@@ -1,8 +1,6 @@
 package currency
 
-import "github.com/khatibomar/fulus"
-
-var _ fulus.Currency = USD{}
+var _ Currency = USD{}
 
 type USD struct{}
 

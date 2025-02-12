@@ -1,8 +1,6 @@
 package currency
 
-import "github.com/khatibomar/fulus"
-
-var _ fulus.Currency = LBP{}
+var _ Currency = LBP{}
 
 type LBP struct{}
 

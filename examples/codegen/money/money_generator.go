@@ -33,6 +33,7 @@ import (
 )
 
 type Money = fulus.Money[currency.{{.Money.Currency}}]
+type Currency = currency.Currency
 
 // New creates a new Money instance with the given amount and currency.
 // The amount should be specified in the currency's smallest sub-unit 
