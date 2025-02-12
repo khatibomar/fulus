@@ -1,4 +1,4 @@
 [money]
-currency = "LBP"
-min = 250
-max = 100000
+currency = "USD"
+min = 100 # 1$
+max = 200000 # 2000$

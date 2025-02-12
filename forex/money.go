@@ -5,7 +5,7 @@ import (
 	"math"
 )
 
-var ErrOutOfBoundTemplate = "money amount should be in interval [%d, %d]"
+var ErrOutOfBoundTemplate = "money amount %d%s should be in interval [%d%s, %d%s]"
 var ErrOverflow = fmt.Errorf("arithmetic operation would overflow")
 
 // Currency represents a monetary unit that follows ISO 4217 standards.
@@ -32,7 +32,7 @@ type Currency interface {
 
 type Money[T Currency] struct {
 	amount   int64
-	currency T
+	Currency T
 }
 
 func (m *Money[T]) Add(other *Money[T]) error {
@@ -72,7 +72,12 @@ func (m *Money[T]) Mul(scale int64) error {
 
 func (m *Money[T]) Validate(min, max int64) error {
 	if m.amount < min || m.amount > max {
-		return fmt.Errorf(ErrOutOfBoundTemplate, min, max)
+		return fmt.Errorf(
+			ErrOutOfBoundTemplate,
+			m.amount, m.Currency.SubUnitSymbol(),
+			min, m.Currency.SubUnitSymbol(),
+			max, m.Currency.SubUnitSymbol(),
+		)
 	}
 	return nil
 }
@@ -83,7 +88,7 @@ func (m *Money[T]) Amount() int64 {
 
 func (m *Money[T]) String() string {
 	if m.amount == 0 {
-		return fmt.Sprintf("%s0", m.currency.Symbol())
+		return fmt.Sprintf("%s0", m.Currency.Symbol())
 	}
 
 	sign := ""
@@ -94,15 +99,15 @@ func (m *Money[T]) String() string {
 	}
 
 	// If there's no minor unit (like JPY), just return the major amount
-	if m.currency.MinorUnit() == 0 {
-		return fmt.Sprintf("%s%s%d", sign, m.currency.Symbol(), amount)
+	if m.Currency.MinorUnit() == 0 {
+		return fmt.Sprintf("%s%s%d", sign, m.Currency.Symbol(), amount)
 	}
 
 	// Calculate major and minor parts
-	divisor := int64(math.Pow10(int(m.currency.MinorUnit())))
+	divisor := int64(math.Pow10(int(m.Currency.MinorUnit())))
 	major := amount / divisor
 	minor := amount % divisor
 
-	format := "%s%s%d.%0" + fmt.Sprintf("%d", m.currency.MinorUnit()) + "d"
-	return fmt.Sprintf(format, sign, m.currency.Symbol(), major, minor)
+	format := "%s%s%d.%0" + fmt.Sprintf("%d", m.Currency.MinorUnit()) + "d"
+	return fmt.Sprintf(format, sign, m.Currency.Symbol(), major, minor)
 }

@@ -27,27 +27,32 @@ func main() {
 	m1 := forex.NewMoney(500)
 	m2 := forex.NewMoney(500)
 
+	fmt.Println(m1)
+
 	err := m1.Add(m2)
-	if err != nil {
-		fmt.Printf("err: %s\n", err.Error())
-	}
+	printErr(err)
+
 	err = m1.Add(m2)
-	if err != nil {
-		fmt.Printf("err: %s\n", err.Error())
-	}
+	printErr(err)
 	fmt.Println(m1)
 
 	err = m1.Mul(10)
-	if err != nil {
-		fmt.Printf("err: %s\n", err.Error())
-	}
+	printErr(err)
 
 	err = m1.Validate(config.Money.Min, config.Money.Max)
+	printErr(err)
+	fmt.Printf("%s is valid\n", m1.String())
+
+	err = m1.Mul(50)
+	printErr(err)
+
+	err = m1.Validate(config.Money.Min, config.Money.Max)
+	printErr(err)
+	fmt.Println(m1)
+}
+
+func printErr(err error) {
 	if err != nil {
 		fmt.Printf("err: %s\n", err.Error())
-	} else {
-		fmt.Printf("%s is valid\n", m1.String())
 	}
-
-	fmt.Println(m1)
 }
