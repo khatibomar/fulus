@@ -4,11 +4,10 @@ import (
 	"fmt"
 
 	"github.com/BurntSushi/toml"
-
-	"github.com/khatibomar/money-experiment/forex"
+	"github.com/khatibomar/fulus/examples/codegen/money"
 )
 
-//go:generate go run money_generator.go
+//go:generate go run money/money_generator.go
 
 type Config struct {
 	Money struct {
@@ -24,8 +23,8 @@ func main() {
 		panic(err)
 	}
 
-	m1 := forex.NewMoney(500)
-	m2 := forex.NewMoney(500)
+	m1 := money.New(500)
+	m2 := money.New(500)
 
 	fmt.Println(m1)
 

@@ -1,4 +1,4 @@
-package forex
+package fulus
 
 import (
 	"fmt"
@@ -33,6 +33,17 @@ type Currency interface {
 type Money[T Currency] struct {
 	amount   int64
 	Currency T
+}
+
+// NewMoney creates a new Money instance with the given amount and currency.
+// The amount should be specified in the currency's smallest sub-unit
+// (e.g., cents for USD, pence for GBP). For example:
+// USD 10.50 should be passed as 1050
+// EUR 5.99 should be passed as 599
+func NewMoney[T Currency](amount int64) *Money[T] {
+	return &Money[T]{
+		amount: amount,
+	}
 }
 
 func (m *Money[T]) Add(other *Money[T]) error {
