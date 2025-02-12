@@ -1,0 +1,37 @@
+name: main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - 'main'
+
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+        cache: true
+        check-latest: true
+    - run: go vet ./...
+    - run: go build -v ./...
+    - run: go test -v ./...
+    
+    - uses: dominikh/staticcheck-action@v1
+      with:
+        version: "latest"
