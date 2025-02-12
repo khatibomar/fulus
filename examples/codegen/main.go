@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/BurntSushi/toml"
-	"github.com/khatibomar/fulus/examples/codegen/money"
+	"github.com/khatibomar/fulus-examples/codegen/money"
 )
 
 //go:generate go run money/money_generator.go

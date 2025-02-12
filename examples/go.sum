@@ -1,0 +1,4 @@
+github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
+github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
+github.com/khatibomar/fulus v0.0.0-20250212232108-b29e90181f5f h1:P7njmjpOIZRMdEHaOh2xBJa3bIdze1Wu1KOLXCBC29o=
+github.com/khatibomar/fulus v0.0.0-20250212232108-b29e90181f5f/go.mod h1:h13WrGnNLugcBfOz7bCa+bZOZWwFsa5KaAtFmn96HRE=
