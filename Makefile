@@ -1,0 +1,3 @@
+run:
+	go generate
+	go run ./...

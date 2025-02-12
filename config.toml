@@ -1,0 +1,4 @@
+[money]
+currency = "LBP"
+min = 250
+max = 100000
