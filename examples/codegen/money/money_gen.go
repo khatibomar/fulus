@@ -6,7 +6,9 @@ import (
 	"github.com/khatibomar/fulus/currency"
 )
 
-// NewMoney creates a new Money instance with the given amount and currency.
+type Money = fulus.Money[currency.USD]
+
+// New creates a new Money instance with the given amount and currency.
 // The amount should be specified in the currency's smallest sub-unit
 // (e.g., cents for USD, pence for GBP). For example:
 // USD 10.50 should be passed as 1050

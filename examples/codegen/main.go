@@ -31,7 +31,7 @@ func main() {
 	err := m1.Add(m2)
 	printErr(err)
 
-	err = m1.Add(m2)
+	err = do(m1)
 	printErr(err)
 	fmt.Println(m1)
 
@@ -54,4 +54,9 @@ func printErr(err error) {
 	if err != nil {
 		fmt.Printf("err: %s\n", err.Error())
 	}
+}
+
+func do(m *money.Money) error {
+	other := money.New(500)
+	return m.Add(other)
 }
