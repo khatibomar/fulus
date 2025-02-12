@@ -11,8 +11,8 @@ var ErrOutOfBoundTemplate = "money amount %d%s should be in interval [%d%s, %d%s
 var ErrOverflow = fmt.Errorf("arithmetic operation would overflow")
 
 type Money[T currency.Currency] struct {
-	amount   int64
-	Currency T
+	amount int64
+	currency.Currency
 }
 
 // NewMoney creates a new Money instance with the given amount and currency.
@@ -21,8 +21,10 @@ type Money[T currency.Currency] struct {
 // USD 10.50 should be passed as 1050
 // EUR 5.99 should be passed as 599
 func NewMoney[T currency.Currency](amount int64) *Money[T] {
+	var c T
 	return &Money[T]{
-		amount: amount,
+		amount:   amount,
+		Currency: c,
 	}
 }
 
