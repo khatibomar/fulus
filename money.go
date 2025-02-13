@@ -88,9 +88,9 @@ func (m *Money[T]) Validate(min, max int64) error {
 	if m.amount < min || m.amount > max {
 		return fmt.Errorf(
 			ErrOutOfBoundTemplate,
-			m.amount, m.Currency.SubUnitSymbol(),
-			min, m.Currency.SubUnitSymbol(),
-			max, m.Currency.SubUnitSymbol(),
+			m.amount, m.Currency.MinorUnitSymbol(),
+			min, m.Currency.MinorUnitSymbol(),
+			max, m.Currency.MinorUnitSymbol(),
 		)
 	}
 	return nil
@@ -113,16 +113,16 @@ func (m *Money[T]) String() string {
 	}
 
 	// If there's no minor unit (like JPY), just return the major amount
-	if m.Currency.MinorUnit() == 0 {
+	if m.Currency.MinorUnits() == 0 {
 		return fmt.Sprintf("%s%s%d", sign, m.Currency.Symbol(), amount)
 	}
 
 	// Calculate major and minor parts
-	divisor := int64(math.Pow10(int(m.Currency.MinorUnit())))
+	divisor := int64(math.Pow10(int(m.Currency.MinorUnits())))
 	major := amount / divisor
 	minor := amount % divisor
 
-	format := "%s%s%d.%0" + fmt.Sprintf("%d", m.Currency.MinorUnit()) + "d"
+	format := "%s%s%d.%0" + fmt.Sprintf("%d", m.Currency.MinorUnits()) + "d"
 	return fmt.Sprintf(format, sign, m.Currency.Symbol(), major, minor)
 }
 

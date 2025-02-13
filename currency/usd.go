@@ -4,18 +4,16 @@ var _ Currency = USD{}
 
 type USD struct{}
 
-func (u USD) Code() string {
-	return "USD"
-}
+func (USD) Code() string { return "USD" }
 
-func (u USD) Symbol() string {
-	return "$"
-}
+func (USD) Number() int { return 840 }
 
-func (u USD) MinorUnit() uint8 {
-	return 2
-}
+func (USD) Name() string { return "United States Dollar" }
 
-func (u USD) SubUnitSymbol() string {
-	return "¢"
-}
+func (USD) MinorUnits() int { return 2 }
+
+func (USD) Symbol() string { return "$" }
+
+func (USD) MinorUnitName() string { return "cent" }
+
+func (USD) MinorUnitSymbol() string { return "¢" }

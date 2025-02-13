@@ -1,23 +1,27 @@
 package currency
 
-// Currency represents a monetary unit that follows ISO 4217 standards.
+// Currency represents an ISO 4217 currency with its minor unit information.
+// It contains all standard currency attributes as defined by ISO 4217
+// along with commonly used symbols and minor unit representations.
 type Currency interface {
-	// Code returns the three-letter ISO 4217 currency code
-	// Example: "USD", "EUR", "LBP"
+	// Code is the three-letter ISO 4217 currency code (e.g., "USD", "EUR")
 	Code() string
 
-	// Symbol returns the currency symbol
-	// Example: "$" for USD, "€" for EUR, "ل.ل" for LBP
+	// Number is the three-digit ISO 4217 numeric code
+	Number() int
+
+	// Name is the official ISO 4217 currency name
+	Name() string
+
+	// MinorUnits specifies the number of digits after the decimal separator
+	MinorUnits() int
+
+	// Symbol is the currency's commonly used symbol (e.g., "$", "€")
 	Symbol() string
 
-	// MinorUnit returns the number of decimal places used for the currency
-	// as defined in ISO 4217. For example:
-	// 2 for USD (cents: 100)
-	// 3 for BHD (fils: 1000)
-	// 0 for JPY (no minor unit)
-	MinorUnit() uint8
+	// MinorUnitName is the name of the fractional monetary unit
+	MinorUnitName() string
 
-	// SubUnitSymbol returns the symbol or abbreviation for the minor unit of the currency
-	// Example: "¢" for USD cents, "p" for GBP pence
-	SubUnitSymbol() string
+	// MinorUnitSymbol represents the symbol used for the minor unit
+	MinorUnitSymbol() string
 }

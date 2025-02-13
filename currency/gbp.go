@@ -4,18 +4,10 @@ var _ Currency = GBP{}
 
 type GBP struct{}
 
-func (g GBP) Code() string {
-	return "GBP"
-}
-
-func (g GBP) Symbol() string {
-	return "£"
-}
-
-func (g GBP) MinorUnit() uint8 {
-	return 2
-}
-
-func (g GBP) SubUnitSymbol() string {
-	return "p"
-}
+func (GBP) Code() string            { return "GBP" }
+func (GBP) Number() int             { return 826 }
+func (GBP) Name() string            { return "Pound Sterling" }
+func (GBP) MinorUnits() int         { return 2 }
+func (GBP) Symbol() string          { return "£" }
+func (GBP) MinorUnitName() string   { return "penny" }
+func (GBP) MinorUnitSymbol() string { return "p" }

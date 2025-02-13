@@ -4,18 +4,10 @@ var _ Currency = JPY{}
 
 type JPY struct{}
 
-func (j JPY) Code() string {
-	return "JPY"
-}
-
-func (j JPY) Symbol() string {
-	return "¥"
-}
-
-func (j JPY) MinorUnit() uint8 {
-	return 0
-}
-
-func (j JPY) SubUnitSymbol() string {
-	return ""
-}
+func (JPY) Code() string            { return "JPY" }
+func (JPY) Number() int             { return 392 }
+func (JPY) Name() string            { return "Yen" }
+func (JPY) MinorUnits() int         { return 0 }
+func (JPY) Symbol() string          { return "¥" }
+func (JPY) MinorUnitName() string   { return "" }
+func (JPY) MinorUnitSymbol() string { return "" }

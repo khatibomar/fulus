@@ -4,18 +4,10 @@ var _ Currency = LBP{}
 
 type LBP struct{}
 
-func (l LBP) Code() string {
-	return "LBP"
-}
-
-func (l LBP) Symbol() string {
-	return "ل.ل"
-}
-
-func (l LBP) MinorUnit() uint8 {
-	return 0
-}
-
-func (l LBP) SubUnitSymbol() string {
-	return ""
-}
+func (LBP) Code() string            { return "LBP" }
+func (LBP) Number() int             { return 422 }
+func (LBP) Name() string            { return "Lebanese Pound" }
+func (LBP) MinorUnits() int         { return 2 }
+func (LBP) Symbol() string          { return "ل.ل" }
+func (LBP) MinorUnitName() string   { return "piastre" }
+func (LBP) MinorUnitSymbol() string { return "p" }

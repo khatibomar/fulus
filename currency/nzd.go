@@ -4,18 +4,10 @@ var _ Currency = NZD{}
 
 type NZD struct{}
 
-func (n NZD) Code() string {
-	return "NZD"
-}
-
-func (n NZD) Symbol() string {
-	return "NZ$"
-}
-
-func (n NZD) MinorUnit() uint8 {
-	return 2
-}
-
-func (n NZD) SubUnitSymbol() string {
-	return "c"
-}
+func (NZD) Code() string            { return "NZD" }
+func (NZD) Number() int             { return 554 }
+func (NZD) Name() string            { return "New Zealand Dollar" }
+func (NZD) MinorUnits() int         { return 2 }
+func (NZD) Symbol() string          { return "$" }
+func (NZD) MinorUnitName() string   { return "cent" }
+func (NZD) MinorUnitSymbol() string { return "c" }

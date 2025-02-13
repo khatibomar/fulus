@@ -4,18 +4,10 @@ var _ Currency = SGD{}
 
 type SGD struct{}
 
-func (s SGD) Code() string {
-	return "SGD"
-}
-
-func (s SGD) Symbol() string {
-	return "S$"
-}
-
-func (s SGD) MinorUnit() uint8 {
-	return 2
-}
-
-func (s SGD) SubUnitSymbol() string {
-	return "¢"
-}
+func (SGD) Code() string            { return "SGD" }
+func (SGD) Number() int             { return 702 }
+func (SGD) Name() string            { return "Singapore Dollar" }
+func (SGD) MinorUnits() int         { return 2 }
+func (SGD) Symbol() string          { return "$" }
+func (SGD) MinorUnitName() string   { return "cent" }
+func (SGD) MinorUnitSymbol() string { return "¢" }

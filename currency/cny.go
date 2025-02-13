@@ -4,18 +4,10 @@ var _ Currency = CNY{}
 
 type CNY struct{}
 
-func (c CNY) Code() string {
-	return "CNY"
-}
-
-func (c CNY) Symbol() string {
-	return "¥"
-}
-
-func (c CNY) MinorUnit() uint8 {
-	return 2
-}
-
-func (c CNY) SubUnitSymbol() string {
-	return "分"
-}
+func (CNY) Code() string            { return "CNY" }
+func (CNY) Number() int             { return 156 }
+func (CNY) Name() string            { return "Yuan Renminbi" }
+func (CNY) MinorUnits() int         { return 2 }
+func (CNY) Symbol() string          { return "¥" }
+func (CNY) MinorUnitName() string   { return "fen" }
+func (CNY) MinorUnitSymbol() string { return "分" }

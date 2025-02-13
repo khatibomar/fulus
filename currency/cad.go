@@ -4,18 +4,10 @@ var _ Currency = CAD{}
 
 type CAD struct{}
 
-func (c CAD) Code() string {
-	return "CAD"
-}
-
-func (c CAD) Symbol() string {
-	return "C$"
-}
-
-func (c CAD) MinorUnit() uint8 {
-	return 2
-}
-
-func (c CAD) SubUnitSymbol() string {
-	return "¢"
-}
+func (CAD) Code() string            { return "CAD" }
+func (CAD) Number() int             { return 124 }
+func (CAD) Name() string            { return "Canadian Dollar" }
+func (CAD) MinorUnits() int         { return 2 }
+func (CAD) Symbol() string          { return "$" }
+func (CAD) MinorUnitName() string   { return "cent" }
+func (CAD) MinorUnitSymbol() string { return "¢" }
