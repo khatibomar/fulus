@@ -40,6 +40,12 @@ type Ratio struct {
 	Denominator int64
 }
 
+// Allocation represents how money is divided according to ratios
+type Allocation[T currency.Currency] struct {
+	Parts []Money[T]
+	Total Money[T]
+}
+
 // ConversionResult holds both the converted amount and the actual ratio used
 type ConversionResult struct {
 	// Amount stores the resulting converted monetary value
@@ -250,6 +256,54 @@ func Convert[T, U currency.Currency](m *Money[T], ratio Ratio) (*Money[U], *Conv
 	}
 
 	return NewMoney[U](roundedAmount), result, nil
+}
+
+// Allocate divides money according to provided ratios
+// Example: $100 allocated by ratios [1,1,2] would give [$25,$25,$50]
+func (m *Money[T]) Allocate(ratios []int64) (*Allocation[T], error) {
+	// Validate ratios
+	if len(ratios) == 0 {
+		return nil, fmt.Errorf("no ratios provided")
+	}
+
+	total := int64(0)
+	for _, ratio := range ratios {
+		if ratio <= 0 {
+			return nil, fmt.Errorf("ratios must be positive")
+		}
+		total += ratio
+	}
+
+	parts := make([]Money[T], len(ratios))
+	remaining := m.amount
+
+	// Allocate for all parts except the last one
+	for i := 0; i < len(ratios)-1; i++ {
+		share := big.NewInt(m.amount)
+		share.Mul(share, big.NewInt(ratios[i]))
+		share.Quo(share, big.NewInt(total))
+
+		if !share.IsInt64() {
+			return nil, ErrOverflow
+		}
+
+		parts[i] = Money[T]{
+			amount:   share.Int64(),
+			Currency: m.Currency,
+		}
+		remaining -= parts[i].amount
+	}
+
+	// Last part gets the remaining amount to avoid rounding issues
+	parts[len(ratios)-1] = Money[T]{
+		amount:   remaining,
+		Currency: m.Currency,
+	}
+
+	return &Allocation[T]{
+		Parts: parts,
+		Total: *m,
+	}, nil
 }
 
 // MarshalJSON implements the json.Marshaler interface

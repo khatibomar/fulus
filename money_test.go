@@ -371,3 +371,169 @@ func TestValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestAllocate(t *testing.T) {
+	tests := []struct {
+		name      string
+		amount    int64
+		ratios    []int64
+		expected  []int64
+		wantError bool
+	}{
+		{
+			name:      "simple equal split",
+			amount:    100,
+			ratios:    []int64{1, 1},
+			expected:  []int64{50, 50},
+			wantError: false,
+		},
+		{
+			name:      "uneven split",
+			amount:    100,
+			ratios:    []int64{1, 2},
+			expected:  []int64{33, 67},
+			wantError: false,
+		},
+		{
+			name:      "three way split",
+			amount:    100,
+			ratios:    []int64{1, 1, 2},
+			expected:  []int64{25, 25, 50},
+			wantError: false,
+		},
+		{
+			name:      "complex ratios",
+			amount:    1000,
+			ratios:    []int64{3, 7},
+			expected:  []int64{300, 700},
+			wantError: false,
+		},
+		{
+			name:      "zero ratio",
+			amount:    100,
+			ratios:    []int64{0, 1},
+			wantError: true,
+		},
+		{
+			name:      "negative ratio",
+			amount:    100,
+			ratios:    []int64{-1, 1},
+			wantError: true,
+		},
+		{
+			name:      "empty ratios",
+			amount:    100,
+			ratios:    []int64{},
+			wantError: true,
+		},
+		{
+			name:      "handle remainder",
+			amount:    1000,
+			ratios:    []int64{1, 1, 1},
+			expected:  []int64{333, 333, 334},
+			wantError: false,
+		},
+		{
+			name:      "large amount with multiple ratios",
+			amount:    1000000,
+			ratios:    []int64{1, 2, 3, 4},
+			expected:  []int64{100000, 200000, 300000, 400000},
+			wantError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			money := NewMoney[currency.USD](tt.amount)
+			allocation, err := money.Allocate(tt.ratios)
+
+			// Check error cases
+			if tt.wantError {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+				return
+			}
+
+			// Verify the number of parts matches the number of ratios
+			if len(allocation.Parts) != len(tt.ratios) {
+				t.Errorf("expected %d parts, got %d", len(tt.ratios), len(allocation.Parts))
+			}
+
+			// Verify each part matches expected amount
+			for i, expected := range tt.expected {
+				if allocation.Parts[i].Amount() != expected {
+					t.Errorf("part %d: expected %d, got %d", i, expected, allocation.Parts[i].Amount())
+				}
+			}
+
+			// Verify sum of parts equals original amount
+			sum := int64(0)
+			for _, part := range allocation.Parts {
+				sum += part.Amount()
+			}
+			if sum != tt.amount {
+				t.Errorf("sum of parts (%d) does not equal original amount (%d)", sum, tt.amount)
+			}
+
+			// Verify Total field matches original money
+			if allocation.Total.Amount() != money.Amount() {
+				t.Errorf("Total field (%d) does not match original amount (%d)",
+					allocation.Total.Amount(), money.Amount())
+			}
+		})
+	}
+}
+
+// Test allocation with real currency values
+func TestAllocateRealMoney(t *testing.T) {
+	tests := []struct {
+		name     string
+		amount   int64 // in cents
+		ratios   []int64
+		expected []string // expected string representations
+	}{
+		{
+			name:     "split $100 equally",
+			amount:   10000, // $100.00
+			ratios:   []int64{1, 1},
+			expected: []string{"$50.00", "$50.00"},
+		},
+		{
+			name:     "split $100 in thirds",
+			amount:   10000, // $100.00
+			ratios:   []int64{1, 1, 1},
+			expected: []string{"$33.33", "$33.33", "$33.34"},
+		},
+		{
+			name:     "split $50.50 by ratio 1:2",
+			amount:   5050, // $50.50
+			ratios:   []int64{1, 2},
+			expected: []string{"$16.83", "$33.67"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			money := NewMoney[currency.USD](tt.amount)
+			allocation, err := money.Allocate(tt.ratios)
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			// Verify string representation of each part
+			for i, expected := range tt.expected {
+				if allocation.Parts[i].String() != expected {
+					t.Errorf("part %d: expected %s, got %s",
+						i, expected, allocation.Parts[i].String())
+				}
+			}
+		})
+	}
+}
