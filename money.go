@@ -2,6 +2,7 @@ package fulus
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -9,8 +10,25 @@ import (
 	"github.com/khatibomar/fulus/currency"
 )
 
-var ErrOutOfBoundTemplate = "money amount %d%s should be in interval [%d%s, %d%s]"
-var ErrOverflow = fmt.Errorf("arithmetic operation would overflow")
+var (
+	// ErrOutOfBoundTemplate is the template for out of bounds errors
+	ErrOutOfBoundTemplate = "money amount %d%s should be in interval [%d%s, %d%s]"
+
+	// ErrOverflow indicates an arithmetic operation would overflow
+	ErrOverflow = errors.New("arithmetic operation would overflow")
+
+	// ErrInvalidChunks indicates an invalid number of chunks for distribution
+	ErrInvalidChunks = errors.New("number of chunks must be positive")
+
+	// ErrZeroDenominator indicates division by zero in conversion
+	ErrZeroDenominator = errors.New("denominator cannot be zero")
+
+	// ErrNoRatios indicates no ratios were provided for allocation
+	ErrNoRatios = errors.New("no ratios provided")
+
+	// ErrNegativeOrZeroRatios indicates negative ratios in allocation
+	ErrNegativeOrZeroRatios = errors.New("ratios must be positive")
+)
 
 // Money represents a monetary value in a specific currency.
 type Money[T currency.Currency] struct {
@@ -186,7 +204,7 @@ func (m Money[T]) String() string {
 //	// Total: (333 * 2) + (334 * 1) = 1000
 func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 	if chunks <= 0 {
-		return Distribution{}, fmt.Errorf("number of chunks must be positive")
+		return Distribution{}, ErrInvalidChunks
 	}
 
 	amount := m.Amount()
@@ -232,12 +250,16 @@ func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 //	// result.ActualRate shows the actual conversion rate used after rounding
 func Convert[T, U currency.Currency](m Money[T], ratio Ratio) (Money[U], ConversionResult, error) {
 	if ratio.Denominator == 0 {
-		return Money[U]{}, ConversionResult{}, fmt.Errorf("denominator cannot be zero")
+		return Money[U]{}, ConversionResult{}, ErrZeroDenominator
 	}
 
 	theoretical := big.NewInt(m.amount)
 	theoretical.Mul(theoretical, big.NewInt(ratio.Numerator))
 	theoretical.Div(theoretical, big.NewInt(ratio.Denominator))
+
+	if !theoretical.IsInt64() {
+		return Money[U]{}, ConversionResult{}, ErrOverflow
+	}
 
 	roundedAmount := theoretical.Int64()
 
@@ -259,13 +281,13 @@ func Convert[T, U currency.Currency](m Money[T], ratio Ratio) (Money[U], Convers
 func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 	// Validate ratios
 	if len(ratios) == 0 {
-		return Allocation[T]{}, fmt.Errorf("no ratios provided")
+		return Allocation[T]{}, ErrNoRatios
 	}
 
 	total := int64(0)
 	for _, ratio := range ratios {
 		if ratio <= 0 {
-			return Allocation[T]{}, fmt.Errorf("ratios must be positive")
+			return Allocation[T]{}, ErrNegativeOrZeroRatios
 		}
 		total += ratio
 	}
