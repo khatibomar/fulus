@@ -12,28 +12,39 @@ import (
 var ErrOutOfBoundTemplate = "money amount %d%s should be in interval [%d%s, %d%s]"
 var ErrOverflow = fmt.Errorf("arithmetic operation would overflow")
 
+// Money represents a monetary value in a specific currency.
 type Money[T currency.Currency] struct {
+	// amount stores the monetary value in the currency's smallest unit (e.g., cents for USD)
 	amount int64
+	// Currency represents the type of currency for this money value
 	currency.Currency
 }
 
 // Distribution represents how to split money into chunks
 type Distribution struct {
-	SmallerChunkSize int64 // Size of the smaller chunks
-	SmallerCount     int64 // Number of smaller chunks
-	LargerChunkSize  int64 // Size of the larger chunks
-	LargerCount      int64 // Number of larger chunks
+	// SmallerChunkSize represents the value of the smaller portions in the distribution
+	SmallerChunkSize int64
+	// SmallerCount represents how many smaller chunks are in the distribution
+	SmallerCount int64
+	// LargerChunkSize represents the value of the larger portions in the distribution
+	LargerChunkSize int64
+	// LargerCount represents how many larger chunks are in the distribution
+	LargerCount int64
 }
 
 // Ratio represents a fraction used for conversion rates
 type Ratio struct {
-	Numerator   int64
+	// Numerator is the top number in the fraction (e.g., 107203 for 1.07203)
+	Numerator int64
+	// Denominator is the bottom number in the fraction (e.g., 100000 for precise decimal representation)
 	Denominator int64
 }
 
 // ConversionResult holds both the converted amount and the actual ratio used
 type ConversionResult struct {
-	Amount     int64
+	// Amount stores the resulting converted monetary value
+	Amount int64
+	// ActualRate stores the precise conversion rate that was actually applied
 	ActualRate Ratio
 }
 
@@ -50,41 +61,58 @@ func NewMoney[T currency.Currency](amount int64) *Money[T] {
 	}
 }
 
+// Add performs addition of two Money values of the same currency.
+// Returns ErrOverflow if the operation would overflow int64.
 func (m *Money[T]) Add(other *Money[T]) error {
-	if other.amount > 0 && m.amount > math.MaxInt64-other.amount {
+	result := big.NewInt(m.amount)
+	result.Add(result, big.NewInt(other.amount))
+
+	if !result.IsInt64() {
 		return ErrOverflow
 	}
-	if other.amount < 0 && m.amount < math.MinInt64-other.amount {
-		return ErrOverflow
-	}
-	m.amount += other.amount
+
+	m.amount = result.Int64()
 	return nil
 }
 
+// Sub performs subtraction of two Money values of the same currency.
+// Returns ErrOverflow if the operation would overflow int64.
 func (m *Money[T]) Sub(other *Money[T]) error {
-	if other.amount > 0 && m.amount < math.MinInt64+other.amount {
+	result := big.NewInt(m.amount)
+	result.Sub(result, big.NewInt(other.amount))
+
+	if !result.IsInt64() {
 		return ErrOverflow
 	}
-	if other.amount < 0 && m.amount > math.MaxInt64+other.amount {
-		return ErrOverflow
-	}
-	m.amount -= other.amount
+
+	m.amount = result.Int64()
 	return nil
 }
 
+// Mul multiplies the Money value by a scalar value.
+// Returns ErrOverflow if the operation would overflow int64.
+// If scale is 0, sets the amount to 0 and returns nil.
 func (m *Money[T]) Mul(scale int64) error {
 	if scale == 0 {
 		m.amount = 0
 		return nil
 	}
-	// prob not so performant
-	if m.amount > math.MaxInt64/scale || m.amount < math.MinInt64/scale {
+
+	// Use math/big to check for overflow
+	result := big.NewInt(m.amount)
+	result.Mul(result, big.NewInt(scale))
+
+	// Check if result fits in int64
+	if !result.IsInt64() {
 		return ErrOverflow
 	}
-	m.amount *= scale
+
+	m.amount = result.Int64()
 	return nil
 }
 
+// Validate checks if the money amount falls within the specified range [min, max].
+// Returns an error if the amount is outside the range.
 func (m *Money[T]) Validate(min, max int64) error {
 	if m.amount < min || m.amount > max {
 		return fmt.Errorf(
@@ -97,10 +125,26 @@ func (m *Money[T]) Validate(min, max int64) error {
 	return nil
 }
 
+// Amount returns the internal amount value in the currency's smallest unit.
+// For example, returns cents for USD or pence for GBP.
 func (m *Money[T]) Amount() int64 {
 	return m.amount
 }
 
+// String returns a formatted string representation of the Money value.
+// The format includes the currency symbol, sign (if negative), and proper decimal placement.
+//
+// For currencies with minor units (e.g., USD, EUR):
+//   - Positive: "$10.50" (USD), "€10.50" (EUR)
+//   - Negative: "-$10.50" (USD), "-€10.50" (EUR)
+//   - Zero: "$0" (USD), "€0" (EUR)
+//
+// For currencies without minor units (e.g., JPY):
+//   - Positive: "¥1000"
+//   - Negative: "-¥1000"
+//   - Zero: "¥0"
+//
+// The number of decimal places is determined by the currency's MinorUnits() value.
 func (m *Money[T]) String() string {
 	if m.amount == 0 {
 		return fmt.Sprintf("%s0", m.Currency.Symbol())
@@ -143,31 +187,29 @@ func (m *Money[T]) Distribute(chunks int64) (*Distribution, error) {
 		return nil, fmt.Errorf("number of chunks must be positive")
 	}
 
-	if m.amount < 0 {
-		return nil, fmt.Errorf("cannot distribute negative amount")
-	}
+	amount := m.Amount()
 
-	if m.amount == 0 {
+	// For even distribution
+	if amount%chunks == 0 {
+		chunkSize := amount / chunks
 		return &Distribution{
-			SmallerChunkSize: 0,
+			SmallerChunkSize: chunkSize,
 			SmallerCount:     chunks,
-			LargerChunkSize:  0,
+			LargerChunkSize:  chunkSize,
 			LargerCount:      0,
 		}, nil
 	}
 
-	smallerSize := m.amount / chunks
-	remainder := m.amount % chunks
-	largerCount := remainder
-
-	smallerCount := chunks - largerCount
-	largerSize := smallerSize + 1
+	// For uneven distribution
+	smallerChunkSize := amount / chunks
+	largerChunkSize := smallerChunkSize + 1
+	remainder := amount % chunks
 
 	return &Distribution{
-		SmallerChunkSize: smallerSize,
-		SmallerCount:     smallerCount,
-		LargerChunkSize:  largerSize,
-		LargerCount:      largerCount,
+		SmallerChunkSize: smallerChunkSize,
+		SmallerCount:     chunks - remainder,
+		LargerChunkSize:  largerChunkSize,
+		LargerCount:      remainder,
 	}, nil
 }
 
