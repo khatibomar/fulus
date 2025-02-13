@@ -26,7 +26,7 @@ func TestAdd(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m1 := NewMoney[currency.USD](tt.a)
 			m2 := NewMoney[currency.USD](tt.b)
-			err := m1.Add(m2)
+			m1, err := m1.Add(m2)
 
 			if tt.wantErr {
 				if err == nil || (tt.errCheck != nil && !tt.errCheck(err)) {
@@ -64,7 +64,7 @@ func TestSub(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			m1 := NewMoney[currency.USD](tt.a)
 			m2 := NewMoney[currency.USD](tt.b)
-			err := m1.Sub(m2)
+			m1, err := m1.Sub(m2)
 
 			if tt.wantErr {
 				if err == nil || (tt.errCheck != nil && !tt.errCheck(err)) {
@@ -102,7 +102,7 @@ func TestMul(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := NewMoney[currency.USD](tt.amount)
-			err := m.Mul(tt.scale)
+			m, err := m.Mul(tt.scale)
 
 			if tt.wantErr {
 				if err == nil || (tt.errCheck != nil && !tt.errCheck(err)) {
@@ -164,14 +164,14 @@ func TestDistribute(t *testing.T) {
 		name      string
 		amount    int64
 		chunks    int64
-		wantDist  *Distribution
+		wantDist  Distribution
 		wantError bool
 	}{
 		{
 			name:   "even distribution",
 			amount: 1000,
 			chunks: 4,
-			wantDist: &Distribution{
+			wantDist: Distribution{
 				SmallerChunkSize: 250,
 				SmallerCount:     4,
 				LargerChunkSize:  250,
@@ -183,7 +183,7 @@ func TestDistribute(t *testing.T) {
 			name:   "uneven distribution",
 			amount: 1000,
 			chunks: 3,
-			wantDist: &Distribution{
+			wantDist: Distribution{
 				SmallerChunkSize: 333,
 				SmallerCount:     2,
 				LargerChunkSize:  334,
@@ -195,7 +195,7 @@ func TestDistribute(t *testing.T) {
 			name:      "invalid chunks",
 			amount:    1000,
 			chunks:    0,
-			wantDist:  nil,
+			wantDist:  Distribution{},
 			wantError: true,
 		},
 	}
@@ -217,7 +217,7 @@ func TestDistribute(t *testing.T) {
 				return
 			}
 
-			if *dist != *tt.wantDist {
+			if dist != tt.wantDist {
 				t.Errorf("Distribute() = %+v, want %+v", dist, tt.wantDist)
 			}
 		})
@@ -295,7 +295,7 @@ func TestConvert(t *testing.T) {
 func TestJSON(t *testing.T) {
 	tests := []struct {
 		name      string
-		money     *Money[currency.USD]
+		money     Money[currency.USD]
 		wantJSON  string
 		wantError bool
 	}{

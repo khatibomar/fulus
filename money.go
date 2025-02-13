@@ -59,9 +59,9 @@ type ConversionResult struct {
 // (e.g., cents for USD, pence for GBP). For example:
 // USD 10.50 should be passed as 1050
 // EUR 5.99 should be passed as 599
-func NewMoney[T currency.Currency](amount int64) *Money[T] {
+func NewMoney[T currency.Currency](amount int64) Money[T] {
 	var c T
-	return &Money[T]{
+	return Money[T]{
 		amount:   amount,
 		Currency: c,
 	}
@@ -69,39 +69,36 @@ func NewMoney[T currency.Currency](amount int64) *Money[T] {
 
 // Add performs addition of two Money values of the same currency.
 // Returns ErrOverflow if the operation would overflow int64.
-func (m *Money[T]) Add(other *Money[T]) error {
+func (m Money[T]) Add(other Money[T]) (Money[T], error) {
 	result := big.NewInt(m.amount)
 	result.Add(result, big.NewInt(other.amount))
 
 	if !result.IsInt64() {
-		return ErrOverflow
+		return Money[T]{}, ErrOverflow
 	}
 
-	m.amount = result.Int64()
-	return nil
+	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
 }
 
 // Sub performs subtraction of two Money values of the same currency.
 // Returns ErrOverflow if the operation would overflow int64.
-func (m *Money[T]) Sub(other *Money[T]) error {
+func (m Money[T]) Sub(other Money[T]) (Money[T], error) {
 	result := big.NewInt(m.amount)
 	result.Sub(result, big.NewInt(other.amount))
 
 	if !result.IsInt64() {
-		return ErrOverflow
+		return Money[T]{}, ErrOverflow
 	}
 
-	m.amount = result.Int64()
-	return nil
+	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
 }
 
 // Mul multiplies the Money value by a scalar value.
 // Returns ErrOverflow if the operation would overflow int64.
 // If scale is 0, sets the amount to 0 and returns nil.
-func (m *Money[T]) Mul(scale int64) error {
+func (m Money[T]) Mul(scale int64) (Money[T], error) {
 	if scale == 0 {
-		m.amount = 0
-		return nil
+		return Money[T]{amount: 0, Currency: m.Currency}, nil
 	}
 
 	// Use math/big to check for overflow
@@ -110,16 +107,15 @@ func (m *Money[T]) Mul(scale int64) error {
 
 	// Check if result fits in int64
 	if !result.IsInt64() {
-		return ErrOverflow
+		return Money[T]{}, ErrOverflow
 	}
 
-	m.amount = result.Int64()
-	return nil
+	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
 }
 
 // Validate checks if the money amount falls within the specified range [min, max].
 // Returns an error if the amount is outside the range.
-func (m *Money[T]) Validate(min, max int64) error {
+func (m Money[T]) Validate(min, max int64) error {
 	if m.amount < min || m.amount > max {
 		return fmt.Errorf(
 			ErrOutOfBoundTemplate,
@@ -133,7 +129,7 @@ func (m *Money[T]) Validate(min, max int64) error {
 
 // Amount returns the internal amount value in the currency's smallest unit.
 // For example, returns cents for USD or pence for GBP.
-func (m *Money[T]) Amount() int64 {
+func (m Money[T]) Amount() int64 {
 	return m.amount
 }
 
@@ -151,7 +147,7 @@ func (m *Money[T]) Amount() int64 {
 //   - Zero: "¥0"
 //
 // The number of decimal places is determined by the currency's MinorUnits() value.
-func (m *Money[T]) String() string {
+func (m Money[T]) String() string {
 	if m.amount == 0 {
 		return fmt.Sprintf("%s0", m.Currency.Symbol())
 	}
@@ -188,9 +184,9 @@ func (m *Money[T]) String() string {
 //	// SmallerChunkSize: 333 ($3.33) x 2 chunks
 //	// LargerChunkSize:  334 ($3.34) x 1 chunk
 //	// Total: (333 * 2) + (334 * 1) = 1000
-func (m *Money[T]) Distribute(chunks int64) (*Distribution, error) {
+func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 	if chunks <= 0 {
-		return nil, fmt.Errorf("number of chunks must be positive")
+		return Distribution{}, fmt.Errorf("number of chunks must be positive")
 	}
 
 	amount := m.Amount()
@@ -198,7 +194,7 @@ func (m *Money[T]) Distribute(chunks int64) (*Distribution, error) {
 	// For even distribution
 	if amount%chunks == 0 {
 		chunkSize := amount / chunks
-		return &Distribution{
+		return Distribution{
 			SmallerChunkSize: chunkSize,
 			SmallerCount:     chunks,
 			LargerChunkSize:  chunkSize,
@@ -211,7 +207,7 @@ func (m *Money[T]) Distribute(chunks int64) (*Distribution, error) {
 	largerChunkSize := smallerChunkSize + 1
 	remainder := amount % chunks
 
-	return &Distribution{
+	return Distribution{
 		SmallerChunkSize: smallerChunkSize,
 		SmallerCount:     chunks - remainder,
 		LargerChunkSize:  largerChunkSize,
@@ -234,9 +230,9 @@ func (m *Money[T]) Distribute(chunks int64) (*Distribution, error) {
 //	chf, result, _ := eur.Convert[currency.CHF](ratio)
 //	// chf will be 107.20 CHF (10720 cents)
 //	// result.ActualRate shows the actual conversion rate used after rounding
-func Convert[T, U currency.Currency](m *Money[T], ratio Ratio) (*Money[U], *ConversionResult, error) {
+func Convert[T, U currency.Currency](m Money[T], ratio Ratio) (Money[U], ConversionResult, error) {
 	if ratio.Denominator == 0 {
-		return nil, nil, fmt.Errorf("denominator cannot be zero")
+		return Money[U]{}, ConversionResult{}, fmt.Errorf("denominator cannot be zero")
 	}
 
 	theoretical := big.NewInt(m.amount)
@@ -250,7 +246,7 @@ func Convert[T, U currency.Currency](m *Money[T], ratio Ratio) (*Money[U], *Conv
 		Denominator: m.amount,
 	}
 
-	result := &ConversionResult{
+	result := ConversionResult{
 		Amount:     roundedAmount,
 		ActualRate: actualRate,
 	}
@@ -260,16 +256,16 @@ func Convert[T, U currency.Currency](m *Money[T], ratio Ratio) (*Money[U], *Conv
 
 // Allocate divides money according to provided ratios
 // Example: $100 allocated by ratios [1,1,2] would give [$25,$25,$50]
-func (m *Money[T]) Allocate(ratios []int64) (*Allocation[T], error) {
+func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 	// Validate ratios
 	if len(ratios) == 0 {
-		return nil, fmt.Errorf("no ratios provided")
+		return Allocation[T]{}, fmt.Errorf("no ratios provided")
 	}
 
 	total := int64(0)
 	for _, ratio := range ratios {
 		if ratio <= 0 {
-			return nil, fmt.Errorf("ratios must be positive")
+			return Allocation[T]{}, fmt.Errorf("ratios must be positive")
 		}
 		total += ratio
 	}
@@ -284,7 +280,7 @@ func (m *Money[T]) Allocate(ratios []int64) (*Allocation[T], error) {
 		share.Quo(share, big.NewInt(total))
 
 		if !share.IsInt64() {
-			return nil, ErrOverflow
+			return Allocation[T]{}, ErrOverflow
 		}
 
 		parts[i] = Money[T]{
@@ -300,9 +296,9 @@ func (m *Money[T]) Allocate(ratios []int64) (*Allocation[T], error) {
 		Currency: m.Currency,
 	}
 
-	return &Allocation[T]{
+	return Allocation[T]{
 		Parts: parts,
-		Total: *m,
+		Total: m,
 	}, nil
 }
 
