@@ -1,6 +1,7 @@
 package fulus
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
@@ -207,4 +208,49 @@ func Convert[T, U currency.Currency](m *Money[T], ratio Ratio) (*Money[U], *Conv
 	}
 
 	return NewMoney[U](roundedAmount), result, nil
+}
+
+// MarshalJSON implements the json.Marshaler interface
+// Serializes the amount as a string to preserve precision
+func (m Money[T]) MarshalJSON() ([]byte, error) {
+	type MoneyJSON struct {
+		Amount   string `json:"amount"`
+		Currency string `json:"currency"`
+	}
+
+	return json.Marshal(MoneyJSON{
+		Amount:   fmt.Sprintf("%d", m.amount),
+		Currency: m.Currency.Code(),
+	})
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface
+// Expects amount as a string to maintain precision
+func (m *Money[T]) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		Amount   string `json:"amount"`
+		Currency string `json:"currency"`
+	}
+
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return fmt.Errorf("failed to unmarshal money: %w", err)
+	}
+
+	var amount int64
+	if _, err := fmt.Sscanf(temp.Amount, "%d", &amount); err != nil {
+		return fmt.Errorf("invalid amount format: %w", err)
+	}
+
+	var zeroCurrency T
+	if zeroCurrency.Code() != temp.Currency {
+		return fmt.Errorf(
+			"currency mismatch: expected %s, got %s",
+			zeroCurrency.Code(),
+			temp.Currency,
+		)
+	}
+
+	m.amount = amount
+	m.Currency = zeroCurrency
+	return nil
 }
