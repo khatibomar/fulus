@@ -12,32 +12,91 @@ A Go library for handling monetary values and currency operations with type safe
 
 ## Why?
 
+### type safety
+
 Money calculations require strict type safety to prevent costly mistakes. Fulus enforces this at compile time using Go generics:
 
 ```go
-// Create new money instances
-usd := fulus.NewMoney[currency.USD](1000) // $10.00
-eur := fulus.NewMoney[currency.EUR](500)   // €5.00
+package main
 
-// This will not compile - Add method only accepts same currency type
-usd.Add(eur) // Compilation error!
+import (
+	"fmt"
 
-// Proper currency conversion needed
-ratio := fulus.Ratio{
-    Numerator:   107203,  // 1.07203 represented as 107203/100000
-    Denominator: 100000,
+	"github.com/khatibomar/fulus"
+	"github.com/khatibomar/fulus/currency"
+)
+
+func main() {
+	usd := fulus.NewMoney[currency.USD](1000) // $10.00
+	eur := fulus.NewMoney[currency.EUR](500)  // €5.00
+
+	// This will not compile. compiler will throw this error.
+	// cannot use eur (variable of struct type fulus.Money[currency.EUR]) 
+	// as fulus.Money[currency.USD] value in argument to usd.Add
+	// usd.Add(eur)
+
+	ratio := fulus.Ratio{
+		Numerator:   107203, // 1.07203 represented as 107203/100000
+		Denominator: 100000,
+	}
+	eurInUsd, _, err := fulus.Convert[currency.EUR, currency.USD](eur, ratio)
+	if err != nil {
+		// handle error
+	}
+	usd, err = usd.Add(eurInUsd)
+	if err != nil {
+		// handle error
+	}
+	fmt.Println(usd) // $15.36
 }
-eurInUsd, result, err := fulus.Convert[currency.USD](eur, ratio)
-if err != nil {
-    // handle error
-}
-usd.Add(eurInUsd) // Works fine!
 ```
 
 This prevents common mistakes like:
 - Accidentally mixing different currencies in calculations
 - Using floating point numbers for money (uses int64 internally)
 - Imprecise currency conversions
+
+### defining own currency types
+
+Don't see your currency in the list? No problem! You can easily create custom currency types that are specific to your financial domain's needs.
+
+Let's introduce kanna currency.
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/khatibomar/fulus"
+	"github.com/khatibomar/fulus/currency"
+)
+
+var _ currency.Currency = KANNA{}
+
+type KANNA struct{}
+
+func (k KANNA) Code() string { return "KANNA" }
+
+func (k KANNA) MinorUnitName() string { return "kanna" }
+
+func (k KANNA) MinorUnitSymbol() string { return "🐲" }
+
+func (k KANNA) MinorUnits() int { return 2 }
+
+func (k KANNA) Name() string { return "Kanna Kamui" }
+
+func (k KANNA) Number() string { return "001" }
+
+func (k KANNA) Symbol() string { return "🐉" }
+
+func main() {
+	kanna := fulus.NewMoney[KANNA](1000)
+	fmt.Println(kanna) // 🐉10.00
+	kanna, _ = kanna.Mul(2)
+	fmt.Println(kanna) // 🐉20.00
+}
+```
 
 ## Features
 
