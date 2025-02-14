@@ -245,10 +245,10 @@ func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 //		Numerator:   107203,  // 1.07203 represented as 107203/100000
 //		Denominator: 100000,
 //	}
-//	chf, result, _ := eur.Convert[currency.CHF](ratio)
+//	chf, result, _ := fulus.Convert[currency.CHF](eur, ratio)
 //	// chf will be 107.20 CHF (10720 cents)
 //	// result.ActualRate shows the actual conversion rate used after rounding
-func Convert[T, U currency.Currency](m Money[T], ratio Ratio) (Money[U], ConversionResult, error) {
+func Convert[U, T currency.Currency](m Money[T], ratio Ratio) (Money[U], ConversionResult, error) {
 	if ratio.Denominator == 0 {
 		return Money[U]{}, ConversionResult{}, ErrZeroDenominator
 	}

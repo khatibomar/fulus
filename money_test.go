@@ -354,7 +354,7 @@ func TestConvert(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := NewMoney[currency.EUR](tt.amount)
-			converted, result, err := Convert[currency.EUR, currency.USD](m, tt.ratio)
+			converted, result, err := Convert[currency.USD](m, tt.ratio)
 
 			if err != tt.expectedErr {
 				t.Errorf("Convert() error = %v, expected error %v", err, tt.expectedErr)

@@ -36,18 +36,19 @@ func main() {
 	// usd.Add(eur)
 
 	ratio := fulus.Ratio{
-		Numerator:   107203, // 1.07203 represented as 107203/100000
+		Numerator:   104565, // 1.04565 represented as 104565/100000
 		Denominator: 100000,
 	}
-	eurInUsd, _, err := fulus.Convert[currency.EUR, currency.USD](eur, ratio)
+	eurInUsd, _, err := fulus.Convert[currency.USD](eur, ratio)
 	if err != nil {
-		// handle error
+		panic(err)
 	}
+	fmt.Println(eurInUsd) // $5.22
 	usd, err = usd.Add(eurInUsd)
 	if err != nil {
-		// handle error
+		panic(err)
 	}
-	fmt.Println(usd) // $15.36
+	fmt.Println(usd) // $15.22
 }
 ```
 
