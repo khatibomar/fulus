@@ -8,7 +8,7 @@ type Currency interface {
 	Code() string
 
 	// Number is the three-digit ISO 4217 numeric code
-	Number() int
+	Number() string
 
 	// Name is the official ISO 4217 currency name
 	Name() string
