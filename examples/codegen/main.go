@@ -28,21 +28,21 @@ func main() {
 
 	fmt.Println(m1)
 
-	err := m1.Add(m2)
+	m1, err := m1.Add(m2)
 	printErr(err)
 
-	err = do(m1)
+	m1, err = do(m1)
 	printErr(err)
 	fmt.Println(m1)
 
-	err = m1.Mul(10)
+	m1, err = m1.Mul(10)
 	printErr(err)
 
 	err = m1.Validate(config.Money.Min, config.Money.Max)
 	printErr(err)
 	fmt.Printf("%s is valid\n", m1.String())
 
-	err = m1.Mul(50)
+	m1, err = m1.Mul(50)
 	printErr(err)
 
 	err = m1.Validate(config.Money.Min, config.Money.Max)
@@ -56,7 +56,7 @@ func printErr(err error) {
 	}
 }
 
-func do(m *money.Money) error {
+func do(m money.Money) (money.Money, error) {
 	other := money.New(500)
 	return m.Add(other)
 }

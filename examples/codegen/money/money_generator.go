@@ -40,7 +40,7 @@ type Currency = currency.Currency
 // (e.g., cents for USD, pence for GBP). For example:
 // USD 10.50 should be passed as 1050
 // EUR 5.99 should be passed as 599
-func New(amount int64) *fulus.Money[currency.{{.Money.Currency}}] {
+func New(amount int64) fulus.Money[currency.{{.Money.Currency}}] {
   return fulus.NewMoney[currency.{{.Money.Currency}}](amount)
 }
 `))
