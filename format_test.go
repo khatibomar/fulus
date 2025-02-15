@@ -146,7 +146,6 @@ func BenchmarkFormatMajor(b *testing.B) {
 	}
 }
 
-// If you want to compare with the recursive implementation
 func BenchmarkFormatMajorComparison(b *testing.B) {
 	input := int64(1234567890)
 	separator := ","
@@ -160,7 +159,6 @@ func BenchmarkFormatMajorComparison(b *testing.B) {
 
 // TestFormatMajorFuzz adds fuzz testing to catch potential edge cases
 func FuzzFormatMajor(f *testing.F) {
-	// Add some seed cases
 	seeds := []int64{0, 1, 12, 123, 1234, 12345, 123456, 1234567}
 	for _, seed := range seeds {
 		f.Add(seed, ",")
