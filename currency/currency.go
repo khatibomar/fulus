@@ -1,27 +1,31 @@
 package currency
 
-// Currency represents an ISO 4217 currency with its minor unit information.
-// It contains all standard currency attributes as defined by ISO 4217
-// along with commonly used symbols and minor unit representations.
+import "github.com/khatibomar/fulus/locale"
+
+// Currency represents an ISO 4217 currency with locale support
 type Currency interface {
-	// Code is the three-letter ISO 4217 currency code (e.g., "USD", "EUR")
+	// Code returns the three-letter ISO 4217 currency code
 	Code() string
 
-	// Number is the three-digit ISO 4217 numeric code
+	// Number returns the three-digit ISO 4217 numeric code
 	Number() string
 
-	// Name is the official ISO 4217 currency name
+	// Name returns the official ISO 4217 currency name
 	Name() string
 
-	// MinorUnits specifies the number of digits after the decimal separator
+	// MinorUnits returns the number of digits after the decimal separator
 	MinorUnits() int
 
-	// Symbol is the currency's commonly used symbol (e.g., "$", "€")
-	Symbol() string
+	// FormatInfo returns the currency formatting information for a given locale
+	FormatInfo(locale locale.Locale) CurrencyFormatInfo
+}
 
-	// MinorUnitName is the name of the fractional monetary unit
-	MinorUnitName() string
-
-	// MinorUnitSymbol represents the symbol used for the minor unit
-	MinorUnitSymbol() string
+// CurrencyFormatInfo contains locale-specific currency formatting information
+type CurrencyFormatInfo struct {
+	Symbol           string // Currency symbol for the locale
+	Format           string // Format pattern
+	GroupSeparator   string // Thousands separator
+	DecimalSeparator string // Decimal separator
+	MinusSign        string // Negative number prefix
+	PlusSign         string // Positive number prefix
 }

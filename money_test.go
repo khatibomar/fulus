@@ -2,11 +2,12 @@ package fulus
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"math"
 	"testing"
 
 	"github.com/khatibomar/fulus/currency"
+	"github.com/khatibomar/fulus/locale"
 )
 
 func TestAdd(t *testing.T) {
@@ -169,6 +170,75 @@ func TestMul(t *testing.T) {
 
 			if tt.expectedErr == nil && m.Amount() != tt.expected {
 				t.Errorf("Mul() = %v, expected %v", m.Amount(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestFormat(t *testing.T) {
+	tests := []struct {
+		name     string
+		money    Money[currency.USD]
+		locale   locale.Locale
+		expected string
+	}{
+		{
+			name:     "positive whole number",
+			money:    NewMoney[currency.USD](1000),
+			locale:   locale.EN,
+			expected: "$10.00",
+		},
+		{
+			name:     "negative whole number",
+			money:    NewMoney[currency.USD](-1000),
+			locale:   locale.EN,
+			expected: "-$10.00",
+		},
+		{
+			name:     "zero",
+			money:    NewMoney[currency.USD](0),
+			locale:   locale.EN,
+			expected: "$0",
+		},
+		{
+			name:     "with cents",
+			money:    NewMoney[currency.USD](1234),
+			locale:   locale.EN,
+			expected: "$12.34",
+		},
+		{
+			name:     "large number with grouping",
+			money:    NewMoney[currency.USD](1234567),
+			locale:   locale.EN,
+			expected: "$12,345.67",
+		},
+		{
+			name:     "different locale format (fr)",
+			money:    NewMoney[currency.USD](1234567),
+			locale:   locale.FR,
+			expected: "12\u202f345,67\u00a0$US",
+		},
+		{
+			name:     "different locale format (de)",
+			money:    NewMoney[currency.USD](1234567),
+			locale:   locale.DE,
+			expected: "12.345,67\u00a0$",
+		},
+		{
+			name:     "Arabic locale format",
+			money:    NewMoney[currency.USD](1234567),
+			locale:   locale.AR,
+			expected: "\u200f12,345.67\u00a0US$;\u200f-#,##0.00\u00a0\u00a4",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.money.Format(tt.locale)
+			if result != tt.expected {
+				t.Errorf("Format() mismatch\nGot:  %+q (len: %d)\nWant: %+q (len: %d)",
+					result, len(result),
+					tt.expected, len(tt.expected))
 			}
 		})
 	}
@@ -433,49 +503,36 @@ func TestValidate(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			name:        "valid amount",
-			amount:      500,
-			min:         0,
-			max:         1000,
-			expectedErr: nil,
-		},
-		{
-			name:        "at minimum",
-			amount:      0,
-			min:         0,
-			max:         1000,
-			expectedErr: nil,
-		},
-		{
-			name:        "at maximum",
-			amount:      1000,
-			min:         0,
-			max:         1000,
-			expectedErr: nil,
-		},
-		{
-			name:   "below minimum",
-			amount: -1,
+			name:   "valid amount",
+			amount: 500,
 			min:    0,
 			max:    1000,
-			expectedErr: fmt.Errorf(
-				ErrOutOfBoundTemplate,
-				-1, currency.USD{}.MinorUnitSymbol(),
-				0, currency.USD{}.MinorUnitSymbol(),
-				1000, currency.USD{}.MinorUnitSymbol(),
-			),
 		},
 		{
-			name:   "above maximum",
-			amount: 1001,
+			name:   "at minimum",
+			amount: 0,
 			min:    0,
 			max:    1000,
-			expectedErr: fmt.Errorf(
-				ErrOutOfBoundTemplate,
-				1001, currency.USD{}.MinorUnitSymbol(),
-				0, currency.USD{}.MinorUnitSymbol(),
-				1000, currency.USD{}.MinorUnitSymbol(),
-			),
+		},
+		{
+			name:   "at maximum",
+			amount: 1000,
+			min:    0,
+			max:    1000,
+		},
+		{
+			name:        "below minimum",
+			amount:      -1,
+			min:         0,
+			max:         1000,
+			expectedErr: ErrValidation,
+		},
+		{
+			name:        "above maximum",
+			amount:      1001,
+			min:         0,
+			max:         1000,
+			expectedErr: ErrValidation,
 		},
 	}
 
@@ -484,16 +541,16 @@ func TestValidate(t *testing.T) {
 			m := NewMoney[currency.USD](tt.amount)
 			err := m.Validate(tt.min, tt.max)
 
+			if tt.expectedErr == nil && err == nil {
+				return
+			}
+
 			if tt.expectedErr == nil && err != nil {
 				t.Errorf("Validate() unexpected error: %v", err)
 			}
 
-			if tt.expectedErr != nil && err == nil {
-				t.Errorf("Validate() expected error %v, got nil", tt.expectedErr)
-			}
-
-			if tt.expectedErr != nil && err != nil && err.Error() != tt.expectedErr.Error() {
-				t.Errorf("Validate() error = %v, expected %v", err, tt.expectedErr)
+			if errors.Unwrap(err) != ErrValidation {
+				t.Errorf("unwrapped error = %v, want %v", errors.Unwrap(err), ErrValidation)
 			}
 		})
 	}

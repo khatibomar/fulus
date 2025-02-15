@@ -35,7 +35,7 @@ func main() {
 	eur := fulus.NewMoney[currency.EUR](500)  // €5.00
 
 	// This will not compile. compiler will throw this error.
-	// cannot use eur (variable of struct type fulus.Money[currency.EUR]) 
+	// cannot use eur (variable of struct type fulus.Money[currency.EUR])
 	// as fulus.Money[currency.USD] value in argument to usd.Add
 	// usd.Add(eur)
 
@@ -110,15 +110,6 @@ func main() {
 - Safe decimal arithmetic using integer math
 - Support for distribution and allocation of money
 - JSON marshaling/unmarshaling support
-
-## Examples
-
-examples are inside the [examples](https://github.com/khatibomar/fulus/tree/main/examples) folder, I included some non trivial examples on how you can leverage the library.
-
-There is a [codegen](https://github.com/khatibomar/fulus/tree/main/examples/codegen) example where you have a manifest or config file to setup an application wide currency.
-It received some criticism, maybe the point is fair, but it's just an example and not the only way to use the library.
-
-Another good point raised by bojanz, so I created an example to showcase how to solve their concern, [bojanz](https://github.com/khatibomar/fulus/tree/main/examples/bojanz)
 
 ## Credits
 

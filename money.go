@@ -6,13 +6,20 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"strings"
 
 	"github.com/khatibomar/fulus/currency"
+	"github.com/khatibomar/fulus/locale"
+)
+
+// DefaultLocale is the fallback locale when none is specified
+var (
+	DefaultLocale = locale.EN
 )
 
 var (
-	// ErrOutOfBoundTemplate is the template for out of bounds errors
-	ErrOutOfBoundTemplate = "money amount %d%s should be in interval [%d%s, %d%s]"
+	// ErrValidation is the error returned when money validation fails
+	ErrValidation = errors.New("money validation error")
 
 	// ErrOverflow indicates an arithmetic operation would overflow
 	ErrOverflow = errors.New("arithmetic operation would overflow")
@@ -135,11 +142,11 @@ func (m Money[T]) Mul(scale int64) (Money[T], error) {
 // Returns an error if the amount is outside the range.
 func (m Money[T]) Validate(min, max int64) error {
 	if m.amount < min || m.amount > max {
-		return fmt.Errorf(
-			ErrOutOfBoundTemplate,
-			m.amount, m.Currency.MinorUnitSymbol(),
-			min, m.Currency.MinorUnitSymbol(),
-			max, m.Currency.MinorUnitSymbol(),
+		return fmt.Errorf("%w: money amount %s should be in interval [%s, %s]",
+			ErrValidation,
+			m,
+			NewMoney[T](min),
+			NewMoney[T](max),
 		)
 	}
 	return nil
@@ -151,44 +158,56 @@ func (m Money[T]) Amount() int64 {
 	return m.amount
 }
 
-// String returns a formatted string representation of the Money value.
-// The format includes the currency symbol, sign (if negative), and proper decimal placement.
-//
-// For currencies with minor units (e.g., USD, EUR):
-//   - Positive: "$10.50" (USD), "€10.50" (EUR)
-//   - Negative: "-$10.50" (USD), "-€10.50" (EUR)
-//   - Zero: "$0" (USD), "€0" (EUR)
-//
-// For currencies without minor units (e.g., JPY):
-//   - Positive: "¥1000"
-//   - Negative: "-¥1000"
-//   - Zero: "¥0"
-//
-// The number of decimal places is determined by the currency's MinorUnits() value.
+// String returns a formatted string representation of the Money value using the default locale.
+// This implements the fmt.Stringer interface.
 func (m Money[T]) String() string {
+	return m.Format(DefaultLocale)
+}
+
+// Format returns a formatted string representation of the Money value for the specified locale.
+func (m Money[T]) Format(locale locale.Locale) string {
+	info := m.Currency.FormatInfo(locale)
+
 	if m.amount == 0 {
-		return fmt.Sprintf("%s0", m.Currency.Symbol())
+		zeroFmt := strings.Replace(info.Format, "#,##0.00", "0", 1)
+		return strings.Replace(zeroFmt, "¤", info.Symbol, 1)
 	}
 
-	sign := ""
 	amount := m.amount
-	if amount < 0 {
-		sign = "-"
+	negative := amount < 0
+	if negative {
 		amount = -amount
 	}
 
-	// If there's no minor unit (like JPY), just return the major amount
-	if m.Currency.MinorUnits() == 0 {
-		return fmt.Sprintf("%s%s%d", sign, m.Currency.Symbol(), amount)
-	}
-
-	// Calculate major and minor parts
-	divisor := int64(math.Pow10(int(m.Currency.MinorUnits())))
+	divisor := int64(math.Pow10(m.Currency.MinorUnits()))
 	major := amount / divisor
 	minor := amount % divisor
 
-	format := "%s%s%d.%0" + fmt.Sprintf("%d", m.Currency.MinorUnits()) + "d"
-	return fmt.Sprintf(format, sign, m.Currency.Symbol(), major, minor)
+	majorStr := formatMajor(major, info.GroupSeparator)
+
+	var result string
+	if m.Currency.MinorUnits() > 0 {
+		result = strings.Replace(info.Format, "#,##0.00",
+			fmt.Sprintf("%s%s%0*d",
+				majorStr,
+				info.DecimalSeparator,
+				m.Currency.MinorUnits(),
+				minor),
+			1)
+	} else {
+		result = strings.Replace(info.Format, "#,##0.00", fmt.Sprint(major), 1)
+		result = strings.Replace(result, ".00", "", 1)
+	}
+
+	result = strings.Replace(result, "¤", info.Symbol, 1)
+
+	if negative {
+		if !strings.Contains(result, info.MinusSign) {
+			result = info.MinusSign + result
+		}
+	}
+
+	return result
 }
 
 // Distribute splits the money amount into the specified number of chunks
