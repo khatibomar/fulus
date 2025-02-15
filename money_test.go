@@ -470,7 +470,6 @@ func TestJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test marshaling
 			got, err := json.Marshal(tt.money)
 			if err != tt.expectedErr {
 				t.Errorf("MarshalJSON() error = %v, expected error %v", err, tt.expectedErr)
@@ -480,7 +479,6 @@ func TestJSON(t *testing.T) {
 				t.Errorf("MarshalJSON() = %v, expected %v", string(got), tt.expected)
 			}
 
-			// Test unmarshaling
 			var unmarshaledMoney Money[currency.USD]
 			err = json.Unmarshal([]byte(tt.expected), &unmarshaledMoney)
 			if err != tt.expectedErr {
@@ -631,14 +629,12 @@ func TestAllocate(t *testing.T) {
 			}
 
 			if tt.expectedErr == nil {
-				// Verify each part matches expected amount
 				for i, expected := range tt.expected {
 					if allocation.Parts[i].Amount() != expected {
 						t.Errorf("part %d: expected %d, got %d", i, expected, allocation.Parts[i].Amount())
 					}
 				}
 
-				// Verify sum of parts equals original amount
 				sum := int64(0)
 				for _, part := range allocation.Parts {
 					sum += part.Amount()
@@ -647,7 +643,6 @@ func TestAllocate(t *testing.T) {
 					t.Errorf("sum of parts (%d) does not equal original amount (%d)", sum, tt.amount)
 				}
 
-				// Verify Total field matches original money
 				if allocation.Total.Amount() != money.Amount() {
 					t.Errorf("Total field (%d) does not match original amount (%d)",
 						allocation.Total.Amount(), money.Amount())
@@ -715,7 +710,6 @@ func TestAllocateRealMoney(t *testing.T) {
 				return
 			}
 
-			// Verify string representation of each part
 			for i, expected := range tt.expected {
 				if allocation.Parts[i].String() != expected {
 					t.Errorf("part %d: expected %s, got %s",
@@ -723,7 +717,6 @@ func TestAllocateRealMoney(t *testing.T) {
 				}
 			}
 
-			// Verify sum equals original amount
 			sum := int64(0)
 			for _, part := range allocation.Parts {
 				sum += part.Amount()
