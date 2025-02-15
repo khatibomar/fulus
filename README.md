@@ -10,6 +10,10 @@
 
 A Go library for handling monetary values and currency operations with type safety.
 
+> disclaimer: I recieved a feedback about localization and formatting, I am still learning about money and currencies in software.
+> I will work on this in second beta, and I will break the interface. This will stay in beta until I put it in practice and do more
+> benchmarking, I am aiming for performance and type-safety.
+
 ## Why?
 
 ### type safety
