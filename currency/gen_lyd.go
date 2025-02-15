@@ -64,227 +64,227 @@ func (LYD) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 		}
 	case "ar":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-AE":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-BH":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-DJ":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-DZ":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-EG":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-EH":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-ER":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-IL":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-IQ":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-JO":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-KM":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-KW":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-LB":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-LY":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-MA":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-MR":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-OM":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-PS":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-QA":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SA":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SD":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SO":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SS":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SY":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-TD":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-TN":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-YE":
 		return CurrencyFormatInfo{
-			Symbol:           "د.ل.‏",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Symbol:           "د.ل.\u200f",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "as":
 		return CurrencyFormatInfo{
@@ -1825,10 +1825,10 @@ func (LYD) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 	case "fa":
 		return CurrencyFormatInfo{
 			Symbol:           "LYD",
-			Format:           "‎¤ #,##0.00",
+			Format:           "\u200e¤ #,##0.00",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎−",
+			MinusSign:        "\u200e−",
 		}
 	case "fa-AF":
 		return CurrencyFormatInfo{
@@ -1836,7 +1836,7 @@ func (LYD) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 			Format:           "¤ #,##0.00",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎−",
+			MinusSign:        "\u200e−",
 		}
 	case "ff":
 		return CurrencyFormatInfo{
@@ -2545,10 +2545,10 @@ func (LYD) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 	case "he":
 		return CurrencyFormatInfo{
 			Symbol:           "LYD",
-			Format:           "‏#,##0.00 ‏¤;‏-#,##0.00 ‏¤",
+			Format:           "\u200f#,##0.00 \u200f¤;\u200f-#,##0.00 \u200f¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "hi":
 		return CurrencyFormatInfo{
@@ -3340,7 +3340,7 @@ func (LYD) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 			Format:           "¤ #,##0.00",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎−",
+			MinusSign:        "\u200e−",
 		}
 	case "ps-PK":
 		return CurrencyFormatInfo{
@@ -3348,7 +3348,7 @@ func (LYD) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 			Format:           "¤ #,##0.00",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎−",
+			MinusSign:        "\u200e−",
 		}
 	case "pt":
 		return CurrencyFormatInfo{
@@ -4028,7 +4028,7 @@ func (LYD) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 			Format:           "¤#,##0.00",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ur-IN":
 		return CurrencyFormatInfo{
@@ -4036,7 +4036,7 @@ func (LYD) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 			Format:           "¤#,##0.00",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "uz":
 		return CurrencyFormatInfo{

@@ -25,226 +25,226 @@ func (XDR) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 	case "ar":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-AE":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-BH":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-DJ":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-DZ":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-EG":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-EH":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-ER":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-IL":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-IQ":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-JO":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-KM":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-KW":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-LB":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-LY":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-MA":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-MR":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-OM":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-PS":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-QA":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SA":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SD":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SO":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SS":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-SY":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-TD":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-TN":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ".",
 			DecimalSeparator: ",",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ar-YE":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ¤;‏-#,##0.00 ¤",
+			Format:           "\u200f#,##0.00 ¤;\u200f-#,##0.00 ¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "ast":
 		return CurrencyFormatInfo{
@@ -2001,10 +2001,10 @@ func (XDR) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 	case "he":
 		return CurrencyFormatInfo{
 			Symbol:           "XDR",
-			Format:           "‏#,##0.00 ‏¤;‏-#,##0.00 ‏¤",
+			Format:           "\u200f#,##0.00 \u200f¤;\u200f-#,##0.00 \u200f¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "hi-Latn":
 		return CurrencyFormatInfo{
