@@ -1849,10 +1849,10 @@ func (MXV) FormatInfo(locale locale.Locale) CurrencyFormatInfo {
 	case "he":
 		return CurrencyFormatInfo{
 			Symbol:           "MXV",
-			Format:           "‏#,##0.00 ‏¤;‏-#,##0.00 ‏¤",
+			Format:           "\u200f#,##0.00 \u200f¤;\u200f-#,##0.00 \u200f¤",
 			GroupSeparator:   ",",
 			DecimalSeparator: ".",
-			MinusSign:        "‎-",
+			MinusSign:        "\u200e-",
 		}
 	case "hi-Latn":
 		return CurrencyFormatInfo{

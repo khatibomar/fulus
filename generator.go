@@ -425,10 +425,10 @@ func (g *Generator) processLocales() error {
 		localeData := numbersFile.Main[locale].Numbers
 
 		g.Locales[locale] = &CurrencyFormatInfo{
-			Format:           localeData.CurrencyFormats.Standard,
-			GroupSeparator:   localeData.Symbols.Group,
-			DecimalSeparator: localeData.Symbols.Decimal,
-			MinusSign:        localeData.Symbols.Minus,
+			Format:           cleanFormatCharacters(localeData.CurrencyFormats.Standard),
+			GroupSeparator:   cleanFormatCharacters(localeData.Symbols.Group),
+			DecimalSeparator: cleanFormatCharacters(localeData.Symbols.Decimal),
+			MinusSign:        cleanFormatCharacters(localeData.Symbols.Minus),
 		}
 
 		currenciesData, err := os.ReadFile(filepath.Join(localesPath, locale, "currencies.json"))
@@ -462,6 +462,8 @@ func (g *Generator) processLocales() error {
 						symbol = code
 					}
 				}
+
+				symbol = cleanFormatCharacters(symbol)
 
 				currency.LocalizedInfo[locale] = &CurrencyFormatInfo{
 					Symbol:           symbol,
@@ -564,4 +566,17 @@ func (g *Generator) generateCurrencies() error {
 	}
 
 	return nil
+}
+
+func cleanFormatCharacters(s string) string {
+	var result strings.Builder
+	for _, r := range s {
+		switch r {
+		case '\u200b', '\u200e', '\u200f', '\u202a', '\u202b', '\u202c', '\u202d', '\u202e':
+			result.WriteString(fmt.Sprintf("\\u%04x", r))
+		default:
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
 }
