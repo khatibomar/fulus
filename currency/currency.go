@@ -27,5 +27,4 @@ type CurrencyFormatInfo struct {
 	GroupSeparator   string // Thousands separator
 	DecimalSeparator string // Decimal separator
 	MinusSign        string // Negative number prefix
-	PlusSign         string // Positive number prefix
 }
