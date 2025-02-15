@@ -107,6 +107,15 @@ func main() {
 - Support for distribution and allocation of money
 - JSON marshaling/unmarshaling support
 
+## Examples
+
+examples are inside the [examples](https://github.com/khatibomar/fulus/tree/main/examples) folder, I included some non trivial examples on how you can leverage the library.
+
+There is a [codegen](https://github.com/khatibomar/fulus/tree/main/examples/codegen) example where you have a manifest or config file to setup an application wide currency.
+It received some criticism, maybe the point is fair, but it's just an example and not the only way to use the library.
+
+Another good point raised by bojanz, so I created an example to showcase how to solve their concern, [bojanz](https://github.com/khatibomar/fulus/tree/main/examples/bojanz)
+
 ## Credits
 
 This library was inspired by the blog post [How to deal with Money in Software](https://cs-syd.eu/posts/2022-08-22-how-to-deal-with-money-in-software) by Christian Sejersen.
