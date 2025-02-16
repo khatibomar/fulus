@@ -111,20 +111,25 @@ func ({{.Code}}) MinorUnits() int { return {{.MinorUnits}} }
 
 func ({{.Code}}) FormatInfo(localeType locale.Locale) CurrencyFormatInfo {
     switch localeType {
-    {{- range $locale, $info := .LocalizedInfo}}
-    case locale.{{toIdentifier $locale}}:
+    {{- range .Groups}}
+    {{- if gt (len .Locales) 1}}
+    // Group of {{len .Locales}} locales
+    case {{range $i, $l := .Locales}}{{if $i}}, {{end}}locale.{{toIdentifier $l}}{{end}}:
+    {{- else}}
+    case locale.{{toIdentifier (index .Locales 0)}}:
+    {{- end}}
         return CurrencyFormatInfo{
-            Symbol:           "{{$info.Symbol}}",
-            Format:          "{{$info.Format}}",
-            GroupSeparator:   "{{$info.GroupSeparator}}",
-            DecimalSeparator: "{{$info.DecimalSeparator}}",
-            MinusSign:        "{{$info.MinusSign}}",
+            Symbol:           "{{.Info.Symbol}}",
+            Format:           "{{.Info.Format}}",
+            GroupSeparator:   "{{.Info.GroupSeparator}}",
+            DecimalSeparator: "{{.Info.DecimalSeparator}}",
+            MinusSign:        "{{.Info.MinusSign}}",
         }
     {{- end}}
     default:
         return CurrencyFormatInfo{
             Symbol:           "{{.DefaultSymbol}}",
-            Format:          "#,##0.00 ¤",
+            Format:           "#,##0.00 ¤",
             GroupSeparator:   ",",
             DecimalSeparator: ".",
             MinusSign:        "-",
@@ -531,10 +536,61 @@ func (g *Generator) generateCurrencies() error {
 	}
 
 	for code, info := range g.Currencies {
-		fileName := filepath.Join(outDir, "gen_"+strings.ToLower(code)+".go")
+		// Group locales by identical format info
+		formatGroups := make(map[string][]string)
+		for locale, formatInfo := range info.LocalizedInfo {
+			key := fmt.Sprintf("%s|%s|%s|%s|%s",
+				formatInfo.Symbol,
+				formatInfo.Format,
+				formatInfo.GroupSeparator,
+				formatInfo.DecimalSeparator,
+				formatInfo.MinusSign,
+			)
+			formatGroups[key] = append(formatGroups[key], locale)
+		}
 
+		// Sort groups for consistent output
+		type formatGroup struct {
+			Locales []string
+			Info    *CurrencyFormatInfo
+		}
+		var groups []formatGroup
+
+		for key, locales := range formatGroups {
+			parts := strings.Split(key, "|")
+			groups = append(groups, formatGroup{
+				Locales: locales,
+				Info: &CurrencyFormatInfo{
+					Symbol:           parts[0],
+					Format:           parts[1],
+					GroupSeparator:   parts[2],
+					DecimalSeparator: parts[3],
+					MinusSign:        parts[4],
+				},
+			})
+		}
+
+		// Sort groups by number of locales (descending) and then by first locale
+		sort.Slice(groups, func(i, j int) bool {
+			if len(groups[i].Locales) != len(groups[j].Locales) {
+				return len(groups[i].Locales) > len(groups[j].Locales)
+			}
+			return groups[i].Locales[0] < groups[j].Locales[0]
+		})
+
+		type templateData struct {
+			*CurrencyInfo
+			Groups []formatGroup
+		}
+
+		data := templateData{
+			CurrencyInfo: info,
+			Groups:       groups,
+		}
+
+		fileName := filepath.Join(outDir, "gen_"+strings.ToLower(code)+".go")
 		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, info); err != nil {
+		if err := tmpl.Execute(&buf, data); err != nil {
 			return fmt.Errorf("failed to execute template for %s: %w", code, err)
 		}
 
@@ -547,7 +603,7 @@ func (g *Generator) generateCurrencies() error {
 			return fmt.Errorf("failed to write %s: %w", fileName, err)
 		}
 
-		log.Printf("Generated %s", fileName)
+		log.Printf("Generated %s with %d format groups", fileName, len(groups))
 	}
 
 	return nil
