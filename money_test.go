@@ -375,14 +375,14 @@ func TestConvert(t *testing.T) {
 	tests := []struct {
 		name        string
 		amount      int64
-		ratio       Ratio
+		ratio       Ratio[currency.EUR, currency.USD]
 		expected    int64
 		expectedErr error
 	}{
 		{
 			name:   "simple conversion",
 			amount: 10000,
-			ratio: Ratio{
+			ratio: Ratio[currency.EUR, currency.USD]{
 				Numerator:   107203,
 				Denominator: 100000,
 			},
@@ -392,7 +392,7 @@ func TestConvert(t *testing.T) {
 		{
 			name:   "zero amount",
 			amount: 0,
-			ratio: Ratio{
+			ratio: Ratio[currency.EUR, currency.USD]{
 				Numerator:   107203,
 				Denominator: 100000,
 			},
@@ -402,7 +402,7 @@ func TestConvert(t *testing.T) {
 		{
 			name:   "invalid ratio",
 			amount: 1000,
-			ratio: Ratio{
+			ratio: Ratio[currency.EUR, currency.USD]{
 				Numerator:   1,
 				Denominator: 0,
 			},
@@ -412,7 +412,7 @@ func TestConvert(t *testing.T) {
 		{
 			name:   "overflow case",
 			amount: math.MaxInt64,
-			ratio: Ratio{
+			ratio: Ratio[currency.EUR, currency.USD]{
 				Numerator:   2,
 				Denominator: 1,
 			},
@@ -424,7 +424,7 @@ func TestConvert(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := NewMoney[currency.EUR](tt.amount)
-			converted, result, err := Convert[currency.USD](m, tt.ratio)
+			converted, result, err := Convert(m, tt.ratio)
 
 			if err != tt.expectedErr {
 				t.Errorf("Convert() error = %v, expected error %v", err, tt.expectedErr)

@@ -58,7 +58,7 @@ type Distribution struct {
 }
 
 // Ratio represents a fraction used for conversion rates
-type Ratio struct {
+type Ratio[F currency.Currency, T currency.Currency] struct {
 	// Numerator is the top number in the fraction (e.g., 107203 for 1.07203)
 	Numerator int64
 	// Denominator is the bottom number in the fraction (e.g., 100000 for precise decimal representation)
@@ -72,11 +72,11 @@ type Allocation[T currency.Currency] struct {
 }
 
 // ConversionResult holds both the converted amount and the actual ratio used
-type ConversionResult struct {
+type ConversionResult[F currency.Currency, T currency.Currency] struct {
 	// Amount stores the resulting converted monetary value
 	Amount int64
 	// ActualRate stores the precise conversion rate that was actually applied
-	ActualRate Ratio
+	ActualRate Ratio[F, T]
 }
 
 // NewMoney creates a new Money instance with the given amount and currency.
@@ -267,9 +267,9 @@ func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 //	chf, result, _ := fulus.Convert[currency.CHF](eur, ratio)
 //	// chf will be 107.20 CHF (10720 cents)
 //	// result.ActualRate shows the actual conversion rate used after rounding
-func Convert[U, T currency.Currency](m Money[T], ratio Ratio) (Money[U], ConversionResult, error) {
+func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T]) (Money[T], ConversionResult[F, T], error) {
 	if ratio.Denominator == 0 {
-		return Money[U]{}, ConversionResult{}, ErrZeroDenominator
+		return Money[T]{}, ConversionResult[F, T]{}, ErrZeroDenominator
 	}
 
 	theoretical := big.NewInt(m.amount)
@@ -277,22 +277,22 @@ func Convert[U, T currency.Currency](m Money[T], ratio Ratio) (Money[U], Convers
 	theoretical.Div(theoretical, big.NewInt(ratio.Denominator))
 
 	if !theoretical.IsInt64() {
-		return Money[U]{}, ConversionResult{}, ErrOverflow
+		return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
 	}
 
 	roundedAmount := theoretical.Int64()
 
-	actualRate := Ratio{
+	actualRate := Ratio[F, T]{
 		Numerator:   roundedAmount,
 		Denominator: m.amount,
 	}
 
-	result := ConversionResult{
+	result := ConversionResult[F, T]{
 		Amount:     roundedAmount,
 		ActualRate: actualRate,
 	}
 
-	return NewMoney[U](roundedAmount), result, nil
+	return NewMoney[T](roundedAmount), result, nil
 }
 
 // Allocate divides money according to provided ratios
