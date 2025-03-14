@@ -212,15 +212,6 @@ func (m Money[T]) Format(locale locale.Locale) string {
 
 // Distribute splits the money amount into the specified number of chunks
 // Returns a Distribution describing how to split the money
-//
-// Example:
-//
-//	money := NewMoney[currency.USD](1000) // $10.00
-//	dist, _ := money.Distribute(3)
-//	// dist will contain:
-//	// SmallerChunkSize: 333 ($3.33) x 2 chunks
-//	// LargerChunkSize:  334 ($3.34) x 1 chunk
-//	// Total: (333 * 2) + (334 * 1) = 1000
 func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 	if chunks <= 0 {
 		return Distribution{}, ErrInvalidChunks
@@ -255,18 +246,6 @@ func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 // Convert performs a conversion using a ratio while maintaining accuracy
 // The ratio should be provided as (numerator, denominator) representing numerator/denominator
 // Returns both the converted Money value and the actual ratio used after rounding
-//
-// Example:
-//
-//	// Convert 100 EUR to CHF at rate 1.072032 CHF/EUR
-//	eur := NewMoney[currency.EUR](10000) // 100.00 EUR
-//	ratio := Ratio{
-//		Numerator:   107203,  // 1.07203 represented as 107203/100000
-//		Denominator: 100000,
-//	}
-//	chf, result, _ := fulus.Convert[currency.CHF](eur, ratio)
-//	// chf will be 107.20 CHF (10720 cents)
-//	// result.ActualRate shows the actual conversion rate used after rounding
 func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T]) (Money[T], ConversionResult[F, T], error) {
 	if ratio.Denominator == 0 {
 		return Money[T]{}, ConversionResult[F, T]{}, ErrZeroDenominator
@@ -296,9 +275,7 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T]) (Money[T], C
 }
 
 // Allocate divides money according to provided ratios
-// Example: $100 allocated by ratios [1,1,2] would give [$25,$25,$50]
 func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
-	// Validate ratios
 	if len(ratios) == 0 {
 		return Allocation[T]{}, ErrNoRatios
 	}
@@ -315,7 +292,7 @@ func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 	remaining := m.amount
 
 	// Allocate for all parts except the last one
-	for i := 0; i < len(ratios)-1; i++ {
+	for i := range len(ratios) - 1 {
 		share := big.NewInt(m.amount)
 		share.Mul(share, big.NewInt(ratios[i]))
 		share.Quo(share, big.NewInt(total))

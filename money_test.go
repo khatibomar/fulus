@@ -3,6 +3,7 @@ package fulus
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"testing"
 
@@ -727,4 +728,66 @@ func TestAllocateRealMoney(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ExampleConvert() {
+	eur := NewMoney[currency.EUR](500) // €5.00
+	ratio := Ratio[currency.EUR, currency.USD]{
+		Numerator:   104565, // 1.04565 represented as 104565/100000
+		Denominator: 100000,
+	}
+	eurInUsd, _, err := Convert(eur, ratio)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(eurInUsd)
+	// Output: $5.22
+}
+
+func ExampleMoney_Allocate() {
+	dollars := NewMoney[currency.USD](10000) // 100.00 USD
+
+	// Allocate in ratio of [1,1,2]
+	allocation, err := dollars.Allocate([]int64{1, 1, 2})
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	for i, part := range allocation.Parts {
+		fmt.Printf("Part %d: %v\n", i+1, part)
+	}
+
+	// Output:
+	// Part 1: $25.00
+	// Part 2: $25.00
+	// Part 3: $50.00
+}
+
+func ExampleMoney_Distribute() {
+	dollars := NewMoney[currency.USD](10000) // 100.00 USD
+
+	// Distribute into 3 chunks
+	dist, err := dollars.Distribute(3)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	fmt.Printf("Smaller chunks: %d x $%.2f\n",
+		dist.SmallerCount,
+		float64(dist.SmallerChunkSize)/100)
+	fmt.Printf("Larger chunks: %d x $%.2f\n",
+		dist.LargerCount,
+		float64(dist.LargerChunkSize)/100)
+
+	// Verify total
+	total := (dist.SmallerChunkSize * dist.SmallerCount) +
+		(dist.LargerChunkSize * dist.LargerCount)
+	fmt.Printf("Total: $%.2f\n", float64(total)/100)
+
+	// Output:
+	// Smaller chunks: 2 x $33.33
+	// Larger chunks: 1 x $33.34
+	// Total: $100.00
 }
