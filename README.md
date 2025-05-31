@@ -89,10 +89,10 @@ func (k KANNA) Number() string { return "001" }
 
 func (k KANNA) MinorUnits() int { return 2 }
 
-func (k KANNA) FormatInfo(loc locale.Locale) currency.CurrencyFormatInfo {
+func (k KANNA) FormatInfo(loc locale.Locale) currency.FormatInfo {
 	switch loc {
 	case locale.JA:
-		return currency.CurrencyFormatInfo{
+		return currency.FormatInfo{
 			Symbol:           "🐲",
 			Format:           "#,##0.00 ¤",
 			GroupSeparator:   "⚔︎",
@@ -100,7 +100,7 @@ func (k KANNA) FormatInfo(loc locale.Locale) currency.CurrencyFormatInfo {
 			MinusSign:        "⛔",
 		}
 	default:
-		return currency.CurrencyFormatInfo{
+		return currency.FormatInfo{
 			Symbol:           "🐉",
 			Format:           "¤ #,##0.00",
 			GroupSeparator:   ",",

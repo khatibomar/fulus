@@ -17,11 +17,11 @@ type Currency interface {
 	MinorUnits() int
 
 	// FormatInfo returns the currency formatting information for a given locale
-	FormatInfo(locale locale.Locale) CurrencyFormatInfo
+	FormatInfo(locale locale.Locale) FormatInfo
 }
 
-// CurrencyFormatInfo contains locale-specific currency formatting information
-type CurrencyFormatInfo struct {
+// FormatInfo contains locale-specific currency formatting information
+type FormatInfo struct {
 	Symbol           string // Currency symbol for the locale
 	Format           string // Format pattern
 	GroupSeparator   string // Thousands separator

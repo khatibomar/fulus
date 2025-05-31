@@ -109,7 +109,7 @@ func ({{.Code}}) Name() string { return "{{.Name}}" }
 
 func ({{.Code}}) MinorUnits() int { return {{.MinorUnits}} }
 
-func ({{.Code}}) FormatInfo(localeType locale.Locale) CurrencyFormatInfo {
+func ({{.Code}}) FormatInfo(localeType locale.Locale) FormatInfo {
     switch localeType {
     {{- range .Groups}}
     {{- if gt (len .Locales) 1}}
@@ -118,7 +118,7 @@ func ({{.Code}}) FormatInfo(localeType locale.Locale) CurrencyFormatInfo {
     {{- else}}
     case locale.{{toIdentifier (index .Locales 0)}}:
     {{- end}}
-        return CurrencyFormatInfo{
+        return FormatInfo{
             Symbol:           "{{.Info.Symbol}}",
             Format:           "{{.Info.Format}}",
             GroupSeparator:   "{{.Info.GroupSeparator}}",
@@ -127,7 +127,7 @@ func ({{.Code}}) FormatInfo(localeType locale.Locale) CurrencyFormatInfo {
         }
     {{- end}}
     default:
-        return CurrencyFormatInfo{
+        return FormatInfo{
             Symbol:           "{{.DefaultSymbol}}",
             Format:           "#,##0.00 ¤",
             GroupSeparator:   ",",

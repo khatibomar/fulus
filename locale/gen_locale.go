@@ -110,6 +110,7 @@ var (
 	CKB            = Locale{code: "ckb"}
 	CKB_IR         = Locale{code: "ckb-IR"}
 	CO             = Locale{code: "co"}
+	COP            = Locale{code: "cop"}
 	CS             = Locale{code: "cs"}
 	CSW            = Locale{code: "csw"}
 	CU             = Locale{code: "cu"}
@@ -161,31 +162,37 @@ var (
 	EN_CM          = Locale{code: "en-CM"}
 	EN_CX          = Locale{code: "en-CX"}
 	EN_CY          = Locale{code: "en-CY"}
+	EN_CZ          = Locale{code: "en-CZ"}
 	EN_DE          = Locale{code: "en-DE"}
 	EN_DG          = Locale{code: "en-DG"}
 	EN_DK          = Locale{code: "en-DK"}
 	EN_DM          = Locale{code: "en-DM"}
 	EN_DSRT        = Locale{code: "en-Dsrt"}
 	EN_ER          = Locale{code: "en-ER"}
+	EN_ES          = Locale{code: "en-ES"}
 	EN_FI          = Locale{code: "en-FI"}
 	EN_FJ          = Locale{code: "en-FJ"}
 	EN_FK          = Locale{code: "en-FK"}
 	EN_FM          = Locale{code: "en-FM"}
+	EN_FR          = Locale{code: "en-FR"}
 	EN_GB          = Locale{code: "en-GB"}
 	EN_GD          = Locale{code: "en-GD"}
 	EN_GG          = Locale{code: "en-GG"}
 	EN_GH          = Locale{code: "en-GH"}
 	EN_GI          = Locale{code: "en-GI"}
 	EN_GM          = Locale{code: "en-GM"}
+	EN_GS          = Locale{code: "en-GS"}
 	EN_GU          = Locale{code: "en-GU"}
 	EN_GY          = Locale{code: "en-GY"}
 	EN_HK          = Locale{code: "en-HK"}
+	EN_HU          = Locale{code: "en-HU"}
 	EN_ID          = Locale{code: "en-ID"}
 	EN_IE          = Locale{code: "en-IE"}
 	EN_IL          = Locale{code: "en-IL"}
 	EN_IM          = Locale{code: "en-IM"}
 	EN_IN          = Locale{code: "en-IN"}
 	EN_IO          = Locale{code: "en-IO"}
+	EN_IT          = Locale{code: "en-IT"}
 	EN_JE          = Locale{code: "en-JE"}
 	EN_JM          = Locale{code: "en-JM"}
 	EN_KE          = Locale{code: "en-KE"}
@@ -209,15 +216,19 @@ var (
 	EN_NF          = Locale{code: "en-NF"}
 	EN_NG          = Locale{code: "en-NG"}
 	EN_NL          = Locale{code: "en-NL"}
+	EN_NO          = Locale{code: "en-NO"}
 	EN_NR          = Locale{code: "en-NR"}
 	EN_NU          = Locale{code: "en-NU"}
 	EN_NZ          = Locale{code: "en-NZ"}
 	EN_PG          = Locale{code: "en-PG"}
 	EN_PH          = Locale{code: "en-PH"}
 	EN_PK          = Locale{code: "en-PK"}
+	EN_PL          = Locale{code: "en-PL"}
 	EN_PN          = Locale{code: "en-PN"}
 	EN_PR          = Locale{code: "en-PR"}
+	EN_PT          = Locale{code: "en-PT"}
 	EN_PW          = Locale{code: "en-PW"}
+	EN_RO          = Locale{code: "en-RO"}
 	EN_RW          = Locale{code: "en-RW"}
 	EN_SB          = Locale{code: "en-SB"}
 	EN_SC          = Locale{code: "en-SC"}
@@ -226,6 +237,7 @@ var (
 	EN_SG          = Locale{code: "en-SG"}
 	EN_SH          = Locale{code: "en-SH"}
 	EN_SI          = Locale{code: "en-SI"}
+	EN_SK          = Locale{code: "en-SK"}
 	EN_SL          = Locale{code: "en-SL"}
 	EN_SS          = Locale{code: "en-SS"}
 	EN_SX          = Locale{code: "en-SX"}
@@ -387,6 +399,7 @@ var (
 	HR             = Locale{code: "hr"}
 	HR_BA          = Locale{code: "hr-BA"}
 	HSB            = Locale{code: "hsb"}
+	HT             = Locale{code: "ht"}
 	HU             = Locale{code: "hu"}
 	HY             = Locale{code: "hy"}
 	IA             = Locale{code: "ia"}
@@ -720,6 +733,7 @@ var (
 	YUE_HANS       = Locale{code: "yue-Hans"}
 	YUE_HANT       = Locale{code: "yue-Hant"}
 	YUE_HANT_CN    = Locale{code: "yue-Hant-CN"}
+	YUE_HANT_MO    = Locale{code: "yue-Hant-MO"}
 	ZA             = Locale{code: "za"}
 	ZGH            = Locale{code: "zgh"}
 	ZH             = Locale{code: "zh"}
@@ -941,6 +955,8 @@ func ParseLocale(code string) (Locale, bool) {
 		return CKB_IR, true
 	case "co":
 		return CO, true
+	case "cop":
+		return COP, true
 	case "cs":
 		return CS, true
 	case "csw":
@@ -1043,6 +1059,8 @@ func ParseLocale(code string) (Locale, bool) {
 		return EN_CX, true
 	case "en-CY":
 		return EN_CY, true
+	case "en-CZ":
+		return EN_CZ, true
 	case "en-DE":
 		return EN_DE, true
 	case "en-DG":
@@ -1055,6 +1073,8 @@ func ParseLocale(code string) (Locale, bool) {
 		return EN_DSRT, true
 	case "en-ER":
 		return EN_ER, true
+	case "en-ES":
+		return EN_ES, true
 	case "en-FI":
 		return EN_FI, true
 	case "en-FJ":
@@ -1063,6 +1083,8 @@ func ParseLocale(code string) (Locale, bool) {
 		return EN_FK, true
 	case "en-FM":
 		return EN_FM, true
+	case "en-FR":
+		return EN_FR, true
 	case "en-GB":
 		return EN_GB, true
 	case "en-GD":
@@ -1075,12 +1097,16 @@ func ParseLocale(code string) (Locale, bool) {
 		return EN_GI, true
 	case "en-GM":
 		return EN_GM, true
+	case "en-GS":
+		return EN_GS, true
 	case "en-GU":
 		return EN_GU, true
 	case "en-GY":
 		return EN_GY, true
 	case "en-HK":
 		return EN_HK, true
+	case "en-HU":
+		return EN_HU, true
 	case "en-ID":
 		return EN_ID, true
 	case "en-IE":
@@ -1093,6 +1119,8 @@ func ParseLocale(code string) (Locale, bool) {
 		return EN_IN, true
 	case "en-IO":
 		return EN_IO, true
+	case "en-IT":
+		return EN_IT, true
 	case "en-JE":
 		return EN_JE, true
 	case "en-JM":
@@ -1139,6 +1167,8 @@ func ParseLocale(code string) (Locale, bool) {
 		return EN_NG, true
 	case "en-NL":
 		return EN_NL, true
+	case "en-NO":
+		return EN_NO, true
 	case "en-NR":
 		return EN_NR, true
 	case "en-NU":
@@ -1151,12 +1181,18 @@ func ParseLocale(code string) (Locale, bool) {
 		return EN_PH, true
 	case "en-PK":
 		return EN_PK, true
+	case "en-PL":
+		return EN_PL, true
 	case "en-PN":
 		return EN_PN, true
 	case "en-PR":
 		return EN_PR, true
+	case "en-PT":
+		return EN_PT, true
 	case "en-PW":
 		return EN_PW, true
+	case "en-RO":
+		return EN_RO, true
 	case "en-RW":
 		return EN_RW, true
 	case "en-SB":
@@ -1173,6 +1209,8 @@ func ParseLocale(code string) (Locale, bool) {
 		return EN_SH, true
 	case "en-SI":
 		return EN_SI, true
+	case "en-SK":
+		return EN_SK, true
 	case "en-SL":
 		return EN_SL, true
 	case "en-SS":
@@ -1495,6 +1533,8 @@ func ParseLocale(code string) (Locale, bool) {
 		return HR_BA, true
 	case "hsb":
 		return HSB, true
+	case "ht":
+		return HT, true
 	case "hu":
 		return HU, true
 	case "hy":
@@ -2161,6 +2201,8 @@ func ParseLocale(code string) (Locale, bool) {
 		return YUE_HANT, true
 	case "yue-Hant-CN":
 		return YUE_HANT_CN, true
+	case "yue-Hant-MO":
+		return YUE_HANT_MO, true
 	case "za":
 		return ZA, true
 	case "zgh":
