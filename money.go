@@ -1,11 +1,13 @@
 package fulus
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/khatibomar/fulus/currency"
@@ -35,6 +37,27 @@ var (
 
 	// ErrNegativeOrZeroRatios indicates negative ratios in allocation
 	ErrNegativeOrZeroRatios = errors.New("ratios must be positive")
+
+	// ErrInvalidRoundingMode indicates unsupported rounding mode
+	ErrInvalidRoundingMode = errors.New("invalid rounding mode")
+
+	// ErrInvalidAmountFormat indicates amount string cannot be parsed
+	ErrInvalidAmountFormat = errors.New("invalid amount format")
+
+	// ErrScaleMismatch indicates decimal digits exceed currency minor units
+	ErrScaleMismatch = errors.New("amount scale exceeds currency minor units")
+)
+
+// RoundingMode controls how division results are rounded in conversion.
+type RoundingMode int
+
+const (
+	// RoundTruncate rounds toward zero (default behavior).
+	RoundTruncate RoundingMode = iota
+	// RoundHalfUp rounds to nearest, ties away from zero.
+	RoundHalfUp
+	// RoundHalfEven rounds to nearest, ties to even.
+	RoundHalfEven
 )
 
 // Money represents a monetary value in a specific currency.
@@ -173,29 +196,29 @@ func (m Money[T]) Format(locale locale.Locale) string {
 		return strings.Replace(zeroFmt, "¤", info.Symbol, 1)
 	}
 
-	amount := m.amount
-	negative := amount < 0
+	amount := big.NewInt(m.amount)
+	negative := amount.Sign() < 0
 	if negative {
-		amount = -amount
+		amount.Abs(amount)
 	}
 
-	divisor := int64(math.Pow10(m.Currency.MinorUnits()))
-	major := amount / divisor
-	minor := amount % divisor
+	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(m.Currency.MinorUnits())), nil)
+	major := new(big.Int).Quo(new(big.Int).Set(amount), divisor)
+	minor := new(big.Int).Mod(new(big.Int).Set(amount), divisor)
 
-	majorStr := formatMajor(major, info.GroupSeparator)
+	majorStr := formatMajorString(major.String(), info.GroupSeparator)
 
 	var result string
 	if m.Currency.MinorUnits() > 0 {
+		minorStr := minor.String()
+		if len(minorStr) < m.Currency.MinorUnits() {
+			minorStr = strings.Repeat("0", m.Currency.MinorUnits()-len(minorStr)) + minorStr
+		}
 		result = strings.Replace(info.Format, "#,##0.00",
-			fmt.Sprintf("%s%s%0*d",
-				majorStr,
-				info.DecimalSeparator,
-				m.Currency.MinorUnits(),
-				minor),
+			majorStr+info.DecimalSeparator+minorStr,
 			1)
 	} else {
-		result = strings.Replace(info.Format, "#,##0.00", fmt.Sprint(major), 1)
+		result = strings.Replace(info.Format, "#,##0.00", major.String(), 1)
 		result = strings.Replace(result, ".00", "", 1)
 	}
 
@@ -235,6 +258,18 @@ func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 	largerChunkSize := smallerChunkSize + 1
 	remainder := amount % chunks
 
+	if remainder < 0 {
+		smallerChunkSize--
+		largerChunkSize--
+		remainder = -remainder
+		return Distribution{
+			SmallerChunkSize: smallerChunkSize,
+			SmallerCount:     remainder,
+			LargerChunkSize:  largerChunkSize,
+			LargerCount:      chunks - remainder,
+		}, nil
+	}
+
 	return Distribution{
 		SmallerChunkSize: smallerChunkSize,
 		SmallerCount:     chunks - remainder,
@@ -243,27 +278,34 @@ func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 	}, nil
 }
 
-// Convert performs a conversion using a ratio while maintaining accuracy
-// The ratio should be provided as (numerator, denominator) representing numerator/denominator
-// Returns both the converted Money value and the actual ratio used after rounding
-func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T]) (Money[T], ConversionResult[F, T], error) {
+// Convert performs conversion with an explicit rounding strategy.
+// The ratio should be provided as (numerator, denominator) representing numerator/denominator.
+// Returns both the converted Money value and the actual ratio used after rounding.
+func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode RoundingMode) (Money[T], ConversionResult[F, T], error) {
 	if ratio.Denominator == 0 {
 		return Money[T]{}, ConversionResult[F, T]{}, ErrZeroDenominator
 	}
 
 	theoretical := big.NewInt(m.amount)
 	theoretical.Mul(theoretical, big.NewInt(ratio.Numerator))
-	theoretical.Div(theoretical, big.NewInt(ratio.Denominator))
+	quotient, err := divideWithRounding(theoretical, big.NewInt(ratio.Denominator), mode)
+	if err != nil {
+		return Money[T]{}, ConversionResult[F, T]{}, err
+	}
 
-	if !theoretical.IsInt64() {
+	if !quotient.IsInt64() {
 		return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
 	}
 
-	roundedAmount := theoretical.Int64()
+	roundedAmount := quotient.Int64()
+	actualDenominator := m.amount
+	if actualDenominator == 0 {
+		actualDenominator = 1
+	}
 
 	actualRate := Ratio[F, T]{
 		Numerator:   roundedAmount,
-		Denominator: m.amount,
+		Denominator: actualDenominator,
 	}
 
 	result := ConversionResult[F, T]{
@@ -272,6 +314,46 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T]) (Money[T], C
 	}
 
 	return NewMoney[T](roundedAmount), result, nil
+}
+
+func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*big.Int, error) {
+	q := new(big.Int)
+	r := new(big.Int)
+	q.QuoRem(numerator, denominator, r)
+
+	if r.Sign() == 0 || mode == RoundTruncate {
+		return q, nil
+	}
+
+	absRem := new(big.Int).Abs(new(big.Int).Set(r))
+	absDen := new(big.Int).Abs(new(big.Int).Set(denominator))
+	twiceRem := new(big.Int).Lsh(absRem, 1)
+	cmp := twiceRem.Cmp(absDen)
+
+	step := big.NewInt(1)
+	negativeResult := (numerator.Sign() < 0) != (denominator.Sign() < 0)
+	if negativeResult {
+		step.Neg(step)
+	}
+
+	switch mode {
+	case RoundHalfUp:
+		if cmp >= 0 {
+			q.Add(q, step)
+		}
+	case RoundHalfEven:
+		if cmp > 0 {
+			q.Add(q, step)
+		} else if cmp == 0 && q.Bit(0) == 1 {
+			q.Add(q, step)
+		}
+	case RoundTruncate:
+		// handled above
+	default:
+		return nil, ErrInvalidRoundingMode
+	}
+
+	return q, nil
 }
 
 // Allocate divides money according to provided ratios
@@ -284,6 +366,9 @@ func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 	for _, ratio := range ratios {
 		if ratio <= 0 {
 			return Allocation[T]{}, ErrNegativeOrZeroRatios
+		}
+		if total > math.MaxInt64-ratio {
+			return Allocation[T]{}, ErrOverflow
 		}
 		total += ratio
 	}
@@ -346,9 +431,9 @@ func (m *Money[T]) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("failed to unmarshal money: %w", err)
 	}
 
-	var amount int64
-	if _, err := fmt.Sscanf(temp.Amount, "%d", &amount); err != nil {
-		return fmt.Errorf("invalid amount format: %w", err)
+	amount, err := parseIntAmount(temp.Amount)
+	if err != nil {
+		return err
 	}
 
 	var zeroCurrency T
@@ -363,4 +448,125 @@ func (m *Money[T]) UnmarshalJSON(data []byte) error {
 	m.amount = amount
 	m.Currency = zeroCurrency
 	return nil
+}
+
+// ParseMoney parses a canonical decimal amount into Money using the currency's minor units.
+// Supported format: optional sign (+/-), digits, optional decimal point and digits.
+func ParseMoney[T currency.Currency](amount string) (Money[T], error) {
+	if amount == "" {
+		return Money[T]{}, fmt.Errorf("%w: empty amount", ErrInvalidAmountFormat)
+	}
+
+	negative := false
+	if amount[0] == '+' || amount[0] == '-' {
+		negative = amount[0] == '-'
+		amount = amount[1:]
+		if amount == "" {
+			return Money[T]{}, fmt.Errorf("%w: sign without digits", ErrInvalidAmountFormat)
+		}
+	}
+
+	parts := strings.Split(amount, ".")
+	if len(parts) > 2 {
+		return Money[T]{}, fmt.Errorf("%w: multiple decimal separators", ErrInvalidAmountFormat)
+	}
+
+	whole := parts[0]
+	if whole == "" {
+		return Money[T]{}, fmt.Errorf("%w: missing whole part", ErrInvalidAmountFormat)
+	}
+	if !allDigits(whole) {
+		return Money[T]{}, fmt.Errorf("%w: invalid whole part", ErrInvalidAmountFormat)
+	}
+
+	fractional := ""
+	if len(parts) == 2 {
+		fractional = parts[1]
+		if fractional == "" {
+			return Money[T]{}, fmt.Errorf("%w: missing fractional part", ErrInvalidAmountFormat)
+		}
+		if !allDigits(fractional) {
+			return Money[T]{}, fmt.Errorf("%w: invalid fractional part", ErrInvalidAmountFormat)
+		}
+	}
+
+	var c T
+	minorUnits := c.MinorUnits()
+	if len(fractional) > minorUnits {
+		return Money[T]{}, fmt.Errorf("%w: got %d fractional digits, max is %d", ErrScaleMismatch, len(fractional), minorUnits)
+	}
+
+	if len(fractional) < minorUnits {
+		fractional = fractional + strings.Repeat("0", minorUnits-len(fractional))
+	}
+
+	magnitude := whole + fractional
+	if magnitude == "" {
+		return Money[T]{}, fmt.Errorf("%w: empty magnitude", ErrInvalidAmountFormat)
+	}
+
+	intVal, ok := new(big.Int).SetString(magnitude, 10)
+	if !ok {
+		return Money[T]{}, fmt.Errorf("%w: cannot parse magnitude", ErrInvalidAmountFormat)
+	}
+	if negative {
+		intVal.Neg(intVal)
+	}
+	if !intVal.IsInt64() {
+		return Money[T]{}, ErrOverflow
+	}
+
+	return NewMoney[T](intVal.Int64()), nil
+}
+
+func parseIntAmount(amount string) (int64, error) {
+	if amount == "" {
+		return 0, fmt.Errorf("%w: empty amount", ErrInvalidAmountFormat)
+	}
+
+	parsed, err := strconv.ParseInt(amount, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %v", ErrInvalidAmountFormat, err)
+	}
+
+	return parsed, nil
+}
+
+func allDigits(s string) bool {
+	for _, ch := range s {
+		if ch < '0' || ch > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// Value implements driver.Valuer for database/sql.
+func (m Money[T]) Value() (driver.Value, error) {
+	b, err := m.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	return string(b), nil
+}
+
+// Scan implements sql.Scanner for database/sql.
+func (m *Money[T]) Scan(value any) error {
+	if value == nil {
+		return fmt.Errorf("cannot scan NULL into Money")
+	}
+
+	switch v := value.(type) {
+	case int64:
+		var c T
+		m.amount = v
+		m.Currency = c
+		return nil
+	case []byte:
+		return m.UnmarshalJSON(v)
+	case string:
+		return m.UnmarshalJSON([]byte(v))
+	default:
+		return fmt.Errorf("cannot scan type %T into Money", value)
+	}
 }

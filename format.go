@@ -1,18 +1,13 @@
 package fulus
 
 import (
-	"fmt"
 	"strings"
 )
 
-// formatMajor formats the major part of a number with group separators
-// For example: 1234567 -> "1,234,567" or "1.234.567" depending on separator
-func formatMajor(n int64, separator string) string {
-	if n == 0 {
+func formatMajorString(str, separator string) string {
+	if str == "0" {
 		return "0"
 	}
-
-	str := fmt.Sprintf("%d", n)
 
 	numSeparators := (len(str) - 1) / 3
 	if numSeparators == 0 {

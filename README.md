@@ -41,7 +41,7 @@ func main() {
 		Numerator:   104565, // 1.04565 represented as 104565/100000
 		Denominator: 100000,
 	}
-	eurInUsd, _, err := fulus.Convert(eur, ratio)
+	eurInUsd, _, err := fulus.Convert(eur, ratio, fulus.RoundTruncate)
 	if err != nil {
 		panic(err)
 	}
@@ -126,6 +126,56 @@ func main() {
 - Safe decimal arithmetic using integer math
 - Support for distribution and allocation of money
 - JSON marshaling/unmarshaling support
+- Explicit conversion rounding modes (truncate, half-up, half-even)
+- Decimal string parsing with minor-unit validation
+- database/sql integration via Scanner and Valuer
+
+## Conversion Rounding Modes
+
+Use `Convert` with an explicit rounding mode:
+
+```go
+eur := fulus.NewMoney[currency.EUR](5) // €0.05
+ratio := fulus.Ratio[currency.EUR, currency.USD]{Numerator: 1, Denominator: 2}
+
+usdTrunc, _, _ := fulus.Convert(eur, ratio, fulus.RoundTruncate) // $0.02
+usdHalfUp, _, _ := fulus.Convert(eur, ratio, fulus.RoundHalfUp)  // $0.03
+usdHalfEven, _, _ := fulus.Convert(eur, ratio, fulus.RoundHalfEven)
+
+fmt.Println(usdTrunc, usdHalfUp, usdHalfEven)
+```
+
+## Parse Decimal Strings
+
+Use `ParseMoney` to parse canonical decimal strings safely:
+
+```go
+usd, err := fulus.ParseMoney[currency.USD]("123.45")
+if err != nil {
+	panic(err)
+}
+fmt.Println(usd) // $123.45
+```
+
+`ParseMoney` validates fractional scale against the currency minor units and rejects malformed formats.
+
+## SQL Integration
+
+`Money[T]` implements `driver.Valuer` and `sql.Scanner`.
+
+```go
+var m fulus.Money[currency.USD]
+if err := m.Scan(`{"amount":"1050","currency":"USD"}`); err != nil {
+	panic(err)
+}
+
+v, err := m.Value()
+if err != nil {
+	panic(err)
+}
+
+fmt.Println(v)
+```
 
 ## Credits
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/khatibomar/fulus/currency"
@@ -196,6 +197,12 @@ func TestFormat(t *testing.T) {
 			expected: "-$10.00",
 		},
 		{
+			name:     "minimum int64",
+			money:    NewMoney[currency.USD](math.MinInt64),
+			locale:   locale.EN,
+			expected: "-$92,233,720,368,547,758.08",
+		},
+		{
 			name:     "zero",
 			money:    NewMoney[currency.USD](0),
 			locale:   locale.EN,
@@ -353,6 +360,18 @@ func TestDistribute(t *testing.T) {
 			expected:    Distribution{},
 			expectedErr: ErrInvalidChunks,
 		},
+		{
+			name:   "negative uneven distribution",
+			amount: -1000,
+			chunks: 3,
+			expected: Distribution{
+				SmallerChunkSize: -334,
+				SmallerCount:     1,
+				LargerChunkSize:  -333,
+				LargerCount:      2,
+			},
+			expectedErr: nil,
+		},
 	}
 
 	for _, tt := range tests {
@@ -367,6 +386,15 @@ func TestDistribute(t *testing.T) {
 
 			if err == nil && dist != tt.expected {
 				t.Errorf("Distribute() = %+v, expected %+v", dist, tt.expected)
+				return
+			}
+
+			if err == nil {
+				total := (dist.SmallerChunkSize * dist.SmallerCount) +
+					(dist.LargerChunkSize * dist.LargerCount)
+				if total != tt.amount {
+					t.Errorf("Distribute() total = %d, expected %d", total, tt.amount)
+				}
 			}
 		})
 	}
@@ -377,6 +405,7 @@ func TestConvert(t *testing.T) {
 		name        string
 		amount      int64
 		ratio       Ratio[currency.EUR, currency.USD]
+		mode        RoundingMode
 		expected    int64
 		expectedErr error
 	}{
@@ -387,6 +416,7 @@ func TestConvert(t *testing.T) {
 				Numerator:   107203,
 				Denominator: 100000,
 			},
+			mode:        RoundTruncate,
 			expected:    10720,
 			expectedErr: nil,
 		},
@@ -397,6 +427,7 @@ func TestConvert(t *testing.T) {
 				Numerator:   107203,
 				Denominator: 100000,
 			},
+			mode:        RoundTruncate,
 			expected:    0,
 			expectedErr: nil,
 		},
@@ -407,6 +438,7 @@ func TestConvert(t *testing.T) {
 				Numerator:   1,
 				Denominator: 0,
 			},
+			mode:        RoundTruncate,
 			expected:    0,
 			expectedErr: ErrZeroDenominator,
 		},
@@ -417,6 +449,7 @@ func TestConvert(t *testing.T) {
 				Numerator:   2,
 				Denominator: 1,
 			},
+			mode:        RoundTruncate,
 			expected:    0,
 			expectedErr: ErrOverflow,
 		},
@@ -425,7 +458,7 @@ func TestConvert(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := NewMoney[currency.EUR](tt.amount)
-			converted, result, err := Convert(m, tt.ratio)
+			converted, result, err := Convert(m, tt.ratio, tt.mode)
 
 			if err != tt.expectedErr {
 				t.Errorf("Convert() error = %v, expected error %v", err, tt.expectedErr)
@@ -440,8 +473,183 @@ func TestConvert(t *testing.T) {
 				if result.Amount != tt.expected {
 					t.Errorf("Convert() result amount = %v, expected %v", result.Amount, tt.expected)
 				}
+
+				if tt.amount == 0 {
+					if result.ActualRate.Denominator != 1 || result.ActualRate.Numerator != 0 {
+						t.Errorf("Convert() actual rate for zero amount = %+v, expected numerator=0 denominator=1", result.ActualRate)
+					}
+				}
 			}
 		})
+	}
+}
+
+func TestConvertRoundingModes(t *testing.T) {
+	tests := []struct {
+		name     string
+		amount   int64
+		ratio    Ratio[currency.EUR, currency.USD]
+		mode     RoundingMode
+		expected int64
+	}{
+		{
+			name:   "truncate positive half",
+			amount: 1,
+			ratio: Ratio[currency.EUR, currency.USD]{
+				Numerator:   1,
+				Denominator: 2,
+			},
+			mode:     RoundTruncate,
+			expected: 0,
+		},
+		{
+			name:   "half up positive tie",
+			amount: 5,
+			ratio: Ratio[currency.EUR, currency.USD]{
+				Numerator:   1,
+				Denominator: 2,
+			},
+			mode:     RoundHalfUp,
+			expected: 3,
+		},
+		{
+			name:   "half even positive tie",
+			amount: 5,
+			ratio: Ratio[currency.EUR, currency.USD]{
+				Numerator:   1,
+				Denominator: 2,
+			},
+			mode:     RoundHalfEven,
+			expected: 2,
+		},
+		{
+			name:   "half up negative tie",
+			amount: -1,
+			ratio: Ratio[currency.EUR, currency.USD]{
+				Numerator:   1,
+				Denominator: 2,
+			},
+			mode:     RoundHalfUp,
+			expected: -1,
+		},
+		{
+			name:   "half even negative tie",
+			amount: -1,
+			ratio: Ratio[currency.EUR, currency.USD]{
+				Numerator:   1,
+				Denominator: 2,
+			},
+			mode:     RoundHalfEven,
+			expected: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewMoney[currency.EUR](tt.amount)
+			converted, _, err := Convert(m, tt.ratio, tt.mode)
+			if err != nil {
+				t.Fatalf("Convert() unexpected error = %v", err)
+			}
+
+			if converted.Amount() != tt.expected {
+				t.Errorf("Convert() = %d, expected %d", converted.Amount(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestConvertInvalidMode(t *testing.T) {
+	m := NewMoney[currency.EUR](1)
+	_, _, err := Convert(m, Ratio[currency.EUR, currency.USD]{Numerator: 1, Denominator: 2}, RoundingMode(99))
+	if !errors.Is(err, ErrInvalidRoundingMode) {
+		t.Fatalf("expected ErrInvalidRoundingMode, got %v", err)
+	}
+}
+
+func TestParseMoney(t *testing.T) {
+	tests := []struct {
+		name        string
+		amount      string
+		expected    int64
+		expectedErr error
+		isJPY       bool
+	}{
+		{name: "usd whole", amount: "10", expected: 1000},
+		{name: "usd decimal", amount: "12.34", expected: 1234},
+		{name: "usd negative", amount: "-0.99", expected: -99},
+		{name: "usd plus sign", amount: "+7.50", expected: 750},
+		{name: "jpy whole", amount: "100", expected: 100, isJPY: true},
+		{name: "scale mismatch", amount: "1.234", expectedErr: ErrScaleMismatch},
+		{name: "invalid format", amount: "abc", expectedErr: ErrInvalidAmountFormat},
+		{name: "empty", amount: "", expectedErr: ErrInvalidAmountFormat},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.isJPY {
+				m, err := ParseMoney[currency.JPY](tt.amount)
+				if tt.expectedErr != nil {
+					if !errors.Is(err, tt.expectedErr) {
+						t.Fatalf("expected error %v, got %v", tt.expectedErr, err)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if m.Amount() != tt.expected {
+					t.Fatalf("amount = %d, expected %d", m.Amount(), tt.expected)
+				}
+				return
+			}
+
+			m, err := ParseMoney[currency.USD](tt.amount)
+			if tt.expectedErr != nil {
+				if !errors.Is(err, tt.expectedErr) {
+					t.Fatalf("expected error %v, got %v", tt.expectedErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if m.Amount() != tt.expected {
+				t.Fatalf("amount = %d, expected %d", m.Amount(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestMoneyValueAndScan(t *testing.T) {
+	original := NewMoney[currency.USD](1050)
+	v, err := original.Value()
+	if err != nil {
+		t.Fatalf("Value() error = %v", err)
+	}
+
+	var scanned Money[currency.USD]
+	if err := scanned.Scan(v); err != nil {
+		t.Fatalf("Scan() error = %v", err)
+	}
+	if scanned.Amount() != original.Amount() {
+		t.Fatalf("scanned amount = %d, expected %d", scanned.Amount(), original.Amount())
+	}
+
+	if err := scanned.Scan(int64(99)); err != nil {
+		t.Fatalf("Scan(int64) error = %v", err)
+	}
+	if scanned.Amount() != 99 {
+		t.Fatalf("scanned int64 amount = %d, expected 99", scanned.Amount())
+	}
+
+	if err := scanned.Scan(nil); err == nil {
+		t.Fatal("expected error when scanning nil")
+	}
+
+	err = scanned.Scan(`{"amount":"100","currency":"EUR"}`)
+	if err == nil {
+		t.Fatal("expected currency mismatch error")
 	}
 }
 
@@ -490,6 +698,14 @@ func TestJSON(t *testing.T) {
 				t.Errorf("UnmarshalJSON() amount = %v, expected %v", unmarshaledMoney.Amount(), tt.money.Amount())
 			}
 		})
+	}
+}
+
+func TestJSONInvalidAmount(t *testing.T) {
+	var unmarshaledMoney Money[currency.USD]
+	err := json.Unmarshal([]byte(`{"amount":"10oops","currency":"USD"}`), &unmarshaledMoney)
+	if err == nil {
+		t.Fatal("expected error for invalid amount format")
 	}
 }
 
@@ -617,6 +833,12 @@ func TestAllocate(t *testing.T) {
 			ratios:   []int64{1, 2, 3, 4},
 			expected: []int64{100000, 200000, 300000, 400000},
 		},
+		{
+			name:        "ratio total overflow",
+			amount:      100,
+			ratios:      []int64{math.MaxInt64, 1},
+			expectedErr: ErrOverflow,
+		},
 	}
 
 	for _, tt := range tests {
@@ -736,7 +958,7 @@ func ExampleConvert() {
 		Numerator:   104565, // 1.04565 represented as 104565/100000
 		Denominator: 100000,
 	}
-	eurInUsd, _, err := Convert(eur, ratio)
+	eurInUsd, _, err := Convert(eur, ratio, RoundTruncate)
 	if err != nil {
 		panic(err)
 	}
@@ -790,4 +1012,163 @@ func ExampleMoney_Distribute() {
 	// Smaller chunks: 2 x $33.33
 	// Larger chunks: 1 x $33.34
 	// Total: $100.00
+}
+
+func TestGeneratedFormatContracts(t *testing.T) {
+	tests := []struct {
+		name     string
+		money    Money[currency.USD]
+		loc      locale.Locale
+		expected currency.FormatInfo
+	}{
+		{
+			name:     "en positive contract",
+			money:    NewMoney[currency.USD](1234567),
+			loc:      locale.EN,
+			expected: currency.USD{}.FormatInfo(locale.EN),
+		},
+		{
+			name:     "de negative contract",
+			money:    NewMoney[currency.USD](-1234567),
+			loc:      locale.DE,
+			expected: currency.USD{}.FormatInfo(locale.DE),
+		},
+		{
+			name:     "fr zero contract",
+			money:    NewMoney[currency.USD](0),
+			loc:      locale.FR,
+			expected: currency.USD{}.FormatInfo(locale.FR),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			formatted := tt.money.Format(tt.loc)
+			if !strings.Contains(formatted, tt.expected.Symbol) {
+				t.Fatalf("formatted value %q does not include symbol %q", formatted, tt.expected.Symbol)
+			}
+
+			if tt.money.Amount() != 0 && tt.money.Currency.MinorUnits() > 0 &&
+				!strings.Contains(formatted, tt.expected.DecimalSeparator) {
+				t.Fatalf("formatted value %q does not include decimal separator %q", formatted, tt.expected.DecimalSeparator)
+			}
+
+			if tt.money.Amount() < 0 && !strings.Contains(formatted, tt.expected.MinusSign) {
+				t.Fatalf("formatted value %q does not include minus sign %q", formatted, tt.expected.MinusSign)
+			}
+
+			if absInt64(tt.money.Amount()) >= 1000 && tt.expected.GroupSeparator != "" &&
+				!strings.Contains(formatted, tt.expected.GroupSeparator) {
+				t.Fatalf("formatted value %q does not include group separator %q", formatted, tt.expected.GroupSeparator)
+			}
+		})
+	}
+}
+
+func FuzzMoneyUnmarshalJSON(f *testing.F) {
+	f.Add("100", "USD")
+	f.Add("-50", "USD")
+	f.Add("abc", "USD")
+
+	f.Fuzz(func(t *testing.T, amount, curr string) {
+		payload := fmt.Sprintf(`{"amount":%q,"currency":%q}`, amount, curr)
+		var m Money[currency.USD]
+		_ = json.Unmarshal([]byte(payload), &m)
+	})
+}
+
+func FuzzDistributeInvariants(f *testing.F) {
+	f.Add(int64(100), int64(3))
+	f.Add(int64(-100), int64(3))
+
+	f.Fuzz(func(t *testing.T, amount, chunks int64) {
+		if chunks <= 0 {
+			return
+		}
+		m := NewMoney[currency.USD](amount)
+		dist, err := m.Distribute(chunks)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if dist.SmallerCount < 0 || dist.LargerCount < 0 {
+			t.Fatalf("counts must be non-negative: %+v", dist)
+		}
+
+		total := (dist.SmallerChunkSize * dist.SmallerCount) + (dist.LargerChunkSize * dist.LargerCount)
+		if total != amount {
+			t.Fatalf("distribution total = %d, amount = %d", total, amount)
+		}
+	})
+}
+
+func FuzzAllocateInvariants(f *testing.F) {
+	f.Add(int64(100), int64(1), int64(1), int64(2))
+
+	f.Fuzz(func(t *testing.T, amount, r1, r2, r3 int64) {
+		ratios := []int64{boundedPositive(r1), boundedPositive(r2), boundedPositive(r3)}
+		m := NewMoney[currency.USD](amount)
+		allocation, err := m.Allocate(ratios)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		sum := int64(0)
+		for _, part := range allocation.Parts {
+			sum += part.Amount()
+		}
+
+		if sum != amount {
+			t.Fatalf("allocation sum = %d, amount = %d", sum, amount)
+		}
+	})
+}
+
+func FuzzConvert(f *testing.F) {
+	f.Add(int64(100), int64(1), int64(3))
+	f.Add(int64(-100), int64(1), int64(2))
+
+	f.Fuzz(func(t *testing.T, amount, numerator, denominator int64) {
+		if denominator == 0 {
+			return
+		}
+
+		m := NewMoney[currency.EUR](amount)
+		ratio := Ratio[currency.EUR, currency.USD]{
+			Numerator:   numerator,
+			Denominator: denominator,
+		}
+
+		converted, result, err := Convert(m, ratio, RoundHalfEven)
+		if errors.Is(err, ErrOverflow) {
+			return
+		}
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if converted.Amount() != result.Amount {
+			t.Fatalf("result mismatch: converted=%d result=%d", converted.Amount(), result.Amount)
+		}
+
+		if amount == 0 && result.ActualRate.Denominator != 1 {
+			t.Fatalf("zero amount must produce denominator=1, got %d", result.ActualRate.Denominator)
+		}
+	})
+}
+
+func absInt64(v int64) int64 {
+	if v == math.MinInt64 {
+		return math.MaxInt64
+	}
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+func boundedPositive(v int64) int64 {
+	v = absInt64(v)
+	v = (v % 1000) + 1
+	return v
 }
