@@ -1,0 +1,57 @@
+name: Monthly CLDR Update
+
+on:
+  schedule:
+    - cron: '0 0 1 * *' # Runs at 00:00 on the 1st of every month
+  workflow_dispatch: # Allow manual triggering for testing/on-demand updates
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Check for new CLDR version and generate
+        id: check_update
+        run: |
+          CURRENT_VERSION=$(grep -oP '// CLDR Version: \K.*' currency/gen_usd.go || echo "unknown")
+          LATEST_VERSION=$(curl -s https://api.github.com/repos/unicode-org/cldr-json/releases/latest | jq -r .tag_name)
+          
+          echo "Current CLDR version: $CURRENT_VERSION"
+          echo "Latest CLDR version: $LATEST_VERSION"
+          
+          if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] && [ "$LATEST_VERSION" != "null" ] && [ -n "$LATEST_VERSION" ]; then
+            echo "New version found. Running generator..."
+            make gen
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+            echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "No update needed."
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.check_update.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update CLDR version to ${{ steps.check_update.outputs.latest_version }}"
+          title: "chore: update CLDR version to ${{ steps.check_update.outputs.latest_version }}"
+          body: |
+            Automated PR to update CLDR data to version ${{ steps.check_update.outputs.latest_version }}.
+            
+            This PR was generated automatically by the `Monthly CLDR Update` workflow.
+          branch: "update-cldr-${{ steps.check_update.outputs.latest_version }}"
+          base: main
+          labels: "automated pr, dependencies"
