@@ -164,6 +164,36 @@ func (m Money[T]) Mul(scale int64) (Money[T], error) {
 	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
 }
 
+// MustAdd performs addition of two Money values of the same currency.
+// Panics if the operation would overflow int64.
+func (m Money[T]) MustAdd(other Money[T]) Money[T] {
+	result, err := m.Add(other)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+// MustSub performs subtraction of two Money values of the same currency.
+// Panics if the operation would overflow int64.
+func (m Money[T]) MustSub(other Money[T]) Money[T] {
+	result, err := m.Sub(other)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
+// MustMul multiplies the Money value by a scalar value.
+// Panics if the operation would overflow int64.
+func (m Money[T]) MustMul(scale int64) Money[T] {
+	result, err := m.Mul(scale)
+	if err != nil {
+		panic(err)
+	}
+	return result
+}
+
 // Div divides the Money value by a scalar value using the specified rounding mode.
 // Returns ErrDivisionByZero if divisor is 0.
 // Returns ErrOverflow if the operation would overflow int64.

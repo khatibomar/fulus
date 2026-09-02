@@ -153,6 +153,17 @@ absUsd, err := fulus.NewMoney[currency.USD](-1000).Abs() // $10.00
 negUsd, err := usd10.Neg()                               // -$10.00
 ```
 
+For ergonomic method chaining when you are confident about bounds (panics on overflow), you can use the `Must` variants:
+
+```go
+usd10 := fulus.NewMoney[currency.USD](1000)
+usd20 := fulus.NewMoney[currency.USD](2000)
+usd30 := fulus.NewMoney[currency.USD](3000)
+
+// Method chaining
+result := usd10.MustAdd(usd20).MustSub(usd30).MustMul(2) // $0.00
+```
+
 ## Comparison Operations
 
 Fulus provides standard comparison methods to safely compare money values of the same currency:

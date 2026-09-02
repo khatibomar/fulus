@@ -1443,3 +1443,57 @@ func boundedPositive(v int64) int64 {
 	v = (v % 1000) + 1
 	return v
 }
+
+func TestMustAdd(t *testing.T) {
+	m1 := NewMoney[currency.USD](100)
+	m2 := NewMoney[currency.USD](50)
+
+	result := m1.MustAdd(m2)
+	if result.Amount() != 150 {
+		t.Errorf("MustAdd = %d, want %d", result.Amount(), 150)
+	}
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("MustAdd should have panicked on overflow")
+		}
+	}()
+	mMax := NewMoney[currency.USD](math.MaxInt64)
+	_ = mMax.MustAdd(NewMoney[currency.USD](1))
+}
+
+func TestMustSub(t *testing.T) {
+	m1 := NewMoney[currency.USD](100)
+	m2 := NewMoney[currency.USD](50)
+
+	result := m1.MustSub(m2)
+	if result.Amount() != 50 {
+		t.Errorf("MustSub = %d, want %d", result.Amount(), 50)
+	}
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("MustSub should have panicked on overflow")
+		}
+	}()
+	mMin := NewMoney[currency.USD](math.MinInt64)
+	_ = mMin.MustSub(NewMoney[currency.USD](1))
+}
+
+func TestMustMul(t *testing.T) {
+	m := NewMoney[currency.USD](100)
+
+	result := m.MustMul(3)
+	if result.Amount() != 300 {
+		t.Errorf("MustMul = %d, want %d", result.Amount(), 300)
+	}
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("MustMul should have panicked on overflow")
+		}
+	}()
+	mMax := NewMoney[currency.USD](math.MaxInt64)
+	_ = mMax.MustMul(2)
+}
+
