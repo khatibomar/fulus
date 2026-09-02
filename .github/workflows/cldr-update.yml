@@ -43,11 +43,11 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check_update.outputs.update_needed == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: update CLDR version to ${{ steps.check_update.outputs.latest_version }}"
-          title: "chore: update CLDR version to ${{ steps.check_update.outputs.latest_version }}"
+          commit-message: "update CLDR version to ${{ steps.check_update.outputs.latest_version }}"
+          title: "update CLDR version to ${{ steps.check_update.outputs.latest_version }}"
           body: |
             Automated PR to update CLDR data to version ${{ steps.check_update.outputs.latest_version }}.
             
