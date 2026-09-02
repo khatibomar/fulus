@@ -130,6 +130,29 @@ func main() {
 - Decimal string parsing with minor-unit validation
 - database/sql integration via Scanner and Valuer
 
+## Arithmetic Operations
+
+Fulus provides basic arithmetic methods with built-in overflow and error checking:
+
+```go
+usd10 := fulus.NewMoney[currency.USD](1000)
+usd20 := fulus.NewMoney[currency.USD](2000)
+
+// Addition and Subtraction
+usd30, err := usd10.Add(usd20)
+usd10, err = usd30.Sub(usd20)
+
+// Multiplication
+usd20, err = usd10.Mul(2)
+
+// Division with explicit rounding
+usd5, err := usd10.Div(2, fulus.RoundHalfUp)
+
+// Absolute value and Negation
+absUsd, err := fulus.NewMoney[currency.USD](-1000).Abs() // $10.00
+negUsd, err := usd10.Neg()                               // -$10.00
+```
+
 ## Comparison Operations
 
 Fulus provides standard comparison methods to safely compare money values of the same currency:

@@ -32,6 +32,9 @@ var (
 	// ErrZeroDenominator indicates division by zero in conversion
 	ErrZeroDenominator = errors.New("denominator cannot be zero")
 
+	// ErrDivisionByZero indicates division by zero
+	ErrDivisionByZero = errors.New("division by zero")
+
 	// ErrNoRatios indicates no ratios were provided for allocation
 	ErrNoRatios = errors.New("no ratios provided")
 
@@ -159,6 +162,48 @@ func (m Money[T]) Mul(scale int64) (Money[T], error) {
 	}
 
 	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
+}
+
+// Div divides the Money value by a scalar value using the specified rounding mode.
+// Returns ErrDivisionByZero if divisor is 0.
+// Returns ErrOverflow if the operation would overflow int64.
+// Returns ErrInvalidRoundingMode if the rounding mode is unsupported.
+func (m Money[T]) Div(divisor int64, mode RoundingMode) (Money[T], error) {
+	if divisor == 0 {
+		return Money[T]{}, ErrDivisionByZero
+	}
+
+	result, err := divideWithRounding(big.NewInt(m.amount), big.NewInt(divisor), mode)
+	if err != nil {
+		return Money[T]{}, err
+	}
+
+	if !result.IsInt64() {
+		return Money[T]{}, ErrOverflow
+	}
+
+	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
+}
+
+// Abs returns the absolute value of the money amount.
+// Returns ErrOverflow if the amount is math.MinInt64.
+func (m Money[T]) Abs() (Money[T], error) {
+	if m.amount == math.MinInt64 {
+		return Money[T]{}, ErrOverflow
+	}
+	if m.amount < 0 {
+		return Money[T]{amount: -m.amount, Currency: m.Currency}, nil
+	}
+	return m, nil
+}
+
+// Neg returns the negated value of the money amount.
+// Returns ErrOverflow if the amount is math.MinInt64.
+func (m Money[T]) Neg() (Money[T], error) {
+	if m.amount == math.MinInt64 {
+		return Money[T]{}, ErrOverflow
+	}
+	return Money[T]{amount: -m.amount, Currency: m.Currency}, nil
 }
 
 // Validate checks if the money amount falls within the specified range [min, max].

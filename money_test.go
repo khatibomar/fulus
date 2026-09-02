@@ -177,6 +177,190 @@ func TestMul(t *testing.T) {
 	}
 }
 
+func TestDiv(t *testing.T) {
+	tests := []struct {
+		name        string
+		amount      int64
+		divisor     int64
+		mode        RoundingMode
+		expected    int64
+		expectedErr error
+	}{
+		{
+			name:        "exact division",
+			amount:      100,
+			divisor:     2,
+			mode:        RoundHalfUp,
+			expected:    50,
+			expectedErr: nil,
+		},
+		{
+			name:        "round half up",
+			amount:      105,
+			divisor:     2,
+			mode:        RoundHalfUp,
+			expected:    53,
+			expectedErr: nil,
+		},
+		{
+			name:        "round half even (even)",
+			amount:      105,
+			divisor:     2,
+			mode:        RoundHalfEven,
+			expected:    52,
+			expectedErr: nil,
+		},
+		{
+			name:        "round half even (odd)",
+			amount:      115, // 115 / 2 = 57.5 -> 58
+			divisor:     2,
+			mode:        RoundHalfEven,
+			expected:    58,
+			expectedErr: nil,
+		},
+		{
+			name:        "truncate",
+			amount:      105,
+			divisor:     2,
+			mode:        RoundTruncate,
+			expected:    52,
+			expectedErr: nil,
+		},
+		{
+			name:        "division by zero",
+			amount:      100,
+			divisor:     0,
+			mode:        RoundHalfUp,
+			expected:    0,
+			expectedErr: ErrDivisionByZero,
+		},
+		{
+			name:        "overflow from minint / -1",
+			amount:      math.MinInt64,
+			divisor:     -1,
+			mode:        RoundHalfUp,
+			expected:    0,
+			expectedErr: ErrOverflow,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewMoney[currency.USD](tt.amount)
+			m, err := m.Div(tt.divisor, tt.mode)
+
+			if err != tt.expectedErr {
+				t.Errorf("Div() error = %v, expected error %v", err, tt.expectedErr)
+				return
+			}
+
+			if tt.expectedErr == nil && m.Amount() != tt.expected {
+				t.Errorf("Div() = %v, expected %v", m.Amount(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestAbs(t *testing.T) {
+	tests := []struct {
+		name        string
+		amount      int64
+		expected    int64
+		expectedErr error
+	}{
+		{
+			name:        "positive",
+			amount:      100,
+			expected:    100,
+			expectedErr: nil,
+		},
+		{
+			name:        "negative",
+			amount:      -100,
+			expected:    100,
+			expectedErr: nil,
+		},
+		{
+			name:        "zero",
+			amount:      0,
+			expected:    0,
+			expectedErr: nil,
+		},
+		{
+			name:        "overflow",
+			amount:      math.MinInt64,
+			expected:    0,
+			expectedErr: ErrOverflow,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewMoney[currency.USD](tt.amount)
+			m, err := m.Abs()
+
+			if err != tt.expectedErr {
+				t.Errorf("Abs() error = %v, expected error %v", err, tt.expectedErr)
+				return
+			}
+
+			if tt.expectedErr == nil && m.Amount() != tt.expected {
+				t.Errorf("Abs() = %v, expected %v", m.Amount(), tt.expected)
+			}
+		})
+	}
+}
+
+func TestNeg(t *testing.T) {
+	tests := []struct {
+		name        string
+		amount      int64
+		expected    int64
+		expectedErr error
+	}{
+		{
+			name:        "positive",
+			amount:      100,
+			expected:    -100,
+			expectedErr: nil,
+		},
+		{
+			name:        "negative",
+			amount:      -100,
+			expected:    100,
+			expectedErr: nil,
+		},
+		{
+			name:        "zero",
+			amount:      0,
+			expected:    0,
+			expectedErr: nil,
+		},
+		{
+			name:        "overflow",
+			amount:      math.MinInt64,
+			expected:    0,
+			expectedErr: ErrOverflow,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := NewMoney[currency.USD](tt.amount)
+			m, err := m.Neg()
+
+			if err != tt.expectedErr {
+				t.Errorf("Neg() error = %v, expected error %v", err, tt.expectedErr)
+				return
+			}
+
+			if tt.expectedErr == nil && m.Amount() != tt.expected {
+				t.Errorf("Neg() = %v, expected %v", m.Amount(), tt.expected)
+			}
+		})
+	}
+}
+
 func TestFormat(t *testing.T) {
 	tests := []struct {
 		name     string

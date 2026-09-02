@@ -6,7 +6,7 @@
 // precision and correctness.
 //
 // The package supports:
-//   - type-safe arithmetic across currency types
+//   - type-safe arithmetic across currency types (Add, Sub, Mul, Div, Abs, Neg)
 //   - configurable conversion rounding policies
 //   - decimal string parsing with minor-unit validation
 //   - JSON and database/sql interoperability
