@@ -209,6 +209,24 @@ fmt.Println(usd) // $123.45
 
 `ParseMoney` validates fractional scale against the currency minor units and rejects malformed formats.
 
+## Parse Exchange Rates
+
+Fulus provides helper functions to parse real-world float or string exchange rates (e.g., from an FX API) into the strict `Ratio` struct used for conversion:
+
+```go
+// Parse a decimal string
+ratioStr, err := fulus.ParseRatioString[currency.EUR, currency.USD]("1.07203")
+if err != nil {
+	panic(err)
+}
+
+// Parse a float64
+ratioFloat, err := fulus.ParseRatioFloat64[currency.EUR, currency.USD](1.07203)
+if err != nil {
+	panic(err)
+}
+```
+
 ## SQL Integration
 
 `Money[T]` implements `driver.Valuer` and `sql.Scanner`.

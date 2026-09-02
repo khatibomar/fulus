@@ -1497,3 +1497,128 @@ func TestMustMul(t *testing.T) {
 	_ = mMax.MustMul(2)
 }
 
+
+func TestParseRatioString(t *testing.T) {
+	tests := []struct {
+		name        string
+		rate        string
+		wantNum     int64
+		wantDenom   int64
+		wantErr     error
+	}{
+		{
+			name:      "simple integer",
+			rate:      "2",
+			wantNum:   2,
+			wantDenom: 1,
+			wantErr:   nil,
+		},
+		{
+			name:      "simple decimal",
+			rate:      "1.5",
+			wantNum:   3,
+			wantDenom: 2,
+			wantErr:   nil,
+		},
+		{
+			name:      "complex decimal",
+			rate:      "1.07203",
+			wantNum:   107203,
+			wantDenom: 100000,
+			wantErr:   nil,
+		},
+		{
+			name:      "large decimal",
+			rate:      "0.00001",
+			wantNum:   1,
+			wantDenom: 100000,
+			wantErr:   nil,
+		},
+		{
+			name:      "negative rate",
+			rate:      "-1.5",
+			wantErr:   ErrInvalidExchangeRate,
+		},
+		{
+			name:      "zero rate",
+			rate:      "0",
+			wantErr:   ErrInvalidExchangeRate,
+		},
+		{
+			name:      "invalid format",
+			rate:      "abc",
+			wantErr:   ErrInvalidExchangeRate,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseRatioString[currency.EUR, currency.USD](tt.rate)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("ParseRatioString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				if got.Numerator != tt.wantNum {
+					t.Errorf("ParseRatioString() got Numerator = %v, want %v", got.Numerator, tt.wantNum)
+				}
+				if got.Denominator != tt.wantDenom {
+					t.Errorf("ParseRatioString() got Denominator = %v, want %v", got.Denominator, tt.wantDenom)
+				}
+			}
+		})
+	}
+}
+
+func TestParseRatioFloat64(t *testing.T) {
+	tests := []struct {
+		name        string
+		rate        float64
+		wantNum     int64
+		wantDenom   int64
+		wantErr     error
+	}{
+		{
+			name:      "simple decimal",
+			rate:      1.5,
+			wantNum:   3,
+			wantDenom: 2,
+			wantErr:   nil,
+		},
+		{
+			name:      "complex decimal",
+			rate:      1.07203,
+			wantNum:   107203,
+			wantDenom: 100000,
+			wantErr:   nil,
+		},
+		{
+			name:      "negative rate",
+			rate:      -1.5,
+			wantErr:   ErrInvalidExchangeRate,
+		},
+		{
+			name:      "zero rate",
+			rate:      0,
+			wantErr:   ErrInvalidExchangeRate,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseRatioFloat64[currency.EUR, currency.USD](tt.rate)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("ParseRatioFloat64() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				if got.Numerator != tt.wantNum {
+					t.Errorf("ParseRatioFloat64() got Numerator = %v, want %v", got.Numerator, tt.wantNum)
+				}
+				if got.Denominator != tt.wantDenom {
+					t.Errorf("ParseRatioFloat64() got Denominator = %v, want %v", got.Denominator, tt.wantDenom)
+				}
+			}
+		})
+	}
+}

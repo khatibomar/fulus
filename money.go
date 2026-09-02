@@ -49,6 +49,9 @@ var (
 
 	// ErrScaleMismatch indicates decimal digits exceed currency minor units
 	ErrScaleMismatch = errors.New("amount scale exceeds currency minor units")
+
+	// ErrInvalidExchangeRate indicates an invalid exchange rate format or value
+	ErrInvalidExchangeRate = errors.New("invalid exchange rate")
 )
 
 // RoundingMode controls how division results are rounded in conversion.
@@ -89,6 +92,37 @@ type Ratio[F currency.Currency, T currency.Currency] struct {
 	Numerator int64
 	// Denominator is the bottom number in the fraction (e.g., 100000 for precise decimal representation)
 	Denominator int64
+}
+
+// ParseRatioString parses a string representation of an exchange rate into a Ratio
+func ParseRatioString[F currency.Currency, T currency.Currency](rate string) (Ratio[F, T], error) {
+	r, ok := new(big.Rat).SetString(rate)
+	if !ok {
+		return Ratio[F, T]{}, fmt.Errorf("%w: %s", ErrInvalidExchangeRate, rate)
+	}
+
+	if r.Sign() <= 0 {
+		return Ratio[F, T]{}, fmt.Errorf("%w: rate must be positive", ErrInvalidExchangeRate)
+	}
+
+	if !r.Num().IsInt64() || !r.Denom().IsInt64() {
+		return Ratio[F, T]{}, ErrOverflow
+	}
+
+	return Ratio[F, T]{
+		Numerator:   r.Num().Int64(),
+		Denominator: r.Denom().Int64(),
+	}, nil
+}
+
+// ParseRatioFloat64 parses a float64 representation of an exchange rate into a Ratio.
+// It formats the float to a string to avoid floating point precision issues.
+func ParseRatioFloat64[F currency.Currency, T currency.Currency](rate float64) (Ratio[F, T], error) {
+	if rate <= 0 {
+		return Ratio[F, T]{}, fmt.Errorf("%w: rate must be positive", ErrInvalidExchangeRate)
+	}
+	s := strconv.FormatFloat(rate, 'f', -1, 64)
+	return ParseRatioString[F, T](s)
 }
 
 // Allocation represents how money is divided according to ratios
