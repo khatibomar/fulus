@@ -175,6 +175,62 @@ func (m Money[T]) Validate(min, max int64) error {
 	return nil
 }
 
+// Cmp compares two Money values and returns:
+// -1 if m < other
+//
+//	0 if m == other
+//
+// +1 if m > other
+func (m Money[T]) Cmp(other Money[T]) int {
+	if m.amount < other.amount {
+		return -1
+	}
+	if m.amount > other.amount {
+		return 1
+	}
+	return 0
+}
+
+// Equal returns true if the two Money values are equal.
+func (m Money[T]) Equal(other Money[T]) bool {
+	return m.amount == other.amount
+}
+
+// GreaterThan returns true if the Money value is greater than the other.
+func (m Money[T]) GreaterThan(other Money[T]) bool {
+	return m.amount > other.amount
+}
+
+// GreaterThanOrEqual returns true if the Money value is greater than or equal to the other.
+func (m Money[T]) GreaterThanOrEqual(other Money[T]) bool {
+	return m.amount >= other.amount
+}
+
+// LessThan returns true if the Money value is less than the other.
+func (m Money[T]) LessThan(other Money[T]) bool {
+	return m.amount < other.amount
+}
+
+// LessThanOrEqual returns true if the Money value is less than or equal to the other.
+func (m Money[T]) LessThanOrEqual(other Money[T]) bool {
+	return m.amount <= other.amount
+}
+
+// IsZero returns true if the Money amount is zero.
+func (m Money[T]) IsZero() bool {
+	return m.amount == 0
+}
+
+// IsPositive returns true if the Money amount is greater than zero.
+func (m Money[T]) IsPositive() bool {
+	return m.amount > 0
+}
+
+// IsNegative returns true if the Money amount is less than zero.
+func (m Money[T]) IsNegative() bool {
+	return m.amount < 0
+}
+
 // Amount returns the internal amount value in the currency's smallest unit.
 // For example, returns cents for USD or pence for GBP.
 func (m Money[T]) Amount() int64 {

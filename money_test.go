@@ -1102,6 +1102,93 @@ func FuzzDistributeInvariants(f *testing.F) {
 	})
 }
 
+func TestComparisons(t *testing.T) {
+	m10 := NewMoney[currency.USD](1000)
+	m10_2 := NewMoney[currency.USD](1000)
+	m20 := NewMoney[currency.USD](2000)
+	m0 := NewMoney[currency.USD](0)
+	m_10 := NewMoney[currency.USD](-1000)
+
+	// Test Cmp
+	if got := m10.Cmp(m20); got != -1 {
+		t.Errorf("Cmp(10, 20) = %d, want -1", got)
+	}
+	if got := m10.Cmp(m10_2); got != 0 {
+		t.Errorf("Cmp(10, 10) = %d, want 0", got)
+	}
+	if got := m20.Cmp(m10); got != 1 {
+		t.Errorf("Cmp(20, 10) = %d, want 1", got)
+	}
+
+	// Test Equal
+	if !m10.Equal(m10_2) {
+		t.Errorf("Equal(10, 10) should be true")
+	}
+	if m10.Equal(m20) {
+		t.Errorf("Equal(10, 20) should be false")
+	}
+
+	// Test GreaterThan
+	if !m20.GreaterThan(m10) {
+		t.Errorf("GreaterThan(20, 10) should be true")
+	}
+	if m10.GreaterThan(m20) {
+		t.Errorf("GreaterThan(10, 20) should be false")
+	}
+
+	// Test GreaterThanOrEqual
+	if !m20.GreaterThanOrEqual(m10) {
+		t.Errorf("GreaterThanOrEqual(20, 10) should be true")
+	}
+	if !m10.GreaterThanOrEqual(m10_2) {
+		t.Errorf("GreaterThanOrEqual(10, 10) should be true")
+	}
+	if m10.GreaterThanOrEqual(m20) {
+		t.Errorf("GreaterThanOrEqual(10, 20) should be false")
+	}
+
+	// Test LessThan
+	if !m10.LessThan(m20) {
+		t.Errorf("LessThan(10, 20) should be true")
+	}
+	if m20.LessThan(m10) {
+		t.Errorf("LessThan(20, 10) should be false")
+	}
+
+	// Test LessThanOrEqual
+	if !m10.LessThanOrEqual(m20) {
+		t.Errorf("LessThanOrEqual(10, 20) should be true")
+	}
+	if !m10.LessThanOrEqual(m10_2) {
+		t.Errorf("LessThanOrEqual(10, 10) should be true")
+	}
+	if m20.LessThanOrEqual(m10) {
+		t.Errorf("LessThanOrEqual(20, 10) should be false")
+	}
+
+	// Test Zero, Positive, Negative
+	if !m0.IsZero() {
+		t.Errorf("IsZero(0) should be true")
+	}
+	if m10.IsZero() {
+		t.Errorf("IsZero(10) should be false")
+	}
+
+	if !m10.IsPositive() {
+		t.Errorf("IsPositive(10) should be true")
+	}
+	if m_10.IsPositive() {
+		t.Errorf("IsPositive(-10) should be false")
+	}
+
+	if !m_10.IsNegative() {
+		t.Errorf("IsNegative(-10) should be true")
+	}
+	if m10.IsNegative() {
+		t.Errorf("IsNegative(10) should be false")
+	}
+}
+
 func FuzzAllocateInvariants(f *testing.F) {
 	f.Add(int64(100), int64(1), int64(1), int64(2))
 

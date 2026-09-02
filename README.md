@@ -130,6 +130,22 @@ func main() {
 - Decimal string parsing with minor-unit validation
 - database/sql integration via Scanner and Valuer
 
+## Comparison Operations
+
+Fulus provides standard comparison methods to safely compare money values of the same currency:
+
+```go
+usd10 := fulus.NewMoney[currency.USD](1000)
+usd20 := fulus.NewMoney[currency.USD](2000)
+
+fmt.Println(usd10.GreaterThan(usd20))      // false
+fmt.Println(usd10.LessThan(usd20))         // true
+fmt.Println(usd10.Equal(usd20))            // false
+fmt.Println(usd10.IsZero())                // false
+fmt.Println(usd10.IsPositive())            // true
+fmt.Println(usd10.Cmp(usd20))              // -1
+```
+
 ## Conversion Rounding Modes
 
 Use `Convert` with an explicit rounding mode:
