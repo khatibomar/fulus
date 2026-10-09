@@ -390,7 +390,7 @@ func TestFormat(t *testing.T) {
 			name:     "zero",
 			money:    NewMoney[currency.USD](0),
 			locale:   locale.EN,
-			expected: "$0",
+			expected: "$0.00",
 		},
 		{
 			name:     "with cents",
@@ -420,7 +420,7 @@ func TestFormat(t *testing.T) {
 			name:     "Arabic locale format",
 			money:    NewMoney[currency.USD](1234567),
 			locale:   locale.AR,
-			expected: "\u200f12,345.67\u00a0US$;\u200f-#,##0.00\u00a0\u00a4",
+			expected: "\u200f12,345.67\u00a0US$",
 		},
 	}
 
@@ -458,13 +458,13 @@ func TestString(t *testing.T) {
 		{
 			name:     "zero currency.USD",
 			amount:   0,
-			expected: "$0",
+			expected: "$0.00",
 			curr:     currency.USD{},
 		},
 		{
 			name:     "JPY no decimals",
 			amount:   1000,
-			expected: "¥1000",
+			expected: "¥1,000",
 			curr:     currency.JPY{},
 		},
 		{
@@ -658,11 +658,66 @@ func TestConvert(t *testing.T) {
 					t.Errorf("Convert() result amount = %v, expected %v", result.Amount, tt.expected)
 				}
 
-				if tt.amount == 0 {
-					if result.ActualRate.Denominator != 1 || result.ActualRate.Numerator != 0 {
-						t.Errorf("Convert() actual rate for zero amount = %+v, expected numerator=0 denominator=1", result.ActualRate)
-					}
+				if tt.amount == 0 && result.ActualRate != tt.ratio {
+					t.Errorf("Convert() actual rate for zero amount = %+v, expected requested ratio %+v", result.ActualRate, tt.ratio)
 				}
+			}
+		})
+	}
+}
+
+func TestConvertActualRate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		amount  int64
+		ratio   Ratio[currency.EUR, currency.USD]
+		want    Ratio[currency.EUR, currency.USD]
+		wantErr error
+	}{
+		{
+			name:   "reduced applied rate",
+			amount: 10000,
+			ratio:  Ratio[currency.EUR, currency.USD]{Numerator: 107203, Denominator: 100000},
+			want:   Ratio[currency.EUR, currency.USD]{Numerator: 134, Denominator: 125},
+		},
+		{
+			name:   "negative amount keeps positive rate",
+			amount: -10000,
+			ratio:  Ratio[currency.EUR, currency.USD]{Numerator: 107203, Denominator: 100000},
+			want:   Ratio[currency.EUR, currency.USD]{Numerator: 134, Denominator: 125},
+		},
+		{
+			name:   "negative denominator is normalized",
+			amount: 10000,
+			ratio:  Ratio[currency.EUR, currency.USD]{Numerator: -107203, Denominator: -100000},
+			want:   Ratio[currency.EUR, currency.USD]{Numerator: 134, Denominator: 125},
+		},
+		{
+			name:   "zero amount returns requested ratio",
+			amount: 0,
+			ratio:  Ratio[currency.EUR, currency.USD]{Numerator: 107203, Denominator: 100000},
+			want:   Ratio[currency.EUR, currency.USD]{Numerator: 107203, Denominator: 100000},
+		},
+		{
+			name:    "applied rate denominator overflow",
+			amount:  math.MinInt64,
+			ratio:   Ratio[currency.EUR, currency.USD]{Numerator: 1, Denominator: 5},
+			wantErr: ErrOverflow,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			_, result, err := Convert(NewMoney[currency.EUR](tt.amount), tt.ratio, RoundTruncate)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("Convert() error = %v, expected %v", err, tt.wantErr)
+			}
+			if err == nil && result.ActualRate != tt.want {
+				t.Errorf("Convert() actual rate = %+v, expected %+v", result.ActualRate, tt.want)
 			}
 		})
 	}
@@ -806,34 +861,71 @@ func TestParseMoney(t *testing.T) {
 }
 
 func TestMoneyValueAndScan(t *testing.T) {
+	t.Parallel()
+
 	original := NewMoney[currency.USD](1050)
 	v, err := original.Value()
 	if err != nil {
 		t.Fatalf("Value() error = %v", err)
 	}
-
-	var scanned Money[currency.USD]
-	if err := scanned.Scan(v); err != nil {
-		t.Fatalf("Scan() error = %v", err)
-	}
-	if scanned.Amount() != original.Amount() {
-		t.Fatalf("scanned amount = %d, expected %d", scanned.Amount(), original.Amount())
+	if v != int64(1050) {
+		t.Fatalf("Value() = %#v, expected int64(1050)", v)
 	}
 
-	if err := scanned.Scan(int64(99)); err != nil {
-		t.Fatalf("Scan(int64) error = %v", err)
-	}
-	if scanned.Amount() != 99 {
-		t.Fatalf("scanned int64 amount = %d, expected 99", scanned.Amount())
+	tests := []struct {
+		name    string
+		value   any
+		want    int64
+		wantErr bool
+	}{
+		{name: "Value output round-trip", value: v, want: 1050},
+		{name: "int64", value: int64(99), want: 99},
+		{name: "negative int64", value: int64(-99), want: -99},
+		{name: "integer bytes", value: []byte("1050"), want: 1050},
+		{name: "integer string", value: "-7", want: -7},
+		{name: "legacy JSON string", value: `{"amount":"100","currency":"USD"}`, want: 100},
+		{name: "legacy JSON bytes", value: []byte(`{"amount":"100","currency":"USD"}`), want: 100},
+		{name: "nil", value: nil, wantErr: true},
+		{name: "currency mismatch", value: `{"amount":"100","currency":"EUR"}`, wantErr: true},
+		{name: "invalid text", value: "12.50", wantErr: true},
+		{name: "unsupported type", value: 1.5, wantErr: true},
 	}
 
-	if err := scanned.Scan(nil); err == nil {
-		t.Fatal("expected error when scanning nil")
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	err = scanned.Scan(`{"amount":"100","currency":"EUR"}`)
-	if err == nil {
-		t.Fatal("expected currency mismatch error")
+			var scanned Money[currency.USD]
+			err := scanned.Scan(tt.value)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Scan(%#v) error = %v, wantErr %v", tt.value, err, tt.wantErr)
+			}
+			if !tt.wantErr && scanned.Amount() != tt.want {
+				t.Fatalf("Scan(%#v) amount = %d, expected %d", tt.value, scanned.Amount(), tt.want)
+			}
+		})
+	}
+}
+
+func TestZeroValueMoney(t *testing.T) {
+	t.Parallel()
+
+	var m Money[currency.USD]
+	if got := m.String(); got != "$0.00" {
+		t.Errorf("String() = %q, expected %q", got, "$0.00")
+	}
+	if got := m.Currency().Code(); got != "USD" {
+		t.Errorf("Currency().Code() = %q, expected %q", got, "USD")
+	}
+	if m != NewMoney[currency.USD](0) {
+		t.Error("zero value must equal NewMoney(0)")
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	if string(b) != `{"amount":"0","currency":"USD"}` {
+		t.Errorf("Marshal() = %s", b)
 	}
 }
 
@@ -1009,7 +1101,31 @@ func TestAllocate(t *testing.T) {
 			name:     "handle remainder",
 			amount:   1000,
 			ratios:   []int64{1, 1, 1},
-			expected: []int64{333, 333, 334},
+			expected: []int64{334, 333, 333},
+		},
+		{
+			name:     "spread leftover units",
+			amount:   100,
+			ratios:   []int64{1, 1, 1, 1, 1, 1, 1},
+			expected: []int64{15, 15, 14, 14, 14, 14, 14},
+		},
+		{
+			name:     "largest remainder gets leftover",
+			amount:   100,
+			ratios:   []int64{1, 1, 1, 1, 1, 1, 3},
+			expected: []int64{11, 11, 11, 11, 11, 11, 34},
+		},
+		{
+			name:     "negative amount",
+			amount:   -100,
+			ratios:   []int64{1, 1, 1},
+			expected: []int64{-34, -33, -33},
+		},
+		{
+			name:     "minimum int64",
+			amount:   math.MinInt64,
+			ratios:   []int64{1, 2},
+			expected: []int64{-3074457345618258603, -6148914691236517205},
 		},
 		{
 			name:     "large amount with multiple ratios",
@@ -1077,7 +1193,7 @@ func TestAllocateRealMoney(t *testing.T) {
 			name:     "split $100 in thirds",
 			amount:   10000, // $100.00
 			ratios:   []int64{1, 1, 1},
-			expected: []string{"$33.33", "$33.33", "$33.34"},
+			expected: []string{"$33.34", "$33.33", "$33.33"},
 		},
 		{
 			name:     "split $50.50 by ratio 1:2",
@@ -1232,7 +1348,7 @@ func TestGeneratedFormatContracts(t *testing.T) {
 				t.Fatalf("formatted value %q does not include symbol %q", formatted, tt.expected.Symbol)
 			}
 
-			if tt.money.Amount() != 0 && tt.money.Currency.MinorUnits() > 0 &&
+			if tt.money.Amount() != 0 && tt.money.Currency().MinorUnits() > 0 &&
 				!strings.Contains(formatted, tt.expected.DecimalSeparator) {
 				t.Fatalf("formatted value %q does not include decimal separator %q", formatted, tt.expected.DecimalSeparator)
 			}
@@ -1497,14 +1613,13 @@ func TestMustMul(t *testing.T) {
 	_ = mMax.MustMul(2)
 }
 
-
 func TestParseRatioString(t *testing.T) {
 	tests := []struct {
-		name        string
-		rate        string
-		wantNum     int64
-		wantDenom   int64
-		wantErr     error
+		name      string
+		rate      string
+		wantNum   int64
+		wantDenom int64
+		wantErr   error
 	}{
 		{
 			name:      "simple integer",
@@ -1535,19 +1650,19 @@ func TestParseRatioString(t *testing.T) {
 			wantErr:   nil,
 		},
 		{
-			name:      "negative rate",
-			rate:      "-1.5",
-			wantErr:   ErrInvalidExchangeRate,
+			name:    "negative rate",
+			rate:    "-1.5",
+			wantErr: ErrInvalidExchangeRate,
 		},
 		{
-			name:      "zero rate",
-			rate:      "0",
-			wantErr:   ErrInvalidExchangeRate,
+			name:    "zero rate",
+			rate:    "0",
+			wantErr: ErrInvalidExchangeRate,
 		},
 		{
-			name:      "invalid format",
-			rate:      "abc",
-			wantErr:   ErrInvalidExchangeRate,
+			name:    "invalid format",
+			rate:    "abc",
+			wantErr: ErrInvalidExchangeRate,
 		},
 	}
 
@@ -1572,11 +1687,11 @@ func TestParseRatioString(t *testing.T) {
 
 func TestParseRatioFloat64(t *testing.T) {
 	tests := []struct {
-		name        string
-		rate        float64
-		wantNum     int64
-		wantDenom   int64
-		wantErr     error
+		name      string
+		rate      float64
+		wantNum   int64
+		wantDenom int64
+		wantErr   error
 	}{
 		{
 			name:      "simple decimal",
@@ -1593,14 +1708,14 @@ func TestParseRatioFloat64(t *testing.T) {
 			wantErr:   nil,
 		},
 		{
-			name:      "negative rate",
-			rate:      -1.5,
-			wantErr:   ErrInvalidExchangeRate,
+			name:    "negative rate",
+			rate:    -1.5,
+			wantErr: ErrInvalidExchangeRate,
 		},
 		{
-			name:      "zero rate",
-			rate:      0,
-			wantErr:   ErrInvalidExchangeRate,
+			name:    "zero rate",
+			rate:    0,
+			wantErr: ErrInvalidExchangeRate,
 		},
 	}
 

@@ -230,10 +230,12 @@ if err != nil {
 ## SQL Integration
 
 `Money[T]` implements `driver.Valuer` and `sql.Scanner`.
+`Value` writes the amount in minor units as `int64`. Use an integer column such as `BIGINT`.
+The type parameter holds the currency, so the column does not store it.
 
 ```go
 var m fulus.Money[currency.USD]
-if err := m.Scan(`{"amount":"1050","currency":"USD"}`); err != nil {
+if err := m.Scan(int64(1050)); err != nil {
 	panic(err)
 }
 
@@ -242,8 +244,10 @@ if err != nil {
 	panic(err)
 }
 
-fmt.Println(v)
+fmt.Println(v) // 1050
 ```
+
+`Scan` also accepts integer text and the JSON form from `MarshalJSON`, so rows that hold the old JSON format still load.
 
 ## Credits
 
