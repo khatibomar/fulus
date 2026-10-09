@@ -210,11 +210,11 @@ func TestParsePattern(t *testing.T) {
 	}{
 		{
 			pattern: "¤#,##0.00",
-			want:    numberPattern{posPrefix: "¤", negPrefix: "-¤", primaryGroup: 3, secondaryGroup: 3},
+			want:    numberPattern{posPrefix: "¤", negPrefix: "¤", implicitMinus: true, primaryGroup: 3, secondaryGroup: 3},
 		},
 		{
 			pattern: "¤ #,##,##0.00",
-			want:    numberPattern{posPrefix: "¤ ", negPrefix: "-¤ ", primaryGroup: 3, secondaryGroup: 2},
+			want:    numberPattern{posPrefix: "¤ ", negPrefix: "¤ ", implicitMinus: true, primaryGroup: 3, secondaryGroup: 2},
 		},
 		{
 			pattern: "#,##0.00 ¤;-#,##0.00 ¤",
@@ -222,11 +222,11 @@ func TestParsePattern(t *testing.T) {
 		},
 		{
 			pattern: "¤#,#0.00",
-			want:    numberPattern{posPrefix: "¤", negPrefix: "-¤", primaryGroup: 2, secondaryGroup: 2},
+			want:    numberPattern{posPrefix: "¤", negPrefix: "¤", implicitMinus: true, primaryGroup: 2, secondaryGroup: 2},
 		},
 		{
 			pattern: "¤0.00",
-			want:    numberPattern{posPrefix: "¤", negPrefix: "-¤"},
+			want:    numberPattern{posPrefix: "¤", negPrefix: "¤", implicitMinus: true},
 		},
 	}
 
@@ -257,7 +257,7 @@ func BenchmarkGroupingThroughMoneyFormat(b *testing.B) {
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				bm.money.Format(bm.locale)
 			}
 		})
@@ -268,7 +268,7 @@ func BenchmarkGroupingBaselineEN(b *testing.B) {
 	m := NewMoney[currency.USD](123456789000)
 
 	b.Run("format", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			m.Format(locale.EN)
 		}
 	})

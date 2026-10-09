@@ -322,6 +322,25 @@ fmt.Println(v) // 1050
 
 Use `NullMoney[T]` for a column that can be NULL. It also writes and reads JSON `null`.
 
+## Performance
+
+Arithmetic uses 128-bit integer math from `math/bits` and does not allocate.
+`math/big` is used only for exchange rate parsing and for factors that do not fit in int64.
+Locale data is in tables indexed by locale, so a format lookup does not depend on the number of locales.
+
+Results of `go test -bench . -benchmem` on an AMD Ryzen AI 9 HX PRO 370:
+
+| Operation | Time | Allocations |
+|-----------|------|-------------|
+| `Add`, `Sub`, `Mul` | 1–2 ns | 0 |
+| `Div`, `MulFrac` | 5 ns | 0 |
+| `MulDecimal("0.0825")` | 8 ns | 0 |
+| `Convert` | 34 ns | 0 |
+| `Allocate` (3 parts) | 29 ns | 1 |
+| `Format` | 120 ns | 1 |
+| `ParseMoney` | 18 ns | 0 |
+| `MarshalJSON` (with `json.Marshal`) | 190 ns | 4 |
+
 ## Credits
 
 This library was inspired by the blog post [How to deal with Money in Software](https://cs-syd.eu/posts/2022-08-22-how-to-deal-with-money-in-software) by Christian Sejersen.

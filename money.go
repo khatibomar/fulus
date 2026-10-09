@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"math"
 	"math/big"
+	"math/bits"
 	"slices"
 	"strconv"
 	"strings"
@@ -191,47 +192,31 @@ func (m Money[T]) Currency() T {
 // Add performs addition of two Money values of the same currency.
 // Returns ErrOverflow if the operation would overflow int64.
 func (m Money[T]) Add(other Money[T]) (Money[T], error) {
-	result := big.NewInt(m.amount)
-	result.Add(result, big.NewInt(other.amount))
-
-	if !result.IsInt64() {
+	result, ok := add64(m.amount, other.amount)
+	if !ok {
 		return Money[T]{}, ErrOverflow
 	}
-
-	return Money[T]{amount: result.Int64()}, nil
+	return Money[T]{amount: result}, nil
 }
 
 // Sub performs subtraction of two Money values of the same currency.
 // Returns ErrOverflow if the operation would overflow int64.
 func (m Money[T]) Sub(other Money[T]) (Money[T], error) {
-	result := big.NewInt(m.amount)
-	result.Sub(result, big.NewInt(other.amount))
-
-	if !result.IsInt64() {
+	result, ok := sub64(m.amount, other.amount)
+	if !ok {
 		return Money[T]{}, ErrOverflow
 	}
-
-	return Money[T]{amount: result.Int64()}, nil
+	return Money[T]{amount: result}, nil
 }
 
 // Mul multiplies the Money value by a scalar value.
 // Returns ErrOverflow if the operation would overflow int64.
-// If scale is 0, sets the amount to 0 and returns nil.
 func (m Money[T]) Mul(scale int64) (Money[T], error) {
-	if scale == 0 {
-		return Money[T]{}, nil
-	}
-
-	// Use math/big to check for overflow
-	result := big.NewInt(m.amount)
-	result.Mul(result, big.NewInt(scale))
-
-	// Check if result fits in int64
-	if !result.IsInt64() {
+	result, ok := mul64(m.amount, scale)
+	if !ok {
 		return Money[T]{}, ErrOverflow
 	}
-
-	return Money[T]{amount: result.Int64()}, nil
+	return Money[T]{amount: result}, nil
 }
 
 // MustAdd performs addition of two Money values of the same currency.
@@ -272,17 +257,7 @@ func (m Money[T]) Div(divisor int64, mode RoundingMode) (Money[T], error) {
 	if divisor == 0 {
 		return Money[T]{}, ErrDivisionByZero
 	}
-
-	result, err := divideWithRounding(big.NewInt(m.amount), big.NewInt(divisor), mode)
-	if err != nil {
-		return Money[T]{}, err
-	}
-
-	if !result.IsInt64() {
-		return Money[T]{}, ErrOverflow
-	}
-
-	return Money[T]{amount: result.Int64()}, nil
+	return m.scale(1, divisor, mode)
 }
 
 // MulFrac multiplies the Money value by numerator/denominator and rounds the result with mode.
@@ -293,7 +268,7 @@ func (m Money[T]) MulFrac(numerator, denominator int64, mode RoundingMode) (Mone
 	if denominator == 0 {
 		return Money[T]{}, ErrDivisionByZero
 	}
-	return m.mulRat(big.NewInt(numerator), big.NewInt(denominator), mode)
+	return m.scale(numerator, denominator, mode)
 }
 
 // MulDecimal multiplies the Money value by a decimal factor such as "0.0825" and rounds the result with mode.
@@ -301,16 +276,20 @@ func (m Money[T]) MulFrac(numerator, denominator int64, mode RoundingMode) (Mone
 // Returns ErrInvalidFactor if the factor cannot be parsed.
 // Returns ErrOverflow if the result does not fit in int64.
 func (m Money[T]) MulDecimal(factor string, mode RoundingMode) (Money[T], error) {
+	if numerator, denominator, ok := parseFactor(factor); ok {
+		return m.scale(numerator, denominator, mode)
+	}
+
 	r, ok := new(big.Rat).SetString(factor)
 	if !ok {
 		return Money[T]{}, fmt.Errorf("%w: %q", ErrInvalidFactor, factor)
 	}
-	return m.mulRat(r.Num(), r.Denom(), mode)
-}
+	if r.Num().IsInt64() && r.Denom().IsInt64() {
+		return m.scale(r.Num().Int64(), r.Denom().Int64(), mode)
+	}
 
-func (m Money[T]) mulRat(numerator, denominator *big.Int, mode RoundingMode) (Money[T], error) {
-	product := new(big.Int).Mul(big.NewInt(m.amount), numerator)
-	result, err := divideWithRounding(product, denominator, mode)
+	product := new(big.Int).Mul(big.NewInt(m.amount), r.Num())
+	result, err := divideWithRounding(product, r.Denom(), mode)
 	if err != nil {
 		return Money[T]{}, err
 	}
@@ -318,6 +297,55 @@ func (m Money[T]) mulRat(numerator, denominator *big.Int, mode RoundingMode) (Mo
 		return Money[T]{}, ErrOverflow
 	}
 	return Money[T]{amount: result.Int64()}, nil
+}
+
+// scale returns m*numerator/denominator rounded with mode. The denominator must not be zero.
+func (m Money[T]) scale(numerator, denominator int64, mode RoundingMode) (Money[T], error) {
+	if !mode.valid() {
+		return Money[T]{}, ErrInvalidRoundingMode
+	}
+	result, ok := mulDivRound(m.amount, numerator, denominator, mode)
+	if !ok {
+		return Money[T]{}, ErrOverflow
+	}
+	return Money[T]{amount: result}, nil
+}
+
+// parseFactor parses a short decimal factor such as "-0.0825" into numerator/denominator without allocation.
+// It reports false for other forms, which MulDecimal parses with math/big.
+func parseFactor(s string) (numerator, denominator int64, ok bool) {
+	negative := false
+	if s != "" && (s[0] == '-' || s[0] == '+') {
+		negative = s[0] == '-'
+		s = s[1:]
+	}
+	if s == "" || len(s) > 18 {
+		return 0, 0, false
+	}
+
+	denominator = 1
+	seenDigit, seenPoint := false, false
+	for i := range len(s) {
+		switch c := s[i]; {
+		case c >= '0' && c <= '9':
+			numerator = numerator*10 + int64(c-'0')
+			if seenPoint {
+				denominator *= 10
+			}
+			seenDigit = true
+		case c == '.' && !seenPoint:
+			seenPoint = true
+		default:
+			return 0, 0, false
+		}
+	}
+	if !seenDigit {
+		return 0, 0, false
+	}
+	if negative {
+		numerator = -numerator
+	}
+	return numerator, denominator, true
 }
 
 // RoundCash rounds the Money value to the smallest cash amount of the currency, with mode.
@@ -334,16 +362,16 @@ func (m Money[T]) RoundCash(mode RoundingMode) (Money[T], error) {
 		return m, nil
 	}
 
-	increment := big.NewInt(rounder.CashIncrement())
-	steps, err := divideWithRounding(big.NewInt(m.amount), increment, mode)
-	if err != nil {
-		return Money[T]{}, err
-	}
-	result := steps.Mul(steps, increment)
-	if !result.IsInt64() {
+	increment := rounder.CashIncrement()
+	steps, ok := mulDivRound(m.amount, 1, increment, mode)
+	if !ok {
 		return Money[T]{}, ErrOverflow
 	}
-	return Money[T]{amount: result.Int64()}, nil
+	result, ok := mul64(steps, increment)
+	if !ok {
+		return Money[T]{}, ErrOverflow
+	}
+	return Money[T]{amount: result}, nil
 }
 
 // Abs returns the absolute value of the money amount.
@@ -510,28 +538,20 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode Roundin
 		return Money[T]{}, ConversionResult[F, T]{}, ErrZeroDenominator
 	}
 
-	theoretical := big.NewInt(m.amount)
-	theoretical.Mul(theoretical, big.NewInt(ratio.Numerator))
-	quotient, err := divideWithRounding(theoretical, big.NewInt(ratio.Denominator), mode)
-	if err != nil {
-		return Money[T]{}, ConversionResult[F, T]{}, err
+	if !mode.valid() {
+		return Money[T]{}, ConversionResult[F, T]{}, ErrInvalidRoundingMode
 	}
 
-	if !quotient.IsInt64() {
+	roundedAmount, ok := mulDivRound(m.amount, ratio.Numerator, ratio.Denominator, mode)
+	if !ok {
 		return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
 	}
 
-	roundedAmount := quotient.Int64()
-
 	actualRate := ratio
 	if m.amount != 0 {
-		applied := new(big.Rat).SetFrac(big.NewInt(roundedAmount), big.NewInt(m.amount))
-		if !applied.Denom().IsInt64() {
+		actualRate, ok = reducedRatio[F, T](roundedAmount, m.amount)
+		if !ok {
 			return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
-		}
-		actualRate = Ratio[F, T]{
-			Numerator:   applied.Num().Int64(),
-			Denominator: applied.Denom().Int64(),
 		}
 	}
 
@@ -541,6 +561,16 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode Roundin
 	}
 
 	return NewMoney[T](roundedAmount), result, nil
+}
+
+// reducedRatio returns numerator/denominator in lowest terms with a positive denominator.
+// It reports false if a term does not fit in int64. The denominator must not be zero.
+func reducedRatio[F, T currency.Currency](numerator, denominator int64) (Ratio[F, T], bool) {
+	g := gcd(abs64(numerator), abs64(denominator))
+	negative := (numerator < 0) != (denominator < 0)
+	n, okN := fromMagnitude(abs64(numerator)/g, negative)
+	d, okD := fromMagnitude(abs64(denominator)/g, false)
+	return Ratio[F, T]{Numerator: n, Denominator: d}, okN && okD
 }
 
 func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*big.Int, error) {
@@ -609,19 +639,18 @@ func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 	// Then the leftover minor units go one by one to the parts with the largest remainders.
 	// Ties go to the part with the lower index.
 	parts := make([]Money[T], len(ratios))
-	remainders := make([]int64, len(ratios))
+	remainders := make([]uint64, len(ratios))
 	leftover := m.amount
-	bigTotal := big.NewInt(total)
-	share, rem := new(big.Int), new(big.Int)
 	for i, ratio := range ratios {
-		product := new(big.Int).Mul(big.NewInt(m.amount), big.NewInt(ratio))
-		share.QuoRem(product, bigTotal, rem)
-		parts[i] = Money[T]{amount: share.Int64()}
-		remainders[i] = rem.Int64()
-		if remainders[i] < 0 {
-			remainders[i] = -remainders[i]
-		}
-		leftover -= parts[i].amount
+		// The share is at most m.amount in magnitude, so it always fits.
+		q, r, negative, _ := mulDiv(m.amount, ratio, total)
+		share, _ := fromMagnitude(q, negative)
+		parts[i] = Money[T]{amount: share}
+		remainders[i] = r
+		leftover -= share
+	}
+	if leftover == 0 {
+		return Allocation[T]{Parts: parts, Total: m}, nil
 	}
 
 	step := int64(1)
@@ -639,19 +668,30 @@ func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 		parts[i].amount += step
 	}
 
-	return Allocation[T]{
-		Parts: parts,
-		Total: m,
-	}, nil
+	return Allocation[T]{Parts: parts, Total: m}, nil
 }
 
 // MarshalJSON implements the json.Marshaler interface
 // Serializes the amount as a string to preserve precision
 func (m Money[T]) MarshalJSON() ([]byte, error) {
-	return json.Marshal(moneyJSON{
-		Amount:   strconv.FormatInt(m.amount, 10),
-		Currency: m.Currency().Code(),
-	})
+	return marshalMoneyJSON(m.amount, m.Currency().Code())
+}
+
+// marshalMoneyJSON writes the JSON form of an amount without reflection
+// when the currency code needs no escaping.
+func marshalMoneyJSON(amount int64, code string) ([]byte, error) {
+	for i := range len(code) {
+		if c := code[i]; c < 0x20 || c > 0x7e || c == '"' || c == '\\' || c == '<' || c == '>' || c == '&' {
+			return json.Marshal(moneyJSON{Amount: strconv.FormatInt(amount, 10), Currency: code})
+		}
+	}
+
+	b := make([]byte, 0, len(`{"amount":"","currency":""}`)+20+len(code))
+	b = append(b, `{"amount":"`...)
+	b = strconv.AppendInt(b, amount, 10)
+	b = append(b, `","currency":"`...)
+	b = append(b, code...)
+	return append(b, `"}`...), nil
 }
 
 type moneyJSON struct {
@@ -707,55 +747,55 @@ func parseDecimal(amount string, minorUnits int) (int64, error) {
 		}
 	}
 
-	parts := strings.Split(amount, ".")
-	if len(parts) > 2 {
+	whole, fractional, hasPoint := strings.Cut(amount, ".")
+	if hasPoint && strings.Contains(fractional, ".") {
 		return 0, fmt.Errorf("%w: multiple decimal separators", ErrInvalidAmountFormat)
 	}
-
-	whole := parts[0]
 	if whole == "" {
 		return 0, fmt.Errorf("%w: missing whole part", ErrInvalidAmountFormat)
 	}
 	if !allDigits(whole) {
 		return 0, fmt.Errorf("%w: invalid whole part", ErrInvalidAmountFormat)
 	}
-
-	fractional := ""
-	if len(parts) == 2 {
-		fractional = parts[1]
-		if fractional == "" {
-			return 0, fmt.Errorf("%w: missing fractional part", ErrInvalidAmountFormat)
-		}
-		if !allDigits(fractional) {
-			return 0, fmt.Errorf("%w: invalid fractional part", ErrInvalidAmountFormat)
-		}
+	if hasPoint && fractional == "" {
+		return 0, fmt.Errorf("%w: missing fractional part", ErrInvalidAmountFormat)
 	}
-
+	if !allDigits(fractional) {
+		return 0, fmt.Errorf("%w: invalid fractional part", ErrInvalidAmountFormat)
+	}
 	if len(fractional) > minorUnits {
 		return 0, fmt.Errorf("%w: got %d fractional digits, max is %d", ErrScaleMismatch, len(fractional), minorUnits)
 	}
 
-	if len(fractional) < minorUnits {
-		fractional = fractional + strings.Repeat("0", minorUnits-len(fractional))
+	var magnitude uint64
+	push := func(digit uint64) bool {
+		if magnitude > (math.MaxUint64-digit)/10 {
+			return false
+		}
+		magnitude = magnitude*10 + digit
+		return true
+	}
+	for i := range len(whole) {
+		if !push(uint64(whole[i] - '0')) {
+			return 0, ErrOverflow
+		}
+	}
+	for i := range len(fractional) {
+		if !push(uint64(fractional[i] - '0')) {
+			return 0, ErrOverflow
+		}
+	}
+	for range minorUnits - len(fractional) {
+		if !push(0) {
+			return 0, ErrOverflow
+		}
 	}
 
-	magnitude := whole + fractional
-	if magnitude == "" {
-		return 0, fmt.Errorf("%w: empty magnitude", ErrInvalidAmountFormat)
-	}
-
-	intVal, ok := new(big.Int).SetString(magnitude, 10)
+	result, ok := fromMagnitude(magnitude, negative)
 	if !ok {
-		return 0, fmt.Errorf("%w: cannot parse magnitude", ErrInvalidAmountFormat)
-	}
-	if negative {
-		intVal.Neg(intVal)
-	}
-	if !intVal.IsInt64() {
 		return 0, ErrOverflow
 	}
-
-	return intVal.Int64(), nil
+	return result, nil
 }
 
 func parseIntAmount(amount string) (int64, error) {
@@ -852,14 +892,18 @@ func (m Money[T]) LogValue() slog.Value {
 // Returns ErrOverflow if the sum does not fit in int64.
 // An intermediate sum can be larger than int64 if the final sum fits.
 func Sum[T currency.Currency](values ...Money[T]) (Money[T], error) {
-	total := new(big.Int)
+	// hi and lo hold a signed 128-bit total, so no intermediate sum can overflow.
+	var hi int64
+	var lo uint64
 	for _, v := range values {
-		total.Add(total, big.NewInt(v.amount))
+		var carry uint64
+		lo, carry = bits.Add64(lo, uint64(v.amount), 0)
+		hi += v.amount>>63 + int64(carry)
 	}
-	if !total.IsInt64() {
+	if hi != int64(lo)>>63 {
 		return Money[T]{}, ErrOverflow
 	}
-	return Money[T]{amount: total.Int64()}, nil
+	return Money[T]{amount: int64(lo)}, nil
 }
 
 // Min returns the smallest of the values.

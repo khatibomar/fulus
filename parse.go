@@ -31,6 +31,9 @@ func parseFormatted(s string, minorUnits int, info currency.FormatInfo) (int64, 
 	}
 	posPrefix, posSuffix := affix(p.posPrefix), affix(p.posSuffix)
 	negPrefix, negSuffix := affix(p.negPrefix), affix(p.negSuffix)
+	if p.implicitMinus {
+		negPrefix = "-" + negPrefix
+	}
 
 	input := normalizeFormatted(s)
 	negative := false
