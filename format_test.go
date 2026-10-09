@@ -1,6 +1,7 @@
 package fulus
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -20,7 +21,7 @@ func TestFormatGroupingThroughMoneyFormat(t *testing.T) {
 			name:   "zero",
 			amount: 0,
 			locale: locale.EN,
-			want:   "$0",
+			want:   "$0.00",
 		},
 		{
 			name:   "single digit",
@@ -77,6 +78,169 @@ func TestFormatGroupingThroughMoneyFormat(t *testing.T) {
 	}
 }
 
+func TestFormatCLDRPatterns(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		format func() string
+		want   string
+	}{
+		{
+			name:   "indian grouping",
+			format: func() string { return NewMoney[currency.INR](-1234567890).Format(locale.EN_IN) },
+			want:   "-₹1,23,45,678.90",
+		},
+		{
+			name:   "indian grouping below one group",
+			format: func() string { return NewMoney[currency.INR](100).Format(locale.EN_IN) },
+			want:   "₹1.00",
+		},
+		{
+			name:   "two digit grouping",
+			format: func() string { return NewMoney[currency.AMD](123456789).Format(locale.TOK) },
+			want:   "֏1\u00a023\u00a045\u00a067,89",
+		},
+		{
+			name:   "positive subpattern",
+			format: func() string { return NewMoney[currency.CHF](123456).Format(locale.DE_CH) },
+			want:   "CHF\u00a01'234.56",
+		},
+		{
+			name:   "negative subpattern",
+			format: func() string { return NewMoney[currency.CHF](-123456).Format(locale.DE_CH) },
+			want:   "CHF-1'234.56",
+		},
+		{
+			name:   "negative subpattern with minus after symbol",
+			format: func() string { return NewMoney[currency.EUR](-123456).Format(locale.NL) },
+			want:   "€\u00a0-1.234,56",
+		},
+		{
+			name:   "negative subpattern with bidi marks",
+			format: func() string { return NewMoney[currency.EGP](-123456).Format(locale.AR) },
+			want:   "\u200f\u200e-1,234.56\u00a0ج.م.\u200f",
+		},
+		{
+			name:   "no minor units with grouping",
+			format: func() string { return NewMoney[currency.JPY](-1234).Format(locale.EN) },
+			want:   "-¥1,234",
+		},
+		{
+			name:   "no minor units zero",
+			format: func() string { return NewMoney[currency.JPY](0).Format(locale.EN) },
+			want:   "¥0",
+		},
+		{
+			name:   "minimum int64",
+			format: func() string { return NewMoney[currency.USD](math.MinInt64).Format(locale.EN) },
+			want:   "-$92,233,720,368,547,758.08",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := tt.format(); got != tt.want {
+				t.Errorf("Format() = %+q, want %+q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFormatAmount(t *testing.T) {
+	t.Parallel()
+
+	base := currency.FormatInfo{
+		Symbol:           "$",
+		GroupSeparator:   ",",
+		DecimalSeparator: ".",
+		MinusSign:        "-",
+	}
+	withFormat := func(format string) currency.FormatInfo {
+		info := base
+		info.Format = format
+		return info
+	}
+
+	tests := []struct {
+		name       string
+		amount     int64
+		minorUnits int
+		info       currency.FormatInfo
+		want       string
+	}{
+		{name: "three minor units", amount: 5, minorUnits: 3, info: withFormat("¤#,##0.00"), want: "$0.005"},
+		{name: "four minor units", amount: -123456789, minorUnits: 4, info: withFormat("¤#,##0.00"), want: "-$12,345.6789"},
+		{name: "minus suffix", amount: -1234, minorUnits: 2, info: withFormat("¤ #,##0.00;¤ #,##0.00-"), want: "$ 12.34-"},
+		{name: "minus suffix positive", amount: 1234, minorUnits: 2, info: withFormat("¤ #,##0.00;¤ #,##0.00-"), want: "$ 12.34"},
+		{name: "no grouping", amount: 123456789, minorUnits: 2, info: withFormat("¤0.00"), want: "$1234567.89"},
+		{name: "symbol suffix", amount: -123456, minorUnits: 2, info: withFormat("#,##0.00 ¤"), want: "-1,234.56 $"},
+		{name: "empty pattern", amount: 123456, minorUnits: 2, info: withFormat(""), want: "1234.56"},
+		{name: "negative minor units", amount: 1234, minorUnits: -1, info: withFormat("¤#,##0"), want: "$1,234"},
+		{
+			name:       "multi rune minus sign",
+			amount:     -1,
+			minorUnits: 2,
+			info: currency.FormatInfo{
+				Symbol: "🐉", Format: "#,##0.00 ¤", GroupSeparator: "⚔︎", DecimalSeparator: "🦖", MinusSign: "⛔",
+			},
+			want: "⛔0🦖01 🐉",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := formatAmount(tt.amount, tt.minorUnits, tt.info); got != tt.want {
+				t.Errorf("formatAmount() = %+q, want %+q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestParsePattern(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		pattern string
+		want    numberPattern
+	}{
+		{
+			pattern: "¤#,##0.00",
+			want:    numberPattern{posPrefix: "¤", negPrefix: "-¤", primaryGroup: 3, secondaryGroup: 3},
+		},
+		{
+			pattern: "¤ #,##,##0.00",
+			want:    numberPattern{posPrefix: "¤ ", negPrefix: "-¤ ", primaryGroup: 3, secondaryGroup: 2},
+		},
+		{
+			pattern: "#,##0.00 ¤;-#,##0.00 ¤",
+			want:    numberPattern{posSuffix: " ¤", negPrefix: "-", negSuffix: " ¤", primaryGroup: 3, secondaryGroup: 3},
+		},
+		{
+			pattern: "¤#,#0.00",
+			want:    numberPattern{posPrefix: "¤", negPrefix: "-¤", primaryGroup: 2, secondaryGroup: 2},
+		},
+		{
+			pattern: "¤0.00",
+			want:    numberPattern{posPrefix: "¤", negPrefix: "-¤"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.pattern, func(t *testing.T) {
+			t.Parallel()
+
+			if got := parsePattern(tt.pattern); got != tt.want {
+				t.Errorf("parsePattern(%q) = %+v, want %+v", tt.pattern, got, tt.want)
+			}
+		})
+	}
+}
+
 func BenchmarkGroupingThroughMoneyFormat(b *testing.B) {
 	benchmarks := []struct {
 		name   string
@@ -127,16 +291,9 @@ func FuzzFormatGrouping(f *testing.F) {
 			t.Fatalf("unexpected EN format shape: %q", result)
 		}
 
-		majorPart := strings.TrimPrefix(result, "$")
-		if n == 0 {
-			if majorPart != "0" {
-				t.Fatalf("unexpected zero format: %q", result)
-			}
-		} else {
-			if !strings.HasSuffix(majorPart, ".00") {
-				t.Fatalf("unexpected EN format shape: %q", result)
-			}
-			majorPart = strings.TrimSuffix(majorPart, ".00")
+		majorPart, ok := strings.CutSuffix(strings.TrimPrefix(result, "$"), ".00")
+		if !ok {
+			t.Fatalf("unexpected EN format shape: %q", result)
 		}
 
 		// Verify the result doesn't contain unexpected separators

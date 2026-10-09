@@ -1,12 +1,14 @@
 package fulus
 
 import (
+	"cmp"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"math/big"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -70,8 +72,6 @@ const (
 type Money[T currency.Currency] struct {
 	// amount stores the monetary value in the currency's smallest unit (e.g., cents for USD)
 	amount int64
-	// Currency represents the type of currency for this money value
-	currency.Currency
 }
 
 // Distribution represents how to split money into chunks
@@ -135,7 +135,8 @@ type Allocation[T currency.Currency] struct {
 type ConversionResult[F currency.Currency, T currency.Currency] struct {
 	// Amount stores the resulting converted monetary value
 	Amount int64
-	// ActualRate stores the precise conversion rate that was actually applied
+	// ActualRate is the applied rate Amount/source amount, reduced and with a positive denominator.
+	// For a zero source amount it is the requested ratio.
 	ActualRate Ratio[F, T]
 }
 
@@ -145,11 +146,13 @@ type ConversionResult[F currency.Currency, T currency.Currency] struct {
 // USD 10.50 should be passed as 1050
 // EUR 5.99 should be passed as 599
 func NewMoney[T currency.Currency](amount int64) Money[T] {
+	return Money[T]{amount: amount}
+}
+
+// Currency returns the currency of the Money value.
+func (m Money[T]) Currency() T {
 	var c T
-	return Money[T]{
-		amount:   amount,
-		Currency: c,
-	}
+	return c
 }
 
 // Add performs addition of two Money values of the same currency.
@@ -162,7 +165,7 @@ func (m Money[T]) Add(other Money[T]) (Money[T], error) {
 		return Money[T]{}, ErrOverflow
 	}
 
-	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
+	return Money[T]{amount: result.Int64()}, nil
 }
 
 // Sub performs subtraction of two Money values of the same currency.
@@ -175,7 +178,7 @@ func (m Money[T]) Sub(other Money[T]) (Money[T], error) {
 		return Money[T]{}, ErrOverflow
 	}
 
-	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
+	return Money[T]{amount: result.Int64()}, nil
 }
 
 // Mul multiplies the Money value by a scalar value.
@@ -183,7 +186,7 @@ func (m Money[T]) Sub(other Money[T]) (Money[T], error) {
 // If scale is 0, sets the amount to 0 and returns nil.
 func (m Money[T]) Mul(scale int64) (Money[T], error) {
 	if scale == 0 {
-		return Money[T]{amount: 0, Currency: m.Currency}, nil
+		return Money[T]{}, nil
 	}
 
 	// Use math/big to check for overflow
@@ -195,7 +198,7 @@ func (m Money[T]) Mul(scale int64) (Money[T], error) {
 		return Money[T]{}, ErrOverflow
 	}
 
-	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
+	return Money[T]{amount: result.Int64()}, nil
 }
 
 // MustAdd performs addition of two Money values of the same currency.
@@ -246,7 +249,7 @@ func (m Money[T]) Div(divisor int64, mode RoundingMode) (Money[T], error) {
 		return Money[T]{}, ErrOverflow
 	}
 
-	return Money[T]{amount: result.Int64(), Currency: m.Currency}, nil
+	return Money[T]{amount: result.Int64()}, nil
 }
 
 // Abs returns the absolute value of the money amount.
@@ -256,7 +259,7 @@ func (m Money[T]) Abs() (Money[T], error) {
 		return Money[T]{}, ErrOverflow
 	}
 	if m.amount < 0 {
-		return Money[T]{amount: -m.amount, Currency: m.Currency}, nil
+		return Money[T]{amount: -m.amount}, nil
 	}
 	return m, nil
 }
@@ -267,7 +270,7 @@ func (m Money[T]) Neg() (Money[T], error) {
 	if m.amount == math.MinInt64 {
 		return Money[T]{}, ErrOverflow
 	}
-	return Money[T]{amount: -m.amount, Currency: m.Currency}, nil
+	return Money[T]{amount: -m.amount}, nil
 }
 
 // Validate checks if the money amount falls within the specified range [min, max].
@@ -353,49 +356,11 @@ func (m Money[T]) String() string {
 }
 
 // Format returns a formatted string representation of the Money value for the specified locale.
-func (m Money[T]) Format(locale locale.Locale) string {
-	info := m.Currency.FormatInfo(locale)
-
-	if m.amount == 0 {
-		zeroFmt := strings.Replace(info.Format, "#,##0.00", "0", 1)
-		return strings.Replace(zeroFmt, "¤", info.Symbol, 1)
-	}
-
-	amount := big.NewInt(m.amount)
-	negative := amount.Sign() < 0
-	if negative {
-		amount.Abs(amount)
-	}
-
-	divisor := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(m.Currency.MinorUnits())), nil)
-	major := new(big.Int).Quo(new(big.Int).Set(amount), divisor)
-	minor := new(big.Int).Mod(new(big.Int).Set(amount), divisor)
-
-	majorStr := formatMajorString(major.String(), info.GroupSeparator)
-
-	var result string
-	if m.Currency.MinorUnits() > 0 {
-		minorStr := minor.String()
-		if len(minorStr) < m.Currency.MinorUnits() {
-			minorStr = strings.Repeat("0", m.Currency.MinorUnits()-len(minorStr)) + minorStr
-		}
-		result = strings.Replace(info.Format, "#,##0.00",
-			majorStr+info.DecimalSeparator+minorStr,
-			1)
-	} else {
-		result = strings.Replace(info.Format, "#,##0.00", major.String(), 1)
-		result = strings.Replace(result, ".00", "", 1)
-	}
-
-	result = strings.Replace(result, "¤", info.Symbol, 1)
-
-	if negative {
-		if !strings.Contains(result, info.MinusSign) {
-			result = info.MinusSign + result
-		}
-	}
-
-	return result
+// It applies the CLDR pattern of the locale, including the negative subpattern and the group sizes.
+// The number of fraction digits is always the minor units of the currency.
+func (m Money[T]) Format(loc locale.Locale) string {
+	c := m.Currency()
+	return formatAmount(m.amount, c.MinorUnits(), c.FormatInfo(loc))
 }
 
 // Distribute splits the money amount into the specified number of chunks
@@ -463,14 +428,17 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode Roundin
 	}
 
 	roundedAmount := quotient.Int64()
-	actualDenominator := m.amount
-	if actualDenominator == 0 {
-		actualDenominator = 1
-	}
 
-	actualRate := Ratio[F, T]{
-		Numerator:   roundedAmount,
-		Denominator: actualDenominator,
+	actualRate := ratio
+	if m.amount != 0 {
+		applied := new(big.Rat).SetFrac(big.NewInt(roundedAmount), big.NewInt(m.amount))
+		if !applied.Denom().IsInt64() {
+			return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
+		}
+		actualRate = Ratio[F, T]{
+			Numerator:   applied.Num().Int64(),
+			Denominator: applied.Denom().Int64(),
+		}
 	}
 
 	result := ConversionResult[F, T]{
@@ -538,30 +506,38 @@ func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 		total += ratio
 	}
 
+	// Largest remainder method: each part gets its truncated share first.
+	// Then the leftover minor units go one by one to the parts with the largest remainders.
+	// Ties go to the part with the lower index.
 	parts := make([]Money[T], len(ratios))
-	remaining := m.amount
-
-	// Allocate for all parts except the last one
-	for i := range len(ratios) - 1 {
-		share := big.NewInt(m.amount)
-		share.Mul(share, big.NewInt(ratios[i]))
-		share.Quo(share, big.NewInt(total))
-
-		if !share.IsInt64() {
-			return Allocation[T]{}, ErrOverflow
+	remainders := make([]int64, len(ratios))
+	leftover := m.amount
+	bigTotal := big.NewInt(total)
+	share, rem := new(big.Int), new(big.Int)
+	for i, ratio := range ratios {
+		product := new(big.Int).Mul(big.NewInt(m.amount), big.NewInt(ratio))
+		share.QuoRem(product, bigTotal, rem)
+		parts[i] = Money[T]{amount: share.Int64()}
+		remainders[i] = rem.Int64()
+		if remainders[i] < 0 {
+			remainders[i] = -remainders[i]
 		}
-
-		parts[i] = Money[T]{
-			amount:   share.Int64(),
-			Currency: m.Currency,
-		}
-		remaining -= parts[i].amount
+		leftover -= parts[i].amount
 	}
 
-	// Last part gets the remaining amount to avoid rounding issues
-	parts[len(ratios)-1] = Money[T]{
-		amount:   remaining,
-		Currency: m.Currency,
+	step := int64(1)
+	if leftover < 0 {
+		step = -1
+	}
+	order := make([]int, len(ratios))
+	for i := range order {
+		order[i] = i
+	}
+	slices.SortStableFunc(order, func(a, b int) int {
+		return cmp.Compare(remainders[b], remainders[a])
+	})
+	for _, i := range order[:leftover*step] {
+		parts[i].amount += step
 	}
 
 	return Allocation[T]{
@@ -580,7 +556,7 @@ func (m Money[T]) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(MoneyJSON{
 		Amount:   fmt.Sprintf("%d", m.amount),
-		Currency: m.Currency.Code(),
+		Currency: m.Currency().Code(),
 	})
 }
 
@@ -601,17 +577,16 @@ func (m *Money[T]) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	var zeroCurrency T
-	if zeroCurrency.Code() != temp.Currency {
+	code := m.Currency().Code()
+	if code != temp.Currency {
 		return fmt.Errorf(
 			"currency mismatch: expected %s, got %s",
-			zeroCurrency.Code(),
+			code,
 			temp.Currency,
 		)
 	}
 
 	m.amount = amount
-	m.Currency = zeroCurrency
 	return nil
 }
 
@@ -707,31 +682,34 @@ func allDigits(s string) bool {
 }
 
 // Value implements driver.Valuer for database/sql.
+// It returns the amount in minor units as int64, for use with an integer column such as BIGINT.
 func (m Money[T]) Value() (driver.Value, error) {
-	b, err := m.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-	return string(b), nil
+	return m.amount, nil
 }
 
 // Scan implements sql.Scanner for database/sql.
+// It accepts an int64 amount in minor units, the same amount as integer text,
+// or the JSON form that MarshalJSON writes.
 func (m *Money[T]) Scan(value any) error {
-	if value == nil {
-		return fmt.Errorf("cannot scan NULL into Money")
-	}
-
 	switch v := value.(type) {
+	case nil:
+		return fmt.Errorf("cannot scan NULL into Money")
 	case int64:
-		var c T
 		m.amount = v
-		m.Currency = c
 		return nil
 	case []byte:
-		return m.UnmarshalJSON(v)
+		return m.scanText(string(v))
 	case string:
-		return m.UnmarshalJSON([]byte(v))
+		return m.scanText(v)
 	default:
 		return fmt.Errorf("cannot scan type %T into Money", value)
 	}
+}
+
+func (m *Money[T]) scanText(s string) error {
+	if amount, err := strconv.ParseInt(s, 10, 64); err == nil {
+		m.amount = amount
+		return nil
+	}
+	return m.UnmarshalJSON([]byte(s))
 }
