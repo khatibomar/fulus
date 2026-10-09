@@ -6,8 +6,13 @@
 // precision and correctness.
 //
 // The package supports:
-//   - type-safe arithmetic across currency types (Add, Sub, Mul, Div, Abs, Neg)
-//   - configurable conversion rounding policies
-//   - decimal string parsing with minor-unit validation
-//   - JSON and database/sql interoperability
+//   - type-safe arithmetic across currency types (Add, Sub, Mul, Div, MulFrac, MulDecimal, Abs, Neg)
+//   - seven explicit rounding modes and CLDR cash rounding
+//   - runtime currencies with AnyMoney and the currency registry
+//   - CLDR formatting and parsing of localized strings
+//   - JSON, text, log/slog and database/sql interoperability
+//
+// The amount is an int64 in minor units. For a currency with 2 minor units,
+// the range is ±92,233,720,368,547,758.07. Every operation returns ErrOverflow
+// instead of a wrong result when the result does not fit.
 package fulus
