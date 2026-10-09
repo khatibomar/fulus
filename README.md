@@ -124,11 +124,19 @@ func main() {
 - Type-safe money operations using Go generics
 - Prevention of invalid currency operations at compile time
 - Safe decimal arithmetic using integer math
-- Support for distribution and allocation of money
-- JSON marshaling/unmarshaling support
-- Explicit conversion rounding modes (truncate, half-up, half-even)
-- Decimal string parsing with minor-unit validation
-- database/sql integration via Scanner and Valuer
+- Support for distribution and allocation of money (largest remainder method)
+- Runtime currencies with `AnyMoney` and a currency registry
+- Seven explicit rounding modes, multiplication by fractions and decimals, and CLDR cash rounding
+- CLDR formatting and parsing of localized strings, with locale matching from BCP 47 and POSIX tags
+- JSON, text, `log/slog` and database/sql support, with `NullMoney` for NULL values
+
+### Limits
+
+The amount is an `int64` in minor units.
+The largest value is 92,233,720,368,547,758.07 for a currency with 2 minor units.
+Every operation returns `ErrOverflow` instead of a wrong result when the result does not fit.
+A currency with many minor units has a smaller range.
+For example, a token with 18 minor units cannot hold more than about 9.2 units.
 
 ## Arithmetic Operations
 
@@ -147,6 +155,14 @@ usd20, err = usd10.Mul(2)
 
 // Division with explicit rounding
 usd5, err := usd10.Div(2, fulus.RoundHalfUp)
+
+// Multiplication by a fraction or a decimal, with explicit rounding
+tip, err := usd10.MulFrac(15, 100, fulus.RoundHalfEven)   // $1.50
+tax, err := usd10.MulDecimal("0.0825", fulus.RoundHalfUp) // $0.83
+
+// Sum, Min and Max
+total, err := fulus.Sum(usd10, usd20, usd5)
+cheapest := fulus.Min(usd10, usd20, usd5)
 
 // Absolute value and Negation
 absUsd, err := fulus.NewMoney[currency.USD](-1000).Abs() // $10.00
@@ -180,7 +196,17 @@ fmt.Println(usd10.IsPositive())            // true
 fmt.Println(usd10.Cmp(usd20))              // -1
 ```
 
-## Conversion Rounding Modes
+## Rounding Modes
+
+| Mode | 2.5 | -2.5 | 2.4 |
+|------|-----|------|-----|
+| `RoundTruncate` | 2 | -2 | 2 |
+| `RoundHalfUp` | 3 | -3 | 2 |
+| `RoundHalfEven` | 2 | -2 | 2 |
+| `RoundHalfDown` | 2 | -2 | 2 |
+| `RoundUp` | 3 | -3 | 3 |
+| `RoundCeiling` | 3 | -2 | 3 |
+| `RoundFloor` | 2 | -3 | 2 |
 
 Use `Convert` with an explicit rounding mode:
 
@@ -193,6 +219,50 @@ usdHalfUp, _, _ := fulus.Convert(eur, ratio, fulus.RoundHalfUp)  // $0.03
 usdHalfEven, _, _ := fulus.Convert(eur, ratio, fulus.RoundHalfEven)
 
 fmt.Println(usdTrunc, usdHalfUp, usdHalfEven)
+```
+
+## Cash Rounding
+
+Some currencies use a larger step for cash than for accounts, for example 0.05 for CHF.
+`RoundCash` uses the CLDR cash rules. Currencies without such a rule do not change.
+
+```go
+chf := fulus.NewMoney[currency.CHF](1003)  // CHF 10.03
+cash, err := chf.RoundCash(fulus.RoundHalfUp) // CHF 10.05
+```
+
+A custom currency can implement `currency.CashRounder` to get cash rounding.
+
+## Runtime Currencies
+
+Use `AnyMoney` when the currency is known only at run time, for example from a database row or a request.
+Convert it to a type-safe `Money[T]` with `As` before you calculate with it.
+
+```go
+price, err := fulus.ParseAnyMoney("12.50", "eur")
+if err != nil {
+	panic(err)
+}
+
+eur, err := fulus.As[currency.EUR](price) // ErrCurrencyMismatch if price is not in EUR
+```
+
+`currency.ByCode` and `currency.ByNumber` find a currency by its ISO 4217 code.
+`currency.Register` adds a custom currency, so that `AnyMoney` can use it.
+`AnyMoney` uses the same JSON form as `Money[T]`.
+
+## Locales
+
+`Format` uses the CLDR pattern of the locale, including the negative pattern and Indian digit grouping.
+`String` uses `DefaultLocale()`. Change it with `SetDefaultLocale`, which is safe for concurrent use.
+`locale.Match` finds the best supported locale for a tag such as `en_US.UTF-8` or `fr-CA-u-nu-latn`.
+
+```go
+loc, ok := locale.Match("en_IN.UTF-8")
+inr := fulus.NewMoney[currency.INR](-1234567890)
+fmt.Println(inr.Format(loc)) // -₹1,23,45,678.90
+
+parsed, err := fulus.ParseFormatted[currency.INR]("-₹1,23,45,678.90", loc)
 ```
 
 ## Parse Decimal Strings
@@ -208,6 +278,7 @@ fmt.Println(usd) // $123.45
 ```
 
 `ParseMoney` validates fractional scale against the currency minor units and rejects malformed formats.
+`Decimal`, `MarshalText` and `UnmarshalText` use the same canonical form.
 
 ## Parse Exchange Rates
 
@@ -248,6 +319,8 @@ fmt.Println(v) // 1050
 ```
 
 `Scan` also accepts integer text and the JSON form from `MarshalJSON`, so rows that hold the old JSON format still load.
+
+Use `NullMoney[T]` for a column that can be NULL. It also writes and reads JSON `null`.
 
 ## Credits
 

@@ -6,20 +6,32 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/big"
 	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/khatibomar/fulus/currency"
 	"github.com/khatibomar/fulus/locale"
 )
 
-// DefaultLocale is the fallback locale when none is specified
-var (
-	DefaultLocale = locale.EN
-)
+var defaultLocale atomic.Pointer[locale.Locale]
+
+// DefaultLocale returns the locale that String uses. The initial value is locale.EN.
+func DefaultLocale() locale.Locale {
+	if l := defaultLocale.Load(); l != nil {
+		return *l
+	}
+	return locale.EN
+}
+
+// SetDefaultLocale sets the locale that String uses. It is safe for concurrent use.
+func SetDefaultLocale(l locale.Locale) {
+	defaultLocale.Store(&l)
+}
 
 var (
 	// ErrValidation is the error returned when money validation fails
@@ -54,9 +66,18 @@ var (
 
 	// ErrInvalidExchangeRate indicates an invalid exchange rate format or value
 	ErrInvalidExchangeRate = errors.New("invalid exchange rate")
+
+	// ErrInvalidFactor indicates a multiplication factor that cannot be parsed
+	ErrInvalidFactor = errors.New("invalid factor")
+
+	// ErrCurrencyMismatch indicates a value in a different currency than expected
+	ErrCurrencyMismatch = errors.New("currency mismatch")
+
+	// ErrUnknownCurrency indicates a currency code that is not registered
+	ErrUnknownCurrency = errors.New("unknown currency")
 )
 
-// RoundingMode controls how division results are rounded in conversion.
+// RoundingMode controls how a result between two minor units is rounded.
 type RoundingMode int
 
 const (
@@ -64,9 +85,21 @@ const (
 	RoundTruncate RoundingMode = iota
 	// RoundHalfUp rounds to nearest, ties away from zero.
 	RoundHalfUp
-	// RoundHalfEven rounds to nearest, ties to even.
+	// RoundHalfEven rounds to nearest, ties to even. This is also known as banker's rounding.
 	RoundHalfEven
+	// RoundHalfDown rounds to nearest, ties toward zero.
+	RoundHalfDown
+	// RoundUp rounds away from zero.
+	RoundUp
+	// RoundCeiling rounds toward positive infinity.
+	RoundCeiling
+	// RoundFloor rounds toward negative infinity.
+	RoundFloor
 )
+
+func (r RoundingMode) valid() bool {
+	return r >= RoundTruncate && r <= RoundFloor
+}
 
 // Money represents a monetary value in a specific currency.
 type Money[T currency.Currency] struct {
@@ -252,6 +285,67 @@ func (m Money[T]) Div(divisor int64, mode RoundingMode) (Money[T], error) {
 	return Money[T]{amount: result.Int64()}, nil
 }
 
+// MulFrac multiplies the Money value by numerator/denominator and rounds the result with mode.
+// For example, MulFrac(15, 100, RoundHalfEven) gives 15 percent of the value.
+// Returns ErrDivisionByZero if denominator is 0.
+// Returns ErrOverflow if the result does not fit in int64.
+func (m Money[T]) MulFrac(numerator, denominator int64, mode RoundingMode) (Money[T], error) {
+	if denominator == 0 {
+		return Money[T]{}, ErrDivisionByZero
+	}
+	return m.mulRat(big.NewInt(numerator), big.NewInt(denominator), mode)
+}
+
+// MulDecimal multiplies the Money value by a decimal factor such as "0.0825" and rounds the result with mode.
+// The factor can also be a fraction such as "1/3".
+// Returns ErrInvalidFactor if the factor cannot be parsed.
+// Returns ErrOverflow if the result does not fit in int64.
+func (m Money[T]) MulDecimal(factor string, mode RoundingMode) (Money[T], error) {
+	r, ok := new(big.Rat).SetString(factor)
+	if !ok {
+		return Money[T]{}, fmt.Errorf("%w: %q", ErrInvalidFactor, factor)
+	}
+	return m.mulRat(r.Num(), r.Denom(), mode)
+}
+
+func (m Money[T]) mulRat(numerator, denominator *big.Int, mode RoundingMode) (Money[T], error) {
+	product := new(big.Int).Mul(big.NewInt(m.amount), numerator)
+	result, err := divideWithRounding(product, denominator, mode)
+	if err != nil {
+		return Money[T]{}, err
+	}
+	if !result.IsInt64() {
+		return Money[T]{}, ErrOverflow
+	}
+	return Money[T]{amount: result.Int64()}, nil
+}
+
+// RoundCash rounds the Money value to the smallest cash amount of the currency, with mode.
+// For example, CHF cash uses steps of 0.05, so 10.03 CHF becomes 10.05 CHF with RoundHalfUp.
+// If the currency does not implement currency.CashRounder, RoundCash returns the value unchanged.
+// Returns ErrOverflow if the result does not fit in int64.
+func (m Money[T]) RoundCash(mode RoundingMode) (Money[T], error) {
+	if !mode.valid() {
+		return Money[T]{}, ErrInvalidRoundingMode
+	}
+
+	rounder, ok := any(m.Currency()).(currency.CashRounder)
+	if !ok || rounder.CashIncrement() <= 1 {
+		return m, nil
+	}
+
+	increment := big.NewInt(rounder.CashIncrement())
+	steps, err := divideWithRounding(big.NewInt(m.amount), increment, mode)
+	if err != nil {
+		return Money[T]{}, err
+	}
+	result := steps.Mul(steps, increment)
+	if !result.IsInt64() {
+		return Money[T]{}, ErrOverflow
+	}
+	return Money[T]{amount: result.Int64()}, nil
+}
+
 // Abs returns the absolute value of the money amount.
 // Returns ErrOverflow if the amount is math.MinInt64.
 func (m Money[T]) Abs() (Money[T], error) {
@@ -352,7 +446,7 @@ func (m Money[T]) Amount() int64 {
 // String returns a formatted string representation of the Money value using the default locale.
 // This implements the fmt.Stringer interface.
 func (m Money[T]) String() string {
-	return m.Format(DefaultLocale)
+	return m.Format(DefaultLocale())
 }
 
 // Format returns a formatted string representation of the Money value for the specified locale.
@@ -450,6 +544,10 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode Roundin
 }
 
 func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*big.Int, error) {
+	if !mode.valid() {
+		return nil, ErrInvalidRoundingMode
+	}
+
 	q := new(big.Int)
 	r := new(big.Int)
 	q.QuoRem(numerator, denominator, r)
@@ -458,34 +556,35 @@ func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*bi
 		return q, nil
 	}
 
-	absRem := new(big.Int).Abs(new(big.Int).Set(r))
-	absDen := new(big.Int).Abs(new(big.Int).Set(denominator))
+	absRem := new(big.Int).Abs(r)
+	absDen := new(big.Int).Abs(denominator)
 	twiceRem := new(big.Int).Lsh(absRem, 1)
 	cmp := twiceRem.Cmp(absDen)
-
-	step := big.NewInt(1)
 	negativeResult := (numerator.Sign() < 0) != (denominator.Sign() < 0)
-	if negativeResult {
-		step.Neg(step)
-	}
 
+	var awayFromZero bool
 	switch mode {
 	case RoundHalfUp:
-		if cmp >= 0 {
-			q.Add(q, step)
-		}
+		awayFromZero = cmp >= 0
+	case RoundHalfDown:
+		awayFromZero = cmp > 0
 	case RoundHalfEven:
-		if cmp > 0 {
-			q.Add(q, step)
-		} else if cmp == 0 && q.Bit(0) == 1 {
-			q.Add(q, step)
-		}
-	case RoundTruncate:
-		// handled above
-	default:
-		return nil, ErrInvalidRoundingMode
+		awayFromZero = cmp > 0 || (cmp == 0 && q.Bit(0) == 1)
+	case RoundUp:
+		awayFromZero = true
+	case RoundCeiling:
+		awayFromZero = !negativeResult
+	case RoundFloor:
+		awayFromZero = negativeResult
 	}
 
+	if awayFromZero {
+		if negativeResult {
+			q.Sub(q, big.NewInt(1))
+		} else {
+			q.Add(q, big.NewInt(1))
+		}
+	}
 	return q, nil
 }
 
@@ -549,25 +648,21 @@ func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 // MarshalJSON implements the json.Marshaler interface
 // Serializes the amount as a string to preserve precision
 func (m Money[T]) MarshalJSON() ([]byte, error) {
-	type MoneyJSON struct {
-		Amount   string `json:"amount"`
-		Currency string `json:"currency"`
-	}
-
-	return json.Marshal(MoneyJSON{
-		Amount:   fmt.Sprintf("%d", m.amount),
+	return json.Marshal(moneyJSON{
+		Amount:   strconv.FormatInt(m.amount, 10),
 		Currency: m.Currency().Code(),
 	})
+}
+
+type moneyJSON struct {
+	Amount   string `json:"amount"`
+	Currency string `json:"currency"`
 }
 
 // UnmarshalJSON implements the json.Unmarshaler interface
 // Expects amount as a string to maintain precision
 func (m *Money[T]) UnmarshalJSON(data []byte) error {
-	var temp struct {
-		Amount   string `json:"amount"`
-		Currency string `json:"currency"`
-	}
-
+	var temp moneyJSON
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return fmt.Errorf("failed to unmarshal money: %w", err)
 	}
@@ -579,11 +674,7 @@ func (m *Money[T]) UnmarshalJSON(data []byte) error {
 
 	code := m.Currency().Code()
 	if code != temp.Currency {
-		return fmt.Errorf(
-			"currency mismatch: expected %s, got %s",
-			code,
-			temp.Currency,
-		)
+		return fmt.Errorf("%w: expected %s, got %s", ErrCurrencyMismatch, code, temp.Currency)
 	}
 
 	m.amount = amount
@@ -593,8 +684,18 @@ func (m *Money[T]) UnmarshalJSON(data []byte) error {
 // ParseMoney parses a canonical decimal amount into Money using the currency's minor units.
 // Supported format: optional sign (+/-), digits, optional decimal point and digits.
 func ParseMoney[T currency.Currency](amount string) (Money[T], error) {
+	var c T
+	minor, err := parseDecimal(amount, c.MinorUnits())
+	if err != nil {
+		return Money[T]{}, err
+	}
+	return Money[T]{amount: minor}, nil
+}
+
+// parseDecimal parses a canonical decimal amount into minor units.
+func parseDecimal(amount string, minorUnits int) (int64, error) {
 	if amount == "" {
-		return Money[T]{}, fmt.Errorf("%w: empty amount", ErrInvalidAmountFormat)
+		return 0, fmt.Errorf("%w: empty amount", ErrInvalidAmountFormat)
 	}
 
 	negative := false
@@ -602,38 +703,36 @@ func ParseMoney[T currency.Currency](amount string) (Money[T], error) {
 		negative = amount[0] == '-'
 		amount = amount[1:]
 		if amount == "" {
-			return Money[T]{}, fmt.Errorf("%w: sign without digits", ErrInvalidAmountFormat)
+			return 0, fmt.Errorf("%w: sign without digits", ErrInvalidAmountFormat)
 		}
 	}
 
 	parts := strings.Split(amount, ".")
 	if len(parts) > 2 {
-		return Money[T]{}, fmt.Errorf("%w: multiple decimal separators", ErrInvalidAmountFormat)
+		return 0, fmt.Errorf("%w: multiple decimal separators", ErrInvalidAmountFormat)
 	}
 
 	whole := parts[0]
 	if whole == "" {
-		return Money[T]{}, fmt.Errorf("%w: missing whole part", ErrInvalidAmountFormat)
+		return 0, fmt.Errorf("%w: missing whole part", ErrInvalidAmountFormat)
 	}
 	if !allDigits(whole) {
-		return Money[T]{}, fmt.Errorf("%w: invalid whole part", ErrInvalidAmountFormat)
+		return 0, fmt.Errorf("%w: invalid whole part", ErrInvalidAmountFormat)
 	}
 
 	fractional := ""
 	if len(parts) == 2 {
 		fractional = parts[1]
 		if fractional == "" {
-			return Money[T]{}, fmt.Errorf("%w: missing fractional part", ErrInvalidAmountFormat)
+			return 0, fmt.Errorf("%w: missing fractional part", ErrInvalidAmountFormat)
 		}
 		if !allDigits(fractional) {
-			return Money[T]{}, fmt.Errorf("%w: invalid fractional part", ErrInvalidAmountFormat)
+			return 0, fmt.Errorf("%w: invalid fractional part", ErrInvalidAmountFormat)
 		}
 	}
 
-	var c T
-	minorUnits := c.MinorUnits()
 	if len(fractional) > minorUnits {
-		return Money[T]{}, fmt.Errorf("%w: got %d fractional digits, max is %d", ErrScaleMismatch, len(fractional), minorUnits)
+		return 0, fmt.Errorf("%w: got %d fractional digits, max is %d", ErrScaleMismatch, len(fractional), minorUnits)
 	}
 
 	if len(fractional) < minorUnits {
@@ -642,21 +741,21 @@ func ParseMoney[T currency.Currency](amount string) (Money[T], error) {
 
 	magnitude := whole + fractional
 	if magnitude == "" {
-		return Money[T]{}, fmt.Errorf("%w: empty magnitude", ErrInvalidAmountFormat)
+		return 0, fmt.Errorf("%w: empty magnitude", ErrInvalidAmountFormat)
 	}
 
 	intVal, ok := new(big.Int).SetString(magnitude, 10)
 	if !ok {
-		return Money[T]{}, fmt.Errorf("%w: cannot parse magnitude", ErrInvalidAmountFormat)
+		return 0, fmt.Errorf("%w: cannot parse magnitude", ErrInvalidAmountFormat)
 	}
 	if negative {
 		intVal.Neg(intVal)
 	}
 	if !intVal.IsInt64() {
-		return Money[T]{}, ErrOverflow
+		return 0, ErrOverflow
 	}
 
-	return NewMoney[T](intVal.Int64()), nil
+	return intVal.Int64(), nil
 }
 
 func parseIntAmount(amount string) (int64, error) {
@@ -712,4 +811,71 @@ func (m *Money[T]) scanText(s string) error {
 		return nil
 	}
 	return m.UnmarshalJSON([]byte(s))
+}
+
+// Decimal returns the amount as a canonical decimal string such as "-1234.50".
+// It has no symbol and no group separator, and ParseMoney accepts it.
+func (m Money[T]) Decimal() string {
+	return formatAmount(m.amount, m.Currency().MinorUnits(), canonicalFormatInfo)
+}
+
+var canonicalFormatInfo = currency.FormatInfo{
+	Format:           "0.00",
+	DecimalSeparator: ".",
+	MinusSign:        "-",
+}
+
+// MarshalText implements encoding.TextMarshaler. It writes the canonical decimal form from Decimal.
+func (m Money[T]) MarshalText() ([]byte, error) {
+	return []byte(m.Decimal()), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler. It reads the canonical decimal form with ParseMoney.
+func (m *Money[T]) UnmarshalText(text []byte) error {
+	parsed, err := ParseMoney[T](string(text))
+	if err != nil {
+		return err
+	}
+	*m = parsed
+	return nil
+}
+
+// LogValue implements slog.LogValuer. It logs the decimal amount and the currency code.
+func (m Money[T]) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("amount", m.Decimal()),
+		slog.String("currency", m.Currency().Code()),
+	)
+}
+
+// Sum returns the sum of the values, or zero if there are no values.
+// Returns ErrOverflow if the sum does not fit in int64.
+// An intermediate sum can be larger than int64 if the final sum fits.
+func Sum[T currency.Currency](values ...Money[T]) (Money[T], error) {
+	total := new(big.Int)
+	for _, v := range values {
+		total.Add(total, big.NewInt(v.amount))
+	}
+	if !total.IsInt64() {
+		return Money[T]{}, ErrOverflow
+	}
+	return Money[T]{amount: total.Int64()}, nil
+}
+
+// Min returns the smallest of the values.
+func Min[T currency.Currency](first Money[T], rest ...Money[T]) Money[T] {
+	result := first
+	for _, v := range rest {
+		result.amount = min(result.amount, v.amount)
+	}
+	return result
+}
+
+// Max returns the largest of the values.
+func Max[T currency.Currency](first Money[T], rest ...Money[T]) Money[T] {
+	result := first
+	for _, v := range rest {
+		result.amount = max(result.amount, v.amount)
+	}
+	return result
 }
