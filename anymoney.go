@@ -126,10 +126,7 @@ func (m AnyMoney) String() string {
 
 // MarshalJSON implements json.Marshaler with the same form as Money.
 func (m AnyMoney) MarshalJSON() ([]byte, error) {
-	return json.Marshal(moneyJSON{
-		Amount:   strconv.FormatInt(m.amount, 10),
-		Currency: m.code(),
-	})
+	return marshalMoneyJSON(m.amount, m.code())
 }
 
 // UnmarshalJSON implements json.Unmarshaler with the same form as Money.

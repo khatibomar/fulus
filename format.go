@@ -11,6 +11,9 @@ import (
 type numberPattern struct {
 	posPrefix, posSuffix string
 	negPrefix, negSuffix string
+	// implicitMinus is true if the pattern has no negative subpattern.
+	// Then the negative form is "-" followed by the positive form.
+	implicitMinus bool
 	// primaryGroup is the size of the group nearest to the decimal separator. Zero means no grouping.
 	primaryGroup int
 	// secondaryGroup is the size of all other groups, for example 2 in "#,##,##0".
@@ -30,7 +33,7 @@ func parsePattern(pattern string) numberPattern {
 	if hasNeg {
 		p.negPrefix, _, p.negSuffix = splitAffixes(neg)
 	} else {
-		p.negPrefix, p.negSuffix = "-"+p.posPrefix, p.posSuffix
+		p.negPrefix, p.negSuffix, p.implicitMinus = p.posPrefix, p.posSuffix, true
 	}
 	return p
 }
@@ -78,9 +81,9 @@ func writeAffix(b *strings.Builder, affix string, info currency.FormatInfo) {
 }
 
 // writeGrouped writes integer digits with a separator between the groups.
-func writeGrouped(b *strings.Builder, digits string, primary, secondary int, separator string) {
+func writeGrouped(b *strings.Builder, digits []byte, primary, secondary int, separator string) {
 	if primary <= 0 || len(digits) <= primary {
-		b.WriteString(digits)
+		b.Write(digits)
 		return
 	}
 
@@ -89,32 +92,27 @@ func writeGrouped(b *strings.Builder, digits string, primary, secondary int, sep
 	if first == 0 {
 		first = secondary
 	}
-	b.WriteString(digits[:first])
+	b.Write(digits[:first])
 	for i := first; i < head; i += secondary {
 		b.WriteString(separator)
-		b.WriteString(digits[i : i+secondary])
+		b.Write(digits[i : i+secondary])
 	}
 	b.WriteString(separator)
-	b.WriteString(digits[head:])
+	b.Write(digits[head:])
 }
 
 // formatAmount formats an amount in minor units with the given format information.
 func formatAmount(amount int64, minorUnits int, info currency.FormatInfo) string {
 	p := parsePattern(info.Format)
 	minorUnits = max(minorUnits, 0)
-
 	negative := amount < 0
-	magnitude := uint64(amount)
-	if negative {
-		// Unsigned negation also gives the correct magnitude for math.MinInt64.
-		magnitude = -magnitude
-	}
 
-	digits := strconv.FormatUint(magnitude, 10)
-	if len(digits) <= minorUnits {
-		digits = strings.Repeat("0", minorUnits-len(digits)+1) + digits
+	var buf [20]byte
+	digits := strconv.AppendUint(buf[:0], abs64(amount), 10)
+	integer, fraction, fractionPad := []byte{'0'}, digits, minorUnits-len(digits)
+	if len(digits) > minorUnits {
+		integer, fraction, fractionPad = digits[:len(digits)-minorUnits], digits[len(digits)-minorUnits:], 0
 	}
-	integer, fraction := digits[:len(digits)-minorUnits], digits[len(digits)-minorUnits:]
 
 	prefix, suffix := p.posPrefix, p.posSuffix
 	if negative {
@@ -122,11 +120,19 @@ func formatAmount(amount int64, minorUnits int, info currency.FormatInfo) string
 	}
 
 	var b strings.Builder
+	b.Grow(len(info.Format) + 2*len(info.Symbol) + len(info.MinusSign) + len(info.DecimalSeparator) +
+		len(digits)*(1+len(info.GroupSeparator)) + minorUnits)
+	if negative && p.implicitMinus {
+		b.WriteString(info.MinusSign)
+	}
 	writeAffix(&b, prefix, info)
 	writeGrouped(&b, integer, p.primaryGroup, p.secondaryGroup, info.GroupSeparator)
 	if minorUnits > 0 {
 		b.WriteString(info.DecimalSeparator)
-		b.WriteString(fraction)
+		for range fractionPad {
+			b.WriteByte('0')
+		}
+		b.Write(fraction)
 	}
 	writeAffix(&b, suffix, info)
 	return b.String()

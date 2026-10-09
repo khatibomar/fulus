@@ -144,3 +144,25 @@ func TestDefaultLocale(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+type quotedCodeCurrency struct{ currency.USD }
+
+func (quotedCodeCurrency) Code() string { return `Q"<&>` }
+
+func TestMarshalJSONEscapesCode(t *testing.T) {
+	t.Parallel()
+
+	got, err := NewMoney[quotedCodeCurrency](-5).MarshalJSON()
+	if err != nil {
+		t.Fatalf("MarshalJSON() error = %v", err)
+	}
+	want, _ := json.Marshal(moneyJSON{Amount: "-5", Currency: `Q"<&>`})
+	if string(got) != string(want) {
+		t.Errorf("MarshalJSON() = %s, want %s", got, want)
+	}
+
+	var back Money[quotedCodeCurrency]
+	if err := json.Unmarshal(got, &back); err != nil || back.Amount() != -5 {
+		t.Errorf("Unmarshal() = %d, %v", back.Amount(), err)
+	}
+}
