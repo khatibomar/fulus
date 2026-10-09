@@ -25,7 +25,7 @@ jobs:
       - name: Check for new CLDR version and generate
         id: check_update
         run: |
-          CURRENT_VERSION=$(grep -oP '// CLDR Version: \K.*' currency/gen_usd.go || echo "unknown")
+          CURRENT_VERSION=$(grep -oP '// CLDR Version: \K.*' currency/gen_currencies.go || echo "unknown")
           LATEST_VERSION=$(curl -s https://api.github.com/repos/unicode-org/cldr-json/releases/latest | jq -r .tag_name)
           
           echo "Current CLDR version: $CURRENT_VERSION"
