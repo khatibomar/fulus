@@ -76,7 +76,8 @@ func isJSONNull(data []byte) bool {
 }
 
 // ParseMoney parses a canonical decimal amount into Money using the currency's minor units.
-// Supported format: optional sign (+/-), digits, optional decimal point and digits.
+// Supported format: optional "-", digits without leading zeros, optional decimal point and digits.
+// Use format.Parse for an amount that a person wrote.
 func ParseMoney[T currency.Unit](amount string) (Money[T], error) {
 	var c T
 	minor, err := parseDecimal(amount, c.MinorUnits())
@@ -93,8 +94,8 @@ func parseDecimal(amount string, minorUnits int) (int128, error) {
 	}
 
 	negative := false
-	if amount[0] == '+' || amount[0] == '-' {
-		negative = amount[0] == '-'
+	if amount[0] == '-' {
+		negative = true
 		amount = amount[1:]
 		if amount == "" {
 			return int128{}, fmt.Errorf("%w: sign without digits", ErrInvalidAmountFormat)
@@ -110,6 +111,9 @@ func parseDecimal(amount string, minorUnits int) (int128, error) {
 	}
 	if !allDigits(whole) {
 		return int128{}, fmt.Errorf("%w: invalid whole part", ErrInvalidAmountFormat)
+	}
+	if len(whole) > 1 && whole[0] == '0' {
+		return int128{}, fmt.Errorf("%w: leading zero", ErrInvalidAmountFormat)
 	}
 	if hasPoint && fractional == "" {
 		return int128{}, fmt.Errorf("%w: missing fractional part", ErrInvalidAmountFormat)
@@ -154,10 +158,10 @@ func parseDecimal(amount string, minorUnits int) (int128, error) {
 	return result, nil
 }
 
-// parseIntAmount parses an integer amount in minor units, with an optional sign.
+// parseIntAmount parses an integer amount in minor units, with an optional "-".
 func parseIntAmount(amount string) (int128, error) {
-	digits := strings.TrimLeft(amount, "+-")
-	if digits == "" || len(amount)-len(digits) > 1 || !allDigits(digits) {
+	digits := strings.TrimPrefix(amount, "-")
+	if digits == "" || !allDigits(digits) {
 		return int128{}, fmt.Errorf("%w: %q is not an integer", ErrInvalidAmountFormat, amount)
 	}
 	return parseDecimal(amount, 0)
