@@ -63,6 +63,10 @@ Use them only when you know the range of the values.
 
 `MinorUnits` comes from the ISO 4217 list. CLDR has other digits for some currencies, for display.
 Fulus uses ISO 4217 because payment systems and banks use it.
+
+ISO 4217 defines no minor units for some codes, for example the metals XAU, XAG, XPT and XPD, and XDR.
+For these codes, the generator uses the CLDR digits and writes this in the doc comment of the type.
+The generator does not include XTS (the testing code) and XXX (no currency).
 `Format` always writes all the minor units, so it does not lose data.
 
 ## Formatting uses CLDR data in generated tables
