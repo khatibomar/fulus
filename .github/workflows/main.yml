@@ -37,6 +37,9 @@ jobs:
     - run: go vet ./...
     - run: go build -v ./...
     - run: go test -race ./...
+    - name: Check the coverage
+      if: matrix.go == 'stable'
+      run: make cover
     - name: Test the examples module
       working-directory: examples
       run: go test ./...
@@ -76,6 +79,30 @@ jobs:
         go-version: stable
         cache: true
     - run: make fuzz FUZZ_TIME=15s
+
+  bench:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+        cache: true
+    # Shared runners are noisy, so this job reports the change and does not fail.
+    - name: Compare the benchmarks with the base branch
+      shell: bash
+      run: |
+        go install golang.org/x/perf/cmd/benchstat@latest
+        go test -run '^$' -bench . -count 6 ./... > "$RUNNER_TEMP/new.txt"
+        git checkout -q "${{ github.event.pull_request.base.sha }}"
+        go test -run '^$' -bench . -count 6 ./... > "$RUNNER_TEMP/old.txt" || true
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
+        benchstat "$RUNNER_TEMP/old.txt" "$RUNNER_TEMP/new.txt" | tee -a "$GITHUB_STEP_SUMMARY"
+        echo '```' >> "$GITHUB_STEP_SUMMARY"
 
   generated:
     runs-on: ubuntu-latest

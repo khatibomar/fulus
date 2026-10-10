@@ -1,5 +1,6 @@
 CLDR_VERSION = $(shell sed -n 's|^// CLDR Version: ||p' locale/gen_locale.go)
 FUZZ_TIME ?= 10s
+COVER_MIN ?= 95
 
 gen:
 	go run generator.go
@@ -16,7 +17,12 @@ fuzz:
 		done; \
 	done
 
+# cover fails if the statement coverage of the fulus and format packages is below COVER_MIN percent.
+cover:
+	go test -coverprofile=cover.out . ./format
+	go tool cover -func=cover.out | awk -v min=$(COVER_MIN) '/^total:/ { sub("%", "", $$3); print "coverage " $$3 "%"; if ($$3 + 0 < min) { print "coverage is below " min "%"; exit 1 } }'
+
 clean:
 	find . -name "gen_*.go" -type f -delete
 
-.PHONY: gen check-gen fuzz clean
+.PHONY: gen check-gen fuzz cover clean

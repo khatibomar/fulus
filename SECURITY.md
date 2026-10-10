@@ -23,6 +23,21 @@ These problems are in scope:
 
 - An operation that returns a wrong amount and no error, for example after an overflow.
 - A parse function that accepts an input and gives a different amount.
-- A panic or an unbounded allocation from untrusted input, for example in `UnmarshalJSON`, `Scan` or `ParseFormatted`.
+- A panic or an unbounded allocation from untrusted input, for example in `UnmarshalJSON`, `Scan`, `ParseFactor` or `format.Parse`.
 
-A difference between `Format` and CLDR data is a bug, not a vulnerability. Open a normal issue for it.
+A difference between `format.Money` and CLDR data is a bug, not a vulnerability. Open a normal issue for it.
+
+## Verify a release
+
+Each release tag is signed. Each GitHub release has a source archive and a SLSA level 3 provenance file
+(`provenance.intoto.jsonl`) that the release workflow makes. To verify an archive, use
+[slsa-verifier](https://github.com/slsa-framework/slsa-verifier):
+
+```sh
+slsa-verifier verify-artifact fulus-v1.2.3.tar.gz \
+  --provenance-path provenance.intoto.jsonl \
+  --source-uri github.com/khatibomar/fulus \
+  --source-tag v1.2.3
+```
+
+The Go checksum database also records the hash of each module version, so `go mod download` detects a changed release.
