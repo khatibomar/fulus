@@ -38,7 +38,7 @@ These operations take a `RoundingMode`. They do not have a default mode.
 | `Div(d, mode)` | amount / d |
 | `MulFrac(n, d, mode)` | amount × n / d |
 | `MulDecimal(f, mode)` | amount × f, where f is a decimal such as `"0.0825"` or a fraction such as `"1/3"` |
-| `Convert(m, ratio, mode)` | amount × ratio.Numerator / ratio.Denominator |
+| `Convert(m, ratio, mode)` | amount × ratio, with the ratio in major units of each currency |
 | `RoundCash(mode)` | amount / increment, rounded, then multiplied by the increment |
 
 Each operation calculates the exact result first, and then it rounds one time.
@@ -84,6 +84,9 @@ A currency without a cash rule does not change. A custom currency can implement 
 `ParseRatioString` reads a decimal string exactly. For example, `"1.07203"` gives 107203/100000.
 `ParseRatioFloat64` writes the float as the shortest decimal string that gives the same float, and then reads that string.
 So `0.1` gives 1/10, not the binary value of the float.
+
+The ratio is the price of one major unit of the source currency in major units of the target currency, as markets quote it.
+For example, a EUR/JPY ratio of 160.25 changes EUR 1.00 to JPY 160. `Convert` adjusts for the different minor units.
 
 `Convert` returns a `ConversionResult`. Its `ActualRate` is the rate after rounding: the result divided by the source amount.
 For example, €3.33 at 1/3 with `RoundHalfUp` gives $1.11, and the actual rate is 111/333 = 1/3.

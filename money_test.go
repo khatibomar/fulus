@@ -723,6 +723,68 @@ func TestConvertActualRate(t *testing.T) {
 	}
 }
 
+func TestConvertDifferentMinorUnits(t *testing.T) {
+	t.Parallel()
+
+	t.Run("EUR to JPY", func(t *testing.T) {
+		t.Parallel()
+		ratio, err := ParseRatioString[currency.EUR, currency.JPY]("160.25")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, result, err := Convert(NewMoney[currency.EUR](100), ratio, RoundHalfEven)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Amount() != 160 {
+			t.Errorf("Convert() = %d, expected 160", got.Amount())
+		}
+		want := Ratio[currency.EUR, currency.JPY]{Numerator: 160, Denominator: 1}
+		if result.ActualRate != want {
+			t.Errorf("ActualRate = %+v, expected %+v", result.ActualRate, want)
+		}
+	})
+
+	t.Run("USD to BHD", func(t *testing.T) {
+		t.Parallel()
+		ratio, err := ParseRatioString[currency.USD, currency.BHD]("0.376")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, _, err := Convert(NewMoney[currency.USD](100), ratio, RoundHalfEven)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Amount() != 376 {
+			t.Errorf("Convert() = %d, expected 376", got.Amount())
+		}
+	})
+
+	t.Run("JPY to USD", func(t *testing.T) {
+		t.Parallel()
+		ratio := Ratio[currency.JPY, currency.USD]{Numerator: 1, Denominator: 150}
+		got, _, err := Convert(NewMoney[currency.JPY](1000), ratio, RoundHalfUp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Amount() != 667 {
+			t.Errorf("Convert() = %d, expected 667", got.Amount())
+		}
+	})
+
+	t.Run("scaled ratio does not fit int64", func(t *testing.T) {
+		t.Parallel()
+		ratio := Ratio[currency.JPY, currency.CLF]{Numerator: math.MaxInt64, Denominator: math.MaxInt64}
+		got, _, err := Convert(NewMoney[currency.JPY](3), ratio, RoundHalfUp)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Amount() != 30000 {
+			t.Errorf("Convert() = %d, expected 30000", got.Amount())
+		}
+	})
+}
+
 func TestConvertRoundingModes(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -530,9 +530,10 @@ func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 	}, nil
 }
 
-// Convert performs conversion with an explicit rounding strategy.
-// The ratio should be provided as (numerator, denominator) representing numerator/denominator.
-// Returns both the converted Money value and the actual ratio used after rounding.
+// Convert changes m to the currency T at ratio and rounds the result with mode.
+// The ratio is the price of one major unit of F in major units of T, as markets quote it.
+// For example, a EUR/JPY ratio of 160.25 changes EUR 1.00 to JPY 160.
+// Convert also returns the applied rate after rounding, in the same units as ratio.
 func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode RoundingMode) (Money[T], ConversionResult[F, T], error) {
 	if ratio.Denominator == 0 {
 		return Money[T]{}, ConversionResult[F, T]{}, ErrZeroDenominator
@@ -542,14 +543,18 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode Roundin
 		return Money[T]{}, ConversionResult[F, T]{}, ErrInvalidRoundingMode
 	}
 
-	roundedAmount, ok := mulDivRound(m.amount, ratio.Numerator, ratio.Denominator, mode)
+	var from F
+	var to T
+	shift := to.MinorUnits() - from.MinorUnits()
+
+	roundedAmount, ok := mulDivRoundShift(m.amount, ratio.Numerator, ratio.Denominator, shift, mode)
 	if !ok {
 		return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
 	}
 
 	actualRate := ratio
 	if m.amount != 0 {
-		actualRate, ok = reducedRatio[F, T](roundedAmount, m.amount)
+		actualRate, ok = appliedRatio[F, T](roundedAmount, m.amount, shift)
 		if !ok {
 			return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
 		}
@@ -563,14 +568,59 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode Roundin
 	return NewMoney[T](roundedAmount), result, nil
 }
 
-// reducedRatio returns numerator/denominator in lowest terms with a positive denominator.
-// It reports false if a term does not fit in int64. The denominator must not be zero.
-func reducedRatio[F, T currency.Currency](numerator, denominator int64) (Ratio[F, T], bool) {
-	g := gcd(abs64(numerator), abs64(denominator))
-	negative := (numerator < 0) != (denominator < 0)
-	n, okN := fromMagnitude(abs64(numerator)/g, negative)
-	d, okD := fromMagnitude(abs64(denominator)/g, false)
-	return Ratio[F, T]{Numerator: n, Denominator: d}, okN && okD
+// mulDivRoundShift returns a*n*10^shift/d rounded with mode. It reports false if the result does not fit in int64.
+func mulDivRoundShift(a, n, d int64, shift int, mode RoundingMode) (int64, bool) {
+	scaledN, scaledD, ok := n, d, true
+	switch {
+	case shift > 0:
+		scaledN, ok = mulPow10(n, shift)
+	case shift < 0:
+		scaledD, ok = mulPow10(d, -shift)
+	}
+	if ok {
+		return mulDivRound(a, scaledN, scaledD, mode)
+	}
+
+	num := new(big.Int).Mul(big.NewInt(a), big.NewInt(n))
+	den := big.NewInt(d)
+	pow := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(max(shift, -shift))), nil)
+	if shift > 0 {
+		num.Mul(num, pow)
+	} else {
+		den.Mul(den, pow)
+	}
+	q, err := divideWithRounding(num, den, mode)
+	if err != nil || !q.IsInt64() {
+		return 0, false
+	}
+	return q.Int64(), true
+}
+
+// appliedRatio returns the rate result/amount in major units, in lowest terms and with a positive denominator.
+// The amount must not be zero.
+func appliedRatio[F, T currency.Currency](result, amount int64, shift int) (Ratio[F, T], bool) {
+	r := new(big.Rat).SetFrac(big.NewInt(result), big.NewInt(amount))
+	pow := new(big.Rat).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(max(shift, -shift))), nil))
+	if shift > 0 {
+		r.Quo(r, pow)
+	} else {
+		r.Mul(r, pow)
+	}
+	if !r.Num().IsInt64() || !r.Denom().IsInt64() {
+		return Ratio[F, T]{}, false
+	}
+	return Ratio[F, T]{Numerator: r.Num().Int64(), Denominator: r.Denom().Int64()}, true
+}
+
+// mulPow10 returns x*10^n and reports whether the product fits in int64.
+func mulPow10(x int64, n int) (int64, bool) {
+	for range n {
+		var ok bool
+		if x, ok = mul64(x, 10); !ok {
+			return 0, false
+		}
+	}
+	return x, true
 }
 
 func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*big.Int, error) {

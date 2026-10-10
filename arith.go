@@ -96,11 +96,3 @@ func fromMagnitude(m uint64, negative bool) (int64, bool) {
 	}
 	return int64(m), true
 }
-
-// gcd returns the greatest common divisor of a and b.
-func gcd(a, b uint64) uint64 {
-	for b != 0 {
-		a, b = b, a%b
-	}
-	return a
-}
