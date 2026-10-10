@@ -21,12 +21,22 @@ type Numbers struct {
 	DecimalSeparator string
 	// MinusSign replaces "-" in the pattern.
 	MinusSign string
+	// MinimumGroupingDigits is the smallest number of digits before the first group separator, for example 2 in es.
+	MinimumGroupingDigits int
 }
 
 type data struct {
 	code    string
 	numbers Numbers
 	symbols uint16
+	// currencyNumbers is 1 + the index of the first currencyNumbers entry of the locale, or 0 if it has none.
+	currencyNumbers uint16
+}
+
+type currencyData struct {
+	locale  uint16
+	code    string
+	numbers Numbers
 }
 
 type symbol struct {
@@ -55,6 +65,21 @@ func (l Locale) String() string {
 // Numbers returns the CLDR number data of the locale.
 func (l Locale) Numbers() Numbers {
 	return localeData[l.id].numbers
+}
+
+// CurrencyNumbers returns the CLDR number data of a currency in the locale, for example "¤#,##0.00" for EUR in en-SK.
+func (l Locale) CurrencyNumbers(code string) Numbers {
+	if first := localeData[l.id].currencyNumbers; first > 0 {
+		for _, d := range currencyNumbers[first-1:] {
+			if d.locale != l.id {
+				break
+			}
+			if d.code == code {
+				return d.numbers
+			}
+		}
+	}
+	return l.Numbers()
 }
 
 // CurrencySymbol returns the CLDR symbol of a currency in the locale, for example "US$" for "USD" in en-CA.

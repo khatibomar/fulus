@@ -24,13 +24,13 @@ func ParseFormatted[T currency.Currency](s string, loc locale.Locale) (Money[T],
 
 func parseFormatted(s string, minorUnits int, info currency.FormatInfo) (int64, error) {
 	p := parsePattern(info.Format)
-	affix := func(a string) string {
+	affix := func(a string, prefix bool) string {
 		var b strings.Builder
-		writeAffix(&b, a, info)
+		writeAffix(&b, a, info, prefix)
 		return normalizeFormatted(b.String())
 	}
-	posPrefix, posSuffix := affix(p.posPrefix), affix(p.posSuffix)
-	negPrefix, negSuffix := affix(p.negPrefix), affix(p.negSuffix)
+	posPrefix, posSuffix := affix(p.posPrefix, true), affix(p.posSuffix, false)
+	negPrefix, negSuffix := affix(p.negPrefix, true), affix(p.negSuffix, false)
 	if p.implicitMinus {
 		negPrefix = "-" + negPrefix
 	}

@@ -3,6 +3,8 @@ package fulus
 import (
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/khatibomar/fulus/currency"
 )
@@ -66,12 +68,19 @@ func groupingSizes(number string) (primary, secondary int) {
 	return primary, secondary
 }
 
-// writeAffix writes a pattern prefix or suffix. It replaces "¤" with the symbol and "-" with the minus sign.
-func writeAffix(b *strings.Builder, affix string, info currency.FormatInfo) {
-	for _, r := range affix {
+// writeAffix writes a pattern affix with the symbol, the minus sign and the CLDR currency spacing.
+func writeAffix(b *strings.Builder, affix string, info currency.FormatInfo, prefix bool) {
+	for i, r := range affix {
 		switch r {
 		case '¤':
+			nextToNumber := prefix && i+len("¤") == len(affix) || !prefix && i == 0
+			if nextToNumber && !prefix && needsCurrencySpace(info.Symbol, utf8.DecodeRuneInString) {
+				b.WriteString(currencySpace)
+			}
 			b.WriteString(info.Symbol)
+			if nextToNumber && prefix && needsCurrencySpace(info.Symbol, utf8.DecodeLastRuneInString) {
+				b.WriteString(currencySpace)
+			}
 		case '-':
 			b.WriteString(info.MinusSign)
 		default:
@@ -80,9 +89,18 @@ func writeAffix(b *strings.Builder, affix string, info currency.FormatInfo) {
 	}
 }
 
-// writeGrouped writes integer digits with a separator between the groups.
-func writeGrouped(b *strings.Builder, digits []byte, primary, secondary int, separator string) {
-	if primary <= 0 || len(digits) <= primary {
+// currencySpace is the CLDR currency spacing text. It is the same in all CLDR locales.
+const currencySpace = "\u00a0"
+
+// needsCurrencySpace reports whether the symbol character next to the number is not a symbol or a separator.
+func needsCurrencySpace(symbol string, decode func(string) (rune, int)) bool {
+	r, size := decode(symbol)
+	return size > 0 && r != utf8.RuneError && !unicode.IsSymbol(r) && !unicode.In(r, unicode.Z)
+}
+
+// writeGrouped writes integer digits with group separators, if the first group has at least minimum digits.
+func writeGrouped(b *strings.Builder, digits []byte, primary, secondary, minimum int, separator string) {
+	if primary <= 0 || len(digits) < primary+max(minimum, 1) {
 		b.Write(digits)
 		return
 	}
@@ -120,13 +138,13 @@ func formatAmount(amount int64, minorUnits int, info currency.FormatInfo) string
 	}
 
 	var b strings.Builder
-	b.Grow(len(info.Format) + 2*len(info.Symbol) + len(info.MinusSign) + len(info.DecimalSeparator) +
+	b.Grow(len(info.Format) + 2*len(info.Symbol) + len(currencySpace) + len(info.MinusSign) + len(info.DecimalSeparator) +
 		len(digits)*(1+len(info.GroupSeparator)) + minorUnits)
 	if negative && p.implicitMinus {
 		b.WriteString(info.MinusSign)
 	}
-	writeAffix(&b, prefix, info)
-	writeGrouped(&b, integer, p.primaryGroup, p.secondaryGroup, info.GroupSeparator)
+	writeAffix(&b, prefix, info, true)
+	writeGrouped(&b, integer, p.primaryGroup, p.secondaryGroup, info.MinimumGroupingDigits, info.GroupSeparator)
 	if minorUnits > 0 {
 		b.WriteString(info.DecimalSeparator)
 		for range fractionPad {
@@ -134,6 +152,6 @@ func formatAmount(amount int64, minorUnits int, info currency.FormatInfo) string
 		}
 		b.Write(fraction)
 	}
-	writeAffix(&b, suffix, info)
+	writeAffix(&b, suffix, info, false)
 	return b.String()
 }
