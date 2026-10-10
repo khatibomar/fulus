@@ -281,7 +281,8 @@ eur, err := fulus.As[currency.EUR](price) // ErrCurrencyMismatch if price is not
 
 `currency.ByCode` and `currency.ByNumber` find a currency by its ISO 4217 code.
 `currency.Register` adds a custom currency, so that `AnyMoney` can use it.
-`AnyMoney` uses the same JSON form as `Money[T]`.
+`AnyMoney` uses the same JSON form as `Money[T]`: `{"amount":"12.50","currency":"EUR"}`.
+The amount is a decimal string, so it does not lose digits in JavaScript and does not depend on the minor units of the reader.
 
 ## Locales
 

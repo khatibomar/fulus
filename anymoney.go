@@ -129,7 +129,10 @@ func (m AnyMoney) String() string {
 
 // MarshalJSON implements json.Marshaler with the same form as Money.
 func (m AnyMoney) MarshalJSON() ([]byte, error) {
-	return marshalMoneyJSON(m.amount, m.code())
+	if m.currency == nil {
+		return marshalMoneyJSON(m.amount, 0, "")
+	}
+	return marshalMoneyJSON(m.amount, m.currency.MinorUnits(), m.currency.Code())
 }
 
 // UnmarshalJSON implements json.Unmarshaler with the same form as Money.
@@ -139,15 +142,11 @@ func (m *AnyMoney) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return fmt.Errorf("failed to unmarshal money: %w", err)
 	}
-	amount, err := parseIntAmount(temp.Amount)
+	parsed, err := ParseAnyMoney(temp.Amount, temp.Currency)
 	if err != nil {
 		return err
 	}
-	c, ok := currency.ByCode(temp.Currency)
-	if !ok {
-		return fmt.Errorf("%w: %q", ErrUnknownCurrency, temp.Currency)
-	}
-	*m = AnyMoney{amount: amount, currency: c}
+	*m = parsed
 	return nil
 }
 

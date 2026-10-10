@@ -10,24 +10,26 @@ import (
 	"github.com/khatibomar/fulus/currency"
 )
 
-// MarshalJSON implements json.Marshaler.
-// It writes the amount in minor units as a string, so that a JSON reader does not lose digits.
+// MarshalJSON implements json.Marshaler. It writes the form {"amount":"10.50","currency":"USD"}.
+// The amount is the canonical decimal from Decimal, in a string, so that a JSON reader does not lose digits.
+// The JSON does not depend on the minor units of the reader, so it stays correct if ISO 4217 changes them.
 func (m Money[T]) MarshalJSON() ([]byte, error) {
-	return marshalMoneyJSON(m.amount, m.Currency().Code())
+	c := m.Currency()
+	return marshalMoneyJSON(m.amount, c.MinorUnits(), c.Code())
 }
 
 // marshalMoneyJSON writes the JSON form of an amount without reflection
 // when the currency code needs no escaping.
-func marshalMoneyJSON(amount int128, code string) ([]byte, error) {
+func marshalMoneyJSON(amount int128, minorUnits int, code string) ([]byte, error) {
 	for i := range len(code) {
 		if c := code[i]; c < 0x20 || c > 0x7e || c == '"' || c == '\\' || c == '<' || c == '>' || c == '&' {
-			return json.Marshal(moneyJSON{Amount: string(appendInt128(nil, amount)), Currency: code})
+			return json.Marshal(moneyJSON{Amount: string(appendDecimal(nil, amount, minorUnits)), Currency: code})
 		}
 	}
 
-	b := make([]byte, 0, len(`{"amount":"","currency":""}`)+40+len(code))
+	b := make([]byte, 0, len(`{"amount":"","currency":""}`)+42+len(code))
 	b = append(b, `{"amount":"`...)
-	b = appendInt128(b, amount)
+	b = appendDecimal(b, amount, minorUnits)
 	b = append(b, `","currency":"`...)
 	b = append(b, code...)
 	return append(b, `"}`...), nil
@@ -39,23 +41,24 @@ type moneyJSON struct {
 }
 
 // UnmarshalJSON implements json.Unmarshaler. It reads the form that MarshalJSON writes.
-// Returns ErrCurrencyMismatch if the currency code is not the code of T.
+// The amount can have fewer fraction digits than the minor units, but not more.
+// Returns ErrCurrencyMismatch if the currency code is not the code of T,
+// and ErrScaleMismatch if the amount has more fraction digits than the minor units.
 func (m *Money[T]) UnmarshalJSON(data []byte) error {
 	var temp moneyJSON
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return fmt.Errorf("failed to unmarshal money: %w", err)
 	}
 
-	amount, err := parseIntAmount(temp.Amount)
+	c := m.Currency()
+	if c.Code() != temp.Currency {
+		return fmt.Errorf("%w: expected %s, got %s", ErrCurrencyMismatch, c.Code(), temp.Currency)
+	}
+
+	amount, err := parseDecimal(temp.Amount, c.MinorUnits())
 	if err != nil {
 		return err
 	}
-
-	code := m.Currency().Code()
-	if code != temp.Currency {
-		return fmt.Errorf("%w: expected %s, got %s", ErrCurrencyMismatch, code, temp.Currency)
-	}
-
 	m.amount = amount
 	return nil
 }
@@ -192,15 +195,32 @@ func (m *Money[T]) scanText(s string) error {
 }
 
 // Decimal returns the amount as a canonical decimal string such as "-1234.50".
-// It has no symbol and no group separator, and ParseMoney accepts it.
+// It has all the minor units, no symbol and no group separator, and ParseMoney accepts it.
 func (m Money[T]) Decimal() string {
-	return formatAmount(m.amount, m.Currency().MinorUnits(), canonicalFormatInfo)
+	return string(appendDecimal(nil, m.amount, m.Currency().MinorUnits()))
 }
 
-var canonicalFormatInfo = currency.FormatInfo{
-	Format:           "0.00",
-	DecimalSeparator: ".",
-	MinusSign:        "-",
+// appendDecimal appends the canonical decimal form of an amount in minor units, such as "-1234.50".
+func appendDecimal(b []byte, amount int128, minorUnits int) []byte {
+	if amount.isNeg() {
+		b = append(b, '-')
+	}
+	var buf [40]byte
+	digits := amount.abs().appendDecimal(buf[:0])
+	if minorUnits <= 0 {
+		return append(b, digits...)
+	}
+	if len(digits) <= minorUnits {
+		b = append(b, '0', '.')
+		for range minorUnits - len(digits) {
+			b = append(b, '0')
+		}
+		return append(b, digits...)
+	}
+	split := len(digits) - minorUnits
+	b = append(b, digits[:split]...)
+	b = append(b, '.')
+	return append(b, digits[split:]...)
 }
 
 // MarshalText implements encoding.TextMarshaler. It writes the canonical decimal form from Decimal.

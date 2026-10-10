@@ -22,7 +22,7 @@ Test it with a curl command:
 
 ```bash
 curl -X POST -H "Content-Type: application/json" \
-  -d '{"cart": [{"id": "1", "name": "Gopher Plush", "price": {"amount": "1500", "currency": "USD"}}, {"id": "2", "name": "Go Sticker", "price": {"amount": "300", "currency": "USD"}}]}' \
+  -d '{"cart": [{"id": "1", "name": "Gopher Plush", "price": {"amount": "15.00", "currency": "USD"}}, {"id": "2", "name": "Go Sticker", "price": {"amount": "3.00", "currency": "USD"}}]}' \
   http://localhost:8080/checkout
 ```
 
@@ -31,15 +31,15 @@ curl -X POST -H "Content-Type: application/json" \
 ```json
 {
   "subtotal": {
-    "amount": "1800",
+    "amount": "18.00",
     "currency": "USD"
   },
   "tax": {
-    "amount": "153",
+    "amount": "1.53",
     "currency": "USD"
   },
   "total": {
-    "amount": "1953",
+    "amount": "19.53",
     "currency": "USD"
   },
   "message": "Checkout successful. Total: $19.53"

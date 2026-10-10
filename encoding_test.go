@@ -163,7 +163,7 @@ func TestMarshalJSONEscapesCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("MarshalJSON() error = %v", err)
 	}
-	want, _ := json.Marshal(moneyJSON{Amount: "-5", Currency: `Q"<&>`})
+	want, _ := json.Marshal(moneyJSON{Amount: "-0.05", Currency: `Q"<&>`})
 	if string(got) != string(want) {
 		t.Errorf("MarshalJSON() = %s, want %s", got, want)
 	}

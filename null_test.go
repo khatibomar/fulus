@@ -72,7 +72,7 @@ func TestNullMoneyJSON(t *testing.T) {
 		{
 			name:  "valid",
 			input: payload{Price: NullMoney[currency.USD]{Money: NewMoney[currency.USD](1050), Valid: true}},
-			json:  `{"price":{"amount":"1050","currency":"USD"}}`,
+			json:  `{"price":{"amount":"10.50","currency":"USD"}}`,
 		},
 	}
 

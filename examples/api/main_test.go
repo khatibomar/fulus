@@ -11,8 +11,8 @@ import (
 func TestCheckoutHandler(t *testing.T) {
 	reqBody := []byte(`{
 		"cart": [
-			{"id": "1", "name": "Gopher Plush", "price": {"amount": "1500", "currency": "USD"}},
-			{"id": "2", "name": "Go Sticker", "price": {"amount": "300", "currency": "USD"}}
+			{"id": "1", "name": "Gopher Plush", "price": {"amount": "15.00", "currency": "USD"}},
+			{"id": "2", "name": "Go Sticker", "price": {"amount": "3.00", "currency": "USD"}}
 		]
 	}`)
 
