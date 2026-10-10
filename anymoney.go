@@ -122,9 +122,17 @@ func (m AnyMoney) Format(loc locale.Locale) string {
 	return formatAmount(m.amount, m.currency.MinorUnits(), m.currency.FormatInfo(loc))
 }
 
-// String returns the value formatted with DefaultLocale.
+// String returns the currency code and the canonical decimal, for example "EUR 12.50".
+// The zero value gives the amount only.
 func (m AnyMoney) String() string {
-	return m.Format(DefaultLocale())
+	if m.currency == nil {
+		return string(appendInt128(nil, m.amount))
+	}
+	code := m.currency.Code()
+	b := make([]byte, 0, len(code)+42)
+	b = append(b, code...)
+	b = append(b, ' ')
+	return string(appendDecimal(b, m.amount, m.currency.MinorUnits()))
 }
 
 // MarshalJSON implements json.Marshaler with the same form as Money.

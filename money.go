@@ -6,26 +6,10 @@ import (
 	"math/big"
 	"slices"
 	"strconv"
-	"sync/atomic"
 
 	"github.com/khatibomar/fulus/currency"
 	"github.com/khatibomar/fulus/locale"
 )
-
-var defaultLocale atomic.Pointer[locale.Locale]
-
-// DefaultLocale returns the locale that String uses. The initial value is locale.EN.
-func DefaultLocale() locale.Locale {
-	if l := defaultLocale.Load(); l != nil {
-		return *l
-	}
-	return locale.EN
-}
-
-// SetDefaultLocale sets the locale that String uses. It is safe for concurrent use.
-func SetDefaultLocale(l locale.Locale) {
-	defaultLocale.Store(&l)
-}
 
 var (
 	// ErrValidation is the error returned when money validation fails
@@ -368,10 +352,14 @@ func (m Money[T]) Sign() int {
 	return m.amount.sign()
 }
 
-// String returns a formatted string representation of the Money value using the default locale.
-// This implements the fmt.Stringer interface.
+// String returns the currency code and the canonical decimal, for example "USD -1234.50".
+// The result does not depend on a locale, so it is safe for logs and tests. Use Format for display.
 func (m Money[T]) String() string {
-	return m.Format(DefaultLocale())
+	code := m.Currency().Code()
+	b := make([]byte, 0, len(code)+42)
+	b = append(b, code...)
+	b = append(b, ' ')
+	return string(appendDecimal(b, m.amount, m.Currency().MinorUnits()))
 }
 
 // Format returns a formatted string representation of the Money value for the specified locale.

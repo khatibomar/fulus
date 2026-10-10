@@ -299,7 +299,7 @@ func ExampleConvert() {
 		panic(err)
 	}
 	fmt.Println(usd)
-	// Output: $5.23
+	// Output: USD 5.23
 }
 
 func ExampleCross() {

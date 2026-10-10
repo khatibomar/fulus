@@ -6,8 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"math"
-	"strings"
-	"sync"
 	"testing"
 
 	"github.com/khatibomar/fulus/currency"
@@ -120,30 +118,6 @@ func TestSumMinMax(t *testing.T) {
 	if got := Max(usd(3)); got.amount64() != 3 {
 		t.Errorf("Max() with one value = %d, want 3", got.amount64())
 	}
-}
-
-// TestDefaultLocale is not parallel because it changes the package default locale.
-func TestDefaultLocale(t *testing.T) {
-	if DefaultLocale() != locale.EN {
-		t.Fatalf("initial DefaultLocale() = %v, want %v", DefaultLocale(), locale.EN)
-	}
-	t.Cleanup(func() { SetDefaultLocale(locale.EN) })
-
-	SetDefaultLocale(locale.DE)
-	if got := NewMoney[currency.EUR](123456).String(); got != "1.234,56 €" {
-		t.Errorf("String() with DE = %q", got)
-	}
-
-	var wg sync.WaitGroup
-	for range 8 {
-		wg.Go(func() {
-			SetDefaultLocale(locale.DE)
-			if s := NewMoney[currency.EUR](1).String(); !strings.Contains(s, "€") {
-				t.Errorf("String() = %q", s)
-			}
-		})
-	}
-	wg.Wait()
 }
 
 type quotedCodeCurrency struct{}
