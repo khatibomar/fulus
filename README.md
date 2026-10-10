@@ -281,7 +281,16 @@ eur, err := fulus.As[currency.EUR](price) // ErrCurrencyMismatch if price is not
 ```
 
 `currency.ByCode` and `currency.ByNumber` find a currency by its ISO 4217 code.
-`currency.Register` adds a custom currency, so that `AnyMoney` can use it.
+`currency.Register` adds a custom currency to the default registry, so that `AnyMoney` can use it.
+To keep custom currencies out of the global state, for example for each tenant or in a test, use a `currency.Registry`:
+
+```go
+reg, err := currency.NewRegistry(currency.Builtin()...)
+err = reg.Register(KANNA{})
+
+c, ok := reg.ByCode("KANNA")
+price, err := fulus.NewAnyMoneyFromDecimal("12.50", c)
+```
 `AnyMoney` uses the same JSON form as `Money[T]`: `{"amount":"12.50","currency":"EUR"}`.
 The amount is a decimal string, so it does not lose digits in JavaScript and does not depend on the minor units of the reader.
 
