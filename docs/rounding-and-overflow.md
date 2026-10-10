@@ -42,13 +42,13 @@ These operations take a `RoundingMode`. They do not have a default mode.
 | `RoundCash(mode)` | amount / increment, rounded, then multiplied by the increment |
 
 Each operation calculates the exact result first, and then it rounds one time.
-The product amount × n uses 128 bits, so it cannot overflow before the division.
+The product amount × n uses 192 bits, so it cannot overflow before the division.
 `ParseFactor` reads a decimal, a fraction such as `"1/3"` or a percentage such as `"8.25%"` as an exact fraction.
 It does not use floating point. It reads only base 10 digits, so it does not accept an exponent such as `"1e3"`,
 a base prefix such as `"0x10"` or an underscore such as `"1_000"`. `ParseRate` uses the same rules.
 `ParseFactor` returns `ErrOverflow` if the numerator or the denominator does not fit in `int64`.
 
-An unknown mode or the zero mode gives `ErrInvalidRoundingMode`. A zero divisor gives `ErrDivisionByZero` or `ErrZeroDenominator`.
+An unknown mode or the zero mode gives `ErrInvalidRoundingMode`. A zero divisor in `Div` or a zero denominator in `NewFactor` gives `ErrDivisionByZero`.
 
 ## Rounding modes
 
