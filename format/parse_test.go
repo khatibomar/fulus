@@ -117,6 +117,22 @@ func TestParse(t *testing.T) {
 			wantErr: fulus.ErrScaleMismatch,
 		},
 		{
+			name: "leading zeros",
+			parse: func() (int64, error) {
+				m, err := Parse[currency.USD]("$007.50", locale.EN)
+				return amount64(m), err
+			},
+			want: 750,
+		},
+		{
+			name: "zeros only in the whole part",
+			parse: func() (int64, error) {
+				m, err := Parse[currency.USD]("-$00.50", locale.EN)
+				return amount64(m), err
+			},
+			want: -50,
+		},
+		{
 			name: "symbol only",
 			parse: func() (int64, error) {
 				m, err := Parse[currency.USD]("$", locale.EN)

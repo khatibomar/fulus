@@ -1,6 +1,7 @@
 package format
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 
@@ -70,6 +71,10 @@ func parseFormatted(s string, info Info) (string, error) {
 			return "", fmt.Errorf("%w: %q has wrong digit grouping", fulus.ErrInvalidAmountFormat, s)
 		}
 		integer = strings.Join(groups, "")
+	}
+	// The canonical decimal has no leading zeros, but a person can write them.
+	if trimmed := strings.TrimLeft(integer, "0"); trimmed != integer {
+		integer = cmp.Or(trimmed, "0")
 	}
 
 	canonical := integer
