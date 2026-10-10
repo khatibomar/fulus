@@ -47,8 +47,8 @@ func TestDecimalAndText(t *testing.T) {
 	}
 
 	var m Money[currency.USD]
-	if err := m.UnmarshalText([]byte("-1234.50")); err != nil || m.Amount() != -123450 {
-		t.Errorf("UnmarshalText() = %d, %v", m.Amount(), err)
+	if err := m.UnmarshalText([]byte("-1234.50")); err != nil || m.amount64() != -123450 {
+		t.Errorf("UnmarshalText() = %d, %v", m.amount64(), err)
 	}
 	if err := m.UnmarshalText([]byte("1.234")); !errors.Is(err, ErrScaleMismatch) {
 		t.Errorf("UnmarshalText() error = %v, want %v", err, ErrScaleMismatch)
@@ -93,7 +93,8 @@ func TestSumMinMax(t *testing.T) {
 		{name: "empty", values: nil, want: 0},
 		{name: "values", values: []Money[currency.USD]{usd(100), usd(-30), usd(5)}, want: 75},
 		{name: "intermediate overflow", values: []Money[currency.USD]{usd(math.MaxInt64), usd(1), usd(-2)}, want: math.MaxInt64 - 1},
-		{name: "overflow", values: []Money[currency.USD]{usd(math.MaxInt64), usd(1)}, wantErr: ErrOverflow},
+		{name: "intermediate overflow of 128 bits", values: []Money[currency.USD]{maxMoney[currency.USD](), usd(1), maxMoney[currency.USD]().MustMul(-1)}, want: 1},
+		{name: "overflow", values: []Money[currency.USD]{maxMoney[currency.USD](), usd(1)}, wantErr: ErrOverflow},
 	}
 
 	for _, tt := range tests {
@@ -104,20 +105,20 @@ func TestSumMinMax(t *testing.T) {
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Sum() error = %v, want %v", err, tt.wantErr)
 			}
-			if err == nil && got.Amount() != tt.want {
-				t.Errorf("Sum() = %d, want %d", got.Amount(), tt.want)
+			if err == nil && got.amount64() != tt.want {
+				t.Errorf("Sum() = %d, want %d", got.amount64(), tt.want)
 			}
 		})
 	}
 
-	if got := Min(usd(3), usd(-1), usd(2)); got.Amount() != -1 {
-		t.Errorf("Min() = %d, want -1", got.Amount())
+	if got := Min(usd(3), usd(-1), usd(2)); got.amount64() != -1 {
+		t.Errorf("Min() = %d, want -1", got.amount64())
 	}
-	if got := Max(usd(3), usd(-1), usd(7)); got.Amount() != 7 {
-		t.Errorf("Max() = %d, want 7", got.Amount())
+	if got := Max(usd(3), usd(-1), usd(7)); got.amount64() != 7 {
+		t.Errorf("Max() = %d, want 7", got.amount64())
 	}
-	if got := Max(usd(3)); got.Amount() != 3 {
-		t.Errorf("Max() with one value = %d, want 3", got.Amount())
+	if got := Max(usd(3)); got.amount64() != 3 {
+		t.Errorf("Max() with one value = %d, want 3", got.amount64())
 	}
 }
 
@@ -168,7 +169,7 @@ func TestMarshalJSONEscapesCode(t *testing.T) {
 	}
 
 	var back Money[quotedCodeCurrency]
-	if err := json.Unmarshal(got, &back); err != nil || back.Amount() != -5 {
-		t.Errorf("Unmarshal() = %d, %v", back.Amount(), err)
+	if err := json.Unmarshal(got, &back); err != nil || back.amount64() != -5 {
+		t.Errorf("Unmarshal() = %d, %v", back.amount64(), err)
 	}
 }

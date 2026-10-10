@@ -35,8 +35,8 @@ func TestCheckoutHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	expectedTotalAmount := int64(1953) // 1500 + 300 = 1800. Tax = 1800 * 0.085 = 153. Total = 1953
-	if resp.Total.Amount() != expectedTotalAmount {
-		t.Errorf("handler returned unexpected total: got %v want %v", resp.Total.Amount(), expectedTotalAmount)
+	// 15.00 + 3.00 = 18.00. Tax = 18.00 * 0.085 = 1.53. Total = 19.53.
+	if got := resp.Total.Decimal(); got != "19.53" {
+		t.Errorf("handler returned unexpected total: got %v want 19.53", got)
 	}
 }

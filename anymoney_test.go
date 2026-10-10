@@ -3,7 +3,6 @@ package fulus
 import (
 	"encoding/json"
 	"errors"
-	"math"
 	"testing"
 
 	"github.com/khatibomar/fulus/currency"
@@ -72,8 +71,8 @@ func TestAnyMoneyConstructors(t *testing.T) {
 			if err != nil {
 				return
 			}
-			if got.Amount() != tt.want || got.Currency().Code() != tt.code {
-				t.Errorf("got %d %s, want %d %s", got.Amount(), got.Currency().Code(), tt.want, tt.code)
+			if got.amount64() != tt.want || got.Currency().Code() != tt.code {
+				t.Errorf("got %d %s, want %d %s", got.amount64(), got.Currency().Code(), tt.want, tt.code)
 			}
 		})
 	}
@@ -83,8 +82,8 @@ func TestAs(t *testing.T) {
 	t.Parallel()
 
 	usd, err := As[currency.USD](NewAnyMoney(1050, currency.USD{}))
-	if err != nil || usd.Amount() != 1050 {
-		t.Fatalf("As[USD]() = %v, %v; want 1050, nil", usd.Amount(), err)
+	if err != nil || usd.amount64() != 1050 {
+		t.Fatalf("As[USD]() = %v, %v; want 1050, nil", usd.amount64(), err)
 	}
 
 	if _, err := As[currency.EUR](NewAnyMoney(1050, currency.USD{})); !errors.Is(err, ErrCurrencyMismatch) {
@@ -111,8 +110,8 @@ func TestAnyMoneyArithmetic(t *testing.T) {
 		{name: "sub", op: func() (AnyMoney, error) { return usd(100).Sub(usd(150)) }, want: -50},
 		{name: "add mismatch", op: func() (AnyMoney, error) { return usd(100).Add(eur) }, wantErr: ErrCurrencyMismatch},
 		{name: "add zero value", op: func() (AnyMoney, error) { return AnyMoney{}.Add(usd(1)) }, wantErr: ErrCurrencyMismatch},
-		{name: "add overflow", op: func() (AnyMoney, error) { return usd(math.MaxInt64).Add(usd(1)) }, wantErr: ErrOverflow},
-		{name: "sub overflow", op: func() (AnyMoney, error) { return usd(math.MinInt64).Sub(usd(1)) }, wantErr: ErrOverflow},
+		{name: "add overflow", op: func() (AnyMoney, error) { return maxMoney[currency.USD]().Any().Add(usd(1)) }, wantErr: ErrOverflow},
+		{name: "sub overflow", op: func() (AnyMoney, error) { return minMoney[currency.USD]().Any().Sub(usd(1)) }, wantErr: ErrOverflow},
 	}
 
 	for _, tt := range tests {
@@ -123,8 +122,8 @@ func TestAnyMoneyArithmetic(t *testing.T) {
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("error = %v, want %v", err, tt.wantErr)
 			}
-			if err == nil && got.Amount() != tt.want {
-				t.Errorf("amount = %d, want %d", got.Amount(), tt.want)
+			if err == nil && got.amount64() != tt.want {
+				t.Errorf("amount = %d, want %d", got.amount64(), tt.want)
 			}
 		})
 	}
@@ -143,7 +142,7 @@ func TestAnyMoneyFormat(t *testing.T) {
 	if got := NewAnyMoney(-123456, currency.CHF{}).Format(locale.DE_CH); got != "CHF-1'234.56" {
 		t.Errorf("Format() = %q", got)
 	}
-	if got := (AnyMoney{amount: 42}).String(); got != "42" {
+	if got := (AnyMoney{amount: int128FromInt64(42)}).String(); got != "42" {
 		t.Errorf("zero currency String() = %q, want %q", got, "42")
 	}
 }
@@ -160,8 +159,8 @@ func TestAnyMoneyJSON(t *testing.T) {
 	}
 
 	var typed Money[currency.EUR]
-	if err := json.Unmarshal(b, &typed); err != nil || typed.Amount() != 1050 {
-		t.Fatalf("Money JSON is not compatible: %v, %d", err, typed.Amount())
+	if err := json.Unmarshal(b, &typed); err != nil || typed.amount64() != 1050 {
+		t.Fatalf("Money JSON is not compatible: %v, %d", err, typed.amount64())
 	}
 
 	tests := []struct {
@@ -185,8 +184,8 @@ func TestAnyMoneyJSON(t *testing.T) {
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Unmarshal() error = %v, want %v", err, tt.wantErr)
 			}
-			if err == nil && (m.Amount() != tt.want || m.Currency().Code() != tt.code) {
-				t.Errorf("Unmarshal() = %d %s", m.Amount(), m.Currency().Code())
+			if err == nil && (m.amount64() != tt.want || m.Currency().Code() != tt.code) {
+				t.Errorf("Unmarshal() = %d %s", m.amount64(), m.Currency().Code())
 			}
 		})
 	}

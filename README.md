@@ -57,7 +57,7 @@ func main() {
 
 This prevents common mistakes like:
 - Accidentally mixing different currencies in calculations
-- Using floating point numbers for money (uses int64 internally)
+- Using floating point numbers for money (uses a 128-bit integer internally)
 - Imprecise currency conversions
 
 ### defining own currency types
@@ -135,23 +135,23 @@ func main() {
 
 ### Limits
 
-The amount is an `int64` in minor units.
-The largest value is 92,233,720,368,547,758.07 for a currency with 2 minor units.
+The amount is a signed 128-bit integer in minor units.
+The largest value is about 1.7 × 10^36 for a currency with 2 minor units.
 Every operation returns `ErrOverflow` instead of a wrong result when the result does not fit.
 A currency with many minor units has a smaller range.
-For example, a token with 18 minor units cannot hold more than about 9.2 units.
+For example, a token with 18 minor units can hold about 1.7 × 10^20 units.
 
 ### Documentation
 
 - [Rounding and overflow](docs/rounding-and-overflow.md): which operations round, how they round, and the range of each currency.
-- [Design decisions](docs/design-decisions.md): why Fulus uses `int64` minor units and generics, and what that costs.
+- [Design decisions](docs/design-decisions.md): why Fulus uses 128-bit minor units and generics, and what that costs.
 - [Release notes](https://github.com/khatibomar/fulus/releases), [CONTRIBUTING](CONTRIBUTING.md) and [SECURITY](SECURITY.md).
 
 ### Comparison
 
 | | Fulus | [Rhymond/go-money](https://github.com/Rhymond/go-money) | [bojanz/currency](https://github.com/bojanz/currency) |
 |---|---|---|---|
-| Amount | `int64` minor units | `int64` minor units | Arbitrary-precision decimal |
+| Amount | 128-bit minor units | `int64` minor units | Arbitrary-precision decimal |
 | Currency check | Compile time, with a type parameter | Run time | Run time |
 | Digits after the minor units | No | No | Yes |
 | Overflow | `ErrOverflow` | Not checked | No overflow |
@@ -161,8 +161,8 @@ For example, a token with 18 minor units cannot hold more than about 9.2 units.
 | Parse formatted amounts | Yes | No | Yes |
 | Dependencies | None | None | `cockroachdb/apd` |
 
-Use Fulus when the currency is known at compile time and `int64` minor units are enough.
-Use `bojanz/currency` when you need more digits than the minor units, or a range larger than `int64`.
+Use Fulus when the currency is known at compile time and 128-bit minor units are enough.
+Use `bojanz/currency` when you need more digits than the minor units, or an unlimited range.
 
 ## Arithmetic Operations
 
@@ -357,21 +357,21 @@ Use `NullMoney[T]` for a column that can be NULL. It also writes and reads JSON 
 
 ## Performance
 
-Arithmetic uses 128-bit integer math from `math/bits` and does not allocate.
-`math/big` is used only for exchange rate parsing and for factors that do not fit in int64.
+Arithmetic uses 128-bit and 192-bit integer math from `math/bits` and does not allocate.
+`math/big` is used only to parse rates and factors, and when an intermediate result does not fit in 128 bits.
 Locale data is in tables indexed by locale, so a format lookup does not depend on the number of locales.
 
 Results of `go test -bench . -benchmem` on an AMD Ryzen AI 9 HX PRO 370:
 
 | Operation | Time | Allocations |
 |-----------|------|-------------|
-| `Add`, `Sub`, `Mul` | 1–2 ns | 0 |
-| `Div`, `MulFactor` | 5 ns | 0 |
-| `Convert` | 34 ns | 0 |
-| `Allocate` (3 parts) | 29 ns | 1 |
-| `Format` | 120 ns | 1 |
-| `ParseMoney` | 18 ns | 0 |
-| `MarshalJSON` (with `json.Marshal`) | 190 ns | 4 |
+| `Add`, `Sub` | 2 ns | 0 |
+| `Mul` | 4 ns | 0 |
+| `Div`, `MulFactor`, `Convert` | 9–10 ns | 0 |
+| `Allocate` (3 parts) | 34 ns | 1 |
+| `Format` | 130 ns | 1 |
+| `ParseMoney` | 21 ns | 0 |
+| `MarshalJSON` (with `json.Marshal`) | 170 ns | 4 |
 
 ## Stability
 

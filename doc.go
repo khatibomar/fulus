@@ -12,7 +12,7 @@
 //   - CLDR formatting and parsing of localized strings
 //   - JSON, text, log/slog and database/sql interoperability
 //
-// The amount is an int64 in minor units. For a currency with 2 minor units,
-// the range is ±92,233,720,368,547,758.07. Every operation returns ErrOverflow
+// The amount is a signed 128-bit integer in minor units. For a currency with 2 minor units,
+// the range is about ±1.7 × 10^36. Every operation returns ErrOverflow
 // instead of a wrong result when the result does not fit.
 package fulus

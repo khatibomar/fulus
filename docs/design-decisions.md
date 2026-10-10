@@ -2,26 +2,27 @@
 
 This page tells why Fulus works as it does, and what each decision costs.
 
-## The amount is an int64 in minor units
+## The amount is a 128-bit integer in minor units
 
-`Money[T]` holds one `int64`, the amount in minor units. For USD, the minor unit is the cent.
+`Money[T]` holds one signed 128-bit integer, the amount in minor units. For USD, the minor unit is the cent.
 
 Why:
 
 - Integer arithmetic is exact. The value 0.1 + 0.2 is exactly 0.3. With `float64` it is not.
-- Operations are fast and do not allocate. `Add` takes 1 to 2 ns. See the README for more benchmarks.
-- A `Money[T]` value is 8 bytes. You can compare it with `==` and use it as a map key.
-- A database stores it in a `BIGINT` column without a conversion.
+- Operations are fast and do not allocate. `Add` takes about 2 ns. See the README for more benchmarks.
+- A `Money[T]` value is 16 bytes. You can compare it with `==` and use it as a map key.
+- The range is large enough for currencies and tokens with many minor units.
+  A token with 18 minor units holds more than 10^20 units. With `int64`, it holds only about 9.2 units.
+  For USD, the largest amount is about 1.7 × 10^36.
 
 Cost:
 
-- The range is limited. For a currency with 2 minor units, the largest amount is about 92 quadrillion.
-  For a currency with 18 minor units, it is about 9.2 units. See [Rounding and overflow](rounding-and-overflow.md).
+- A value is 16 bytes, not 8. Multiplication and division are about 2 times slower than with `int64`.
+- `Int64` reports false for an amount that does not fit in `int64`. Use `BigInt` or `Decimal` for such an amount.
 - An amount cannot have more digits than the minor units. A price per unit such as $0.0042 needs another type,
   or a custom currency with more minor units.
 
 Every operation returns `ErrOverflow` when a result does not fit. Fulus never returns a wrong result.
-If you need a larger range, use a decimal type with arbitrary precision.
 
 ## The currency is a type parameter
 
@@ -30,7 +31,7 @@ The currency is the type parameter `T` of `Money[T]`. It is not a field.
 Why:
 
 - The compiler stops you from mixing currencies. `usd.Add(eur)` does not compile.
-- The value does not store the currency, so it stays 8 bytes.
+- The value does not store the currency, so it stays 16 bytes.
 - A function can require a currency in its signature, for example `func Charge(m fulus.Money[currency.EUR])`.
 - A conversion must name both currencies: `Rate[currency.EUR, currency.USD]`.
   `Cross(Rate[A, B], Rate[B, C])` gives a `Rate[A, C]`, so the compiler checks a triangulation.
@@ -92,7 +93,7 @@ Cost:
 `MarshalJSON` writes `{"amount":"1050","currency":"USD"}`. The amount is a string of minor units.
 
 Why: JavaScript and many JSON parsers read numbers as `float64`. A `float64` is exact only up to 2^53.
-A string keeps all the digits of an `int64`. The currency code lets the reader check the currency.
+A string keeps all the digits of a 128-bit amount. The currency code lets the reader check the currency.
 
 ## SQL stores the minor units only
 

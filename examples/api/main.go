@@ -27,6 +27,8 @@ type CheckoutResponse struct {
 	Message  string                    `json:"message"`
 }
 
+var salesTax = fulus.MustParseFactor("8.5%")
+
 func checkoutHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -50,16 +52,9 @@ func checkoutHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Calculate 8.5% tax
-	// 8.5% = 85 / 1000
-	tax, err := subtotal.Mul(85)
+	tax, err := subtotal.MulFactor(salesTax, fulus.RoundHalfUp)
 	if err != nil {
 		http.Error(w, "Error calculating tax", http.StatusInternalServerError)
-		return
-	}
-	tax, err = tax.Div(1000, fulus.RoundHalfUp)
-	if err != nil {
-		http.Error(w, "Error rounding tax", http.StatusInternalServerError)
 		return
 	}
 

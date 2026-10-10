@@ -40,13 +40,6 @@ func TestAdd(t *testing.T) {
 			expected:    50,
 			expectedErr: nil,
 		},
-		{
-			name:        "overflow",
-			a:           math.MaxInt64,
-			b:           1,
-			expected:    0,
-			expectedErr: ErrOverflow,
-		},
 	}
 
 	for _, tt := range tests {
@@ -60,8 +53,8 @@ func TestAdd(t *testing.T) {
 				return
 			}
 
-			if tt.expectedErr == nil && m1.Amount() != tt.expected {
-				t.Errorf("Add() = %v, expected %v", m1.Amount(), tt.expected)
+			if tt.expectedErr == nil && m1.amount64() != tt.expected {
+				t.Errorf("Add() = %v, expected %v", m1.amount64(), tt.expected)
 			}
 		})
 	}
@@ -95,13 +88,6 @@ func TestSub(t *testing.T) {
 			expected:    150,
 			expectedErr: nil,
 		},
-		{
-			name:        "underflow",
-			a:           math.MinInt64,
-			b:           1,
-			expected:    0,
-			expectedErr: ErrOverflow,
-		},
 	}
 
 	for _, tt := range tests {
@@ -115,8 +101,8 @@ func TestSub(t *testing.T) {
 				return
 			}
 
-			if tt.expectedErr == nil && m1.Amount() != tt.expected {
-				t.Errorf("Sub() = %v, expected %v", m1.Amount(), tt.expected)
+			if tt.expectedErr == nil && m1.amount64() != tt.expected {
+				t.Errorf("Sub() = %v, expected %v", m1.amount64(), tt.expected)
 			}
 		})
 	}
@@ -151,13 +137,6 @@ func TestMul(t *testing.T) {
 			expected:    -200,
 			expectedErr: nil,
 		},
-		{
-			name:        "overflow",
-			amount:      math.MaxInt64,
-			scale:       2,
-			expected:    0,
-			expectedErr: ErrOverflow,
-		},
 	}
 
 	for _, tt := range tests {
@@ -170,8 +149,8 @@ func TestMul(t *testing.T) {
 				return
 			}
 
-			if tt.expectedErr == nil && m.Amount() != tt.expected {
-				t.Errorf("Mul() = %v, expected %v", m.Amount(), tt.expected)
+			if tt.expectedErr == nil && m.amount64() != tt.expected {
+				t.Errorf("Mul() = %v, expected %v", m.amount64(), tt.expected)
 			}
 		})
 	}
@@ -234,14 +213,6 @@ func TestDiv(t *testing.T) {
 			expected:    0,
 			expectedErr: ErrDivisionByZero,
 		},
-		{
-			name:        "overflow from minint / -1",
-			amount:      math.MinInt64,
-			divisor:     -1,
-			mode:        RoundHalfUp,
-			expected:    0,
-			expectedErr: ErrOverflow,
-		},
 	}
 
 	for _, tt := range tests {
@@ -254,8 +225,8 @@ func TestDiv(t *testing.T) {
 				return
 			}
 
-			if tt.expectedErr == nil && m.Amount() != tt.expected {
-				t.Errorf("Div() = %v, expected %v", m.Amount(), tt.expected)
+			if tt.expectedErr == nil && m.amount64() != tt.expected {
+				t.Errorf("Div() = %v, expected %v", m.amount64(), tt.expected)
 			}
 		})
 	}
@@ -286,12 +257,6 @@ func TestAbs(t *testing.T) {
 			expected:    0,
 			expectedErr: nil,
 		},
-		{
-			name:        "overflow",
-			amount:      math.MinInt64,
-			expected:    0,
-			expectedErr: ErrOverflow,
-		},
 	}
 
 	for _, tt := range tests {
@@ -304,8 +269,8 @@ func TestAbs(t *testing.T) {
 				return
 			}
 
-			if tt.expectedErr == nil && m.Amount() != tt.expected {
-				t.Errorf("Abs() = %v, expected %v", m.Amount(), tt.expected)
+			if tt.expectedErr == nil && m.amount64() != tt.expected {
+				t.Errorf("Abs() = %v, expected %v", m.amount64(), tt.expected)
 			}
 		})
 	}
@@ -336,12 +301,6 @@ func TestNeg(t *testing.T) {
 			expected:    0,
 			expectedErr: nil,
 		},
-		{
-			name:        "overflow",
-			amount:      math.MinInt64,
-			expected:    0,
-			expectedErr: ErrOverflow,
-		},
 	}
 
 	for _, tt := range tests {
@@ -354,8 +313,8 @@ func TestNeg(t *testing.T) {
 				return
 			}
 
-			if tt.expectedErr == nil && m.Amount() != tt.expected {
-				t.Errorf("Neg() = %v, expected %v", m.Amount(), tt.expected)
+			if tt.expectedErr == nil && m.amount64() != tt.expected {
+				t.Errorf("Neg() = %v, expected %v", m.amount64(), tt.expected)
 			}
 		})
 	}
@@ -574,8 +533,8 @@ func TestParseMoney(t *testing.T) {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)
 				}
-				if m.Amount() != tt.expected {
-					t.Fatalf("amount = %d, expected %d", m.Amount(), tt.expected)
+				if m.amount64() != tt.expected {
+					t.Fatalf("amount = %d, expected %d", m.amount64(), tt.expected)
 				}
 				return
 			}
@@ -590,8 +549,8 @@ func TestParseMoney(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if m.Amount() != tt.expected {
-				t.Fatalf("amount = %d, expected %d", m.Amount(), tt.expected)
+			if m.amount64() != tt.expected {
+				t.Fatalf("amount = %d, expected %d", m.amount64(), tt.expected)
 			}
 		})
 	}
@@ -637,8 +596,8 @@ func TestMoneyValueAndScan(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Scan(%#v) error = %v, wantErr %v", tt.value, err, tt.wantErr)
 			}
-			if !tt.wantErr && scanned.Amount() != tt.want {
-				t.Fatalf("Scan(%#v) amount = %d, expected %d", tt.value, scanned.Amount(), tt.want)
+			if !tt.wantErr && scanned.amount64() != tt.want {
+				t.Fatalf("Scan(%#v) amount = %d, expected %d", tt.value, scanned.amount64(), tt.want)
 			}
 		})
 	}
@@ -707,8 +666,8 @@ func TestJSON(t *testing.T) {
 				t.Errorf("UnmarshalJSON() error = %v, expected error %v", err, tt.expectedErr)
 				return
 			}
-			if unmarshaledMoney.Amount() != tt.money.Amount() {
-				t.Errorf("UnmarshalJSON() amount = %v, expected %v", unmarshaledMoney.Amount(), tt.money.Amount())
+			if unmarshaledMoney.amount64() != tt.money.amount64() {
+				t.Errorf("UnmarshalJSON() amount = %v, expected %v", unmarshaledMoney.amount64(), tt.money.amount64())
 			}
 		})
 	}
@@ -890,14 +849,14 @@ func TestAllocate(t *testing.T) {
 
 			if tt.expectedErr == nil {
 				for i, expected := range tt.expected {
-					if parts[i].Amount() != expected {
-						t.Errorf("part %d: expected %d, got %d", i, expected, parts[i].Amount())
+					if parts[i].amount64() != expected {
+						t.Errorf("part %d: expected %d, got %d", i, expected, parts[i].amount64())
 					}
 				}
 
 				sum := int64(0)
 				for _, part := range parts {
-					sum += part.Amount()
+					sum += part.amount64()
 				}
 				if sum != tt.amount {
 					t.Errorf("sum of parts (%d) does not equal original amount (%d)", sum, tt.amount)
@@ -975,7 +934,7 @@ func TestAllocateRealMoney(t *testing.T) {
 
 			sum := int64(0)
 			for _, part := range parts {
-				sum += part.Amount()
+				sum += part.amount64()
 			}
 			if sum != tt.amount {
 				t.Errorf("sum of parts (%d) does not equal original amount (%d)",
@@ -1056,16 +1015,16 @@ func TestGeneratedFormatContracts(t *testing.T) {
 				t.Fatalf("formatted value %q does not include symbol %q", formatted, tt.expected.Symbol)
 			}
 
-			if tt.money.Amount() != 0 && tt.money.Currency().MinorUnits() > 0 &&
+			if tt.money.amount64() != 0 && tt.money.Currency().MinorUnits() > 0 &&
 				!strings.Contains(formatted, tt.expected.DecimalSeparator) {
 				t.Fatalf("formatted value %q does not include decimal separator %q", formatted, tt.expected.DecimalSeparator)
 			}
 
-			if tt.money.Amount() < 0 && !strings.Contains(formatted, tt.expected.MinusSign) {
+			if tt.money.amount64() < 0 && !strings.Contains(formatted, tt.expected.MinusSign) {
 				t.Fatalf("formatted value %q does not include minus sign %q", formatted, tt.expected.MinusSign)
 			}
 
-			if absInt64(tt.money.Amount()) >= 1000 && tt.expected.GroupSeparator != "" &&
+			if absInt64(tt.money.amount64()) >= 1000 && tt.expected.GroupSeparator != "" &&
 				!strings.Contains(formatted, tt.expected.GroupSeparator) {
 				t.Fatalf("formatted value %q does not include group separator %q", formatted, tt.expected.GroupSeparator)
 			}
@@ -1103,7 +1062,7 @@ func FuzzDistributeInvariants(f *testing.F) {
 			t.Fatalf("counts must be non-negative: %+v", dist)
 		}
 
-		total := (dist.Smaller.Amount() * dist.SmallerCount) + (dist.Larger.Amount() * dist.LargerCount)
+		total := (dist.Smaller.amount64() * dist.SmallerCount) + (dist.Larger.amount64() * dist.LargerCount)
 		if total != amount {
 			t.Fatalf("distribution total = %d, amount = %d", total, amount)
 		}
@@ -1210,7 +1169,7 @@ func FuzzAllocateInvariants(f *testing.F) {
 
 		sum := int64(0)
 		for _, part := range parts {
-			sum += part.Amount()
+			sum += part.amount64()
 		}
 
 		if sum != amount {
@@ -1240,8 +1199,8 @@ func TestMustAdd(t *testing.T) {
 	m2 := NewMoney[currency.USD](50)
 
 	result := m1.MustAdd(m2)
-	if result.Amount() != 150 {
-		t.Errorf("MustAdd = %d, want %d", result.Amount(), 150)
+	if result.amount64() != 150 {
+		t.Errorf("MustAdd = %d, want %d", result.amount64(), 150)
 	}
 
 	defer func() {
@@ -1249,7 +1208,7 @@ func TestMustAdd(t *testing.T) {
 			t.Errorf("MustAdd should have panicked on overflow")
 		}
 	}()
-	mMax := NewMoney[currency.USD](math.MaxInt64)
+	mMax := maxMoney[currency.USD]()
 	_ = mMax.MustAdd(NewMoney[currency.USD](1))
 }
 
@@ -1258,8 +1217,8 @@ func TestMustSub(t *testing.T) {
 	m2 := NewMoney[currency.USD](50)
 
 	result := m1.MustSub(m2)
-	if result.Amount() != 50 {
-		t.Errorf("MustSub = %d, want %d", result.Amount(), 50)
+	if result.amount64() != 50 {
+		t.Errorf("MustSub = %d, want %d", result.amount64(), 50)
 	}
 
 	defer func() {
@@ -1267,7 +1226,7 @@ func TestMustSub(t *testing.T) {
 			t.Errorf("MustSub should have panicked on overflow")
 		}
 	}()
-	mMin := NewMoney[currency.USD](math.MinInt64)
+	mMin := minMoney[currency.USD]()
 	_ = mMin.MustSub(NewMoney[currency.USD](1))
 }
 
@@ -1275,8 +1234,8 @@ func TestMustMul(t *testing.T) {
 	m := NewMoney[currency.USD](100)
 
 	result := m.MustMul(3)
-	if result.Amount() != 300 {
-		t.Errorf("MustMul = %d, want %d", result.Amount(), 300)
+	if result.amount64() != 300 {
+		t.Errorf("MustMul = %d, want %d", result.amount64(), 300)
 	}
 
 	defer func() {
@@ -1284,6 +1243,6 @@ func TestMustMul(t *testing.T) {
 			t.Errorf("MustMul should have panicked on overflow")
 		}
 	}()
-	mMax := NewMoney[currency.USD](math.MaxInt64)
+	mMax := maxMoney[currency.USD]()
 	_ = mMax.MustMul(2)
 }

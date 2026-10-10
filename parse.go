@@ -22,7 +22,7 @@ func ParseFormatted[T currency.Unit](s string, loc locale.Locale) (Money[T], err
 	return Money[T]{amount: minor}, nil
 }
 
-func parseFormatted(s string, minorUnits int, info currency.FormatInfo) (int64, error) {
+func parseFormatted(s string, minorUnits int, info currency.FormatInfo) (int128, error) {
 	p := parsePattern(info.Format)
 	affix := func(a string, prefix bool) string {
 		var b strings.Builder
@@ -41,14 +41,14 @@ func parseFormatted(s string, minorUnits int, info currency.FormatInfo) (int64, 
 	if ok && (negPrefix != posPrefix || negSuffix != posSuffix) {
 		negative = true
 	} else if body, ok = cutAffixes(input, posPrefix, posSuffix); !ok {
-		return 0, fmt.Errorf("%w: %q does not match pattern %q", ErrInvalidAmountFormat, s, info.Format)
+		return int128{}, fmt.Errorf("%w: %q does not match pattern %q", ErrInvalidAmountFormat, s, info.Format)
 	}
 
 	integer, fraction, hasFraction := strings.Cut(body, normalizeFormatted(info.DecimalSeparator))
 	if group := normalizeFormatted(info.GroupSeparator); group != "" && strings.Contains(integer, group) {
 		groups := strings.Split(integer, group)
 		if !validGroups(groups, p.primaryGroup, p.secondaryGroup) {
-			return 0, fmt.Errorf("%w: %q has wrong digit grouping", ErrInvalidAmountFormat, s)
+			return int128{}, fmt.Errorf("%w: %q has wrong digit grouping", ErrInvalidAmountFormat, s)
 		}
 		integer = strings.Join(groups, "")
 	}

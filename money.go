@@ -1,18 +1,11 @@
 package fulus
 
 import (
-	"cmp"
-	"database/sql/driver"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
-	"math"
 	"math/big"
-	"math/bits"
 	"slices"
 	"strconv"
-	"strings"
 	"sync/atomic"
 
 	"github.com/khatibomar/fulus/currency"
@@ -129,10 +122,12 @@ func (r RoundingMode) String() string {
 	}
 }
 
-// Money represents a monetary value in a specific currency.
+// Money is an amount of money in the currency T.
+// It holds a signed 128-bit integer in minor units of T, for example cents for USD.
+// A Money value is 16 bytes. You can compare it with == and use it as a map key.
+// The zero value is zero in T.
 type Money[T currency.Unit] struct {
-	// amount stores the monetary value in the currency's smallest unit (e.g., cents for USD)
-	amount int64
+	amount int128
 }
 
 // Distribution tells how Distribute splits a value into equal chunks.
@@ -149,13 +144,20 @@ type Distribution[T currency.Unit] struct {
 	LargerCount int64
 }
 
-// NewMoney creates a new Money instance with the given amount and currency.
-// The amount should be specified in the currency's smallest sub-unit
-// (e.g., cents for USD, pence for GBP). For example:
-// USD 10.50 should be passed as 1050
-// EUR 5.99 should be passed as 599
+// NewMoney returns an amount in minor units of T. For example, NewMoney[currency.USD](1050) is USD 10.50.
+// Use ParseMoney or NewMoneyFromBigInt for an amount that does not fit in int64.
 func NewMoney[T currency.Unit](amount int64) Money[T] {
-	return Money[T]{amount: amount}
+	return Money[T]{amount: int128FromInt64(amount)}
+}
+
+// NewMoneyFromBigInt returns an amount in minor units of T.
+// Returns ErrOverflow if the amount does not fit in 128 bits.
+func NewMoneyFromBigInt[T currency.Unit](amount *big.Int) (Money[T], error) {
+	a, ok := int128FromBig(amount)
+	if !ok {
+		return Money[T]{}, ErrOverflow
+	}
+	return Money[T]{amount: a}, nil
 }
 
 // Currency returns the currency of the Money value.
@@ -164,38 +166,47 @@ func (m Money[T]) Currency() T {
 	return c
 }
 
-// Add performs addition of two Money values of the same currency.
-// Returns ErrOverflow if the operation would overflow int64.
+// Int64 returns the amount in minor units, and reports whether it fits in int64.
+func (m Money[T]) Int64() (int64, bool) {
+	return m.amount.int64()
+}
+
+// BigInt returns the amount in minor units.
+func (m Money[T]) BigInt() *big.Int {
+	return m.amount.big()
+}
+
+// Add returns m + other.
+// Returns ErrOverflow if the result does not fit.
 func (m Money[T]) Add(other Money[T]) (Money[T], error) {
-	result, ok := add64(m.amount, other.amount)
+	result, ok := add128(m.amount, other.amount)
 	if !ok {
 		return Money[T]{}, ErrOverflow
 	}
 	return Money[T]{amount: result}, nil
 }
 
-// Sub performs subtraction of two Money values of the same currency.
-// Returns ErrOverflow if the operation would overflow int64.
+// Sub returns m - other.
+// Returns ErrOverflow if the result does not fit.
 func (m Money[T]) Sub(other Money[T]) (Money[T], error) {
-	result, ok := sub64(m.amount, other.amount)
+	result, ok := sub128(m.amount, other.amount)
 	if !ok {
 		return Money[T]{}, ErrOverflow
 	}
 	return Money[T]{amount: result}, nil
 }
 
-// Mul multiplies the Money value by a scalar value.
-// Returns ErrOverflow if the operation would overflow int64.
+// Mul returns m * scale.
+// Returns ErrOverflow if the result does not fit.
 func (m Money[T]) Mul(scale int64) (Money[T], error) {
-	result, ok := mul64(m.amount, scale)
+	result, ok := m.amount.mulInt64(scale)
 	if !ok {
 		return Money[T]{}, ErrOverflow
 	}
 	return Money[T]{amount: result}, nil
 }
 
-// MustAdd performs addition of two Money values of the same currency.
-// Panics if the operation would overflow int64.
+// MustAdd is like Add but panics if the result does not fit.
 func (m Money[T]) MustAdd(other Money[T]) Money[T] {
 	result, err := m.Add(other)
 	if err != nil {
@@ -204,8 +215,7 @@ func (m Money[T]) MustAdd(other Money[T]) Money[T] {
 	return result
 }
 
-// MustSub performs subtraction of two Money values of the same currency.
-// Panics if the operation would overflow int64.
+// MustSub is like Sub but panics if the result does not fit.
 func (m Money[T]) MustSub(other Money[T]) Money[T] {
 	result, err := m.Sub(other)
 	if err != nil {
@@ -214,8 +224,7 @@ func (m Money[T]) MustSub(other Money[T]) Money[T] {
 	return result
 }
 
-// MustMul multiplies the Money value by a scalar value.
-// Panics if the operation would overflow int64.
+// MustMul is like Mul but panics if the result does not fit.
 func (m Money[T]) MustMul(scale int64) Money[T] {
 	result, err := m.Mul(scale)
 	if err != nil {
@@ -224,10 +233,9 @@ func (m Money[T]) MustMul(scale int64) Money[T] {
 	return result
 }
 
-// Div divides the Money value by a scalar value using the specified rounding mode.
-// Returns ErrDivisionByZero if divisor is 0.
-// Returns ErrOverflow if the operation would overflow int64.
-// Returns ErrInvalidRoundingMode if the rounding mode is unsupported.
+// Div returns m / divisor, rounded with mode.
+// Returns ErrDivisionByZero if divisor is 0, ErrOverflow if the result does not fit,
+// and ErrInvalidRoundingMode if the rounding mode is not valid.
 func (m Money[T]) Div(divisor int64, mode RoundingMode) (Money[T], error) {
 	if divisor == 0 {
 		return Money[T]{}, ErrDivisionByZero
@@ -260,7 +268,7 @@ func (m Money[T]) scale(numerator, denominator int64, mode RoundingMode) (Money[
 // RoundCash rounds the Money value to the smallest cash amount of the currency, with mode.
 // For example, CHF cash uses steps of 0.05, so 10.03 CHF becomes 10.05 CHF with RoundHalfUp.
 // If the currency does not implement currency.CashRounder, RoundCash returns the value unchanged.
-// Returns ErrOverflow if the result does not fit in int64.
+// Returns ErrOverflow if the result does not fit.
 func (m Money[T]) RoundCash(mode RoundingMode) (Money[T], error) {
 	if !mode.valid() {
 		return Money[T]{}, ErrInvalidRoundingMode
@@ -276,102 +284,88 @@ func (m Money[T]) RoundCash(mode RoundingMode) (Money[T], error) {
 	if err != nil {
 		return Money[T]{}, err
 	}
-	result, ok := mul64(steps, increment)
+	result, ok := steps.mulInt64(increment)
 	if !ok {
 		return Money[T]{}, ErrOverflow
 	}
 	return Money[T]{amount: result}, nil
 }
 
-// Abs returns the absolute value of the money amount.
-// Returns ErrOverflow if the amount is math.MinInt64.
+// Abs returns the absolute value of m.
+// Returns ErrOverflow for the smallest amount, because its positive value does not fit.
 func (m Money[T]) Abs() (Money[T], error) {
-	if m.amount == math.MinInt64 {
-		return Money[T]{}, ErrOverflow
+	if !m.amount.isNeg() {
+		return m, nil
 	}
-	if m.amount < 0 {
-		return Money[T]{amount: -m.amount}, nil
-	}
-	return m, nil
+	return m.Neg()
 }
 
-// Neg returns the negated value of the money amount.
-// Returns ErrOverflow if the amount is math.MinInt64.
+// Neg returns -m.
+// Returns ErrOverflow for the smallest amount, because its positive value does not fit.
 func (m Money[T]) Neg() (Money[T], error) {
-	if m.amount == math.MinInt64 {
+	result, ok := m.amount.neg()
+	if !ok {
 		return Money[T]{}, ErrOverflow
 	}
-	return Money[T]{amount: -m.amount}, nil
+	return Money[T]{amount: result}, nil
 }
 
 // Validate returns ErrValidation if m is not in the closed interval [low, high].
 func (m Money[T]) Validate(low, high Money[T]) error {
-	if m.amount < low.amount || m.amount > high.amount {
+	if m.LessThan(low) || m.GreaterThan(high) {
 		return fmt.Errorf("%w: money amount %s should be in interval [%s, %s]", ErrValidation, m, low, high)
 	}
 	return nil
 }
 
-// Cmp compares two Money values and returns:
-// -1 if m < other
-//
-//	0 if m == other
-//
-// +1 if m > other
+// Cmp returns -1 if m < other, 0 if m == other, and +1 if m > other.
 func (m Money[T]) Cmp(other Money[T]) int {
-	if m.amount < other.amount {
-		return -1
-	}
-	if m.amount > other.amount {
-		return 1
-	}
-	return 0
+	return m.amount.cmp(other.amount)
 }
 
-// Equal returns true if the two Money values are equal.
+// Equal reports whether m == other.
 func (m Money[T]) Equal(other Money[T]) bool {
 	return m.amount == other.amount
 }
 
-// GreaterThan returns true if the Money value is greater than the other.
+// GreaterThan reports whether m > other.
 func (m Money[T]) GreaterThan(other Money[T]) bool {
-	return m.amount > other.amount
+	return m.Cmp(other) > 0
 }
 
-// GreaterThanOrEqual returns true if the Money value is greater than or equal to the other.
+// GreaterThanOrEqual reports whether m >= other.
 func (m Money[T]) GreaterThanOrEqual(other Money[T]) bool {
-	return m.amount >= other.amount
+	return m.Cmp(other) >= 0
 }
 
-// LessThan returns true if the Money value is less than the other.
+// LessThan reports whether m < other.
 func (m Money[T]) LessThan(other Money[T]) bool {
-	return m.amount < other.amount
+	return m.Cmp(other) < 0
 }
 
-// LessThanOrEqual returns true if the Money value is less than or equal to the other.
+// LessThanOrEqual reports whether m <= other.
 func (m Money[T]) LessThanOrEqual(other Money[T]) bool {
-	return m.amount <= other.amount
+	return m.Cmp(other) <= 0
 }
 
-// IsZero returns true if the Money amount is zero.
+// IsZero reports whether m is zero.
 func (m Money[T]) IsZero() bool {
-	return m.amount == 0
+	return m.amount.isZero()
 }
 
-// IsPositive returns true if the Money amount is greater than zero.
+// IsPositive reports whether m > 0.
 func (m Money[T]) IsPositive() bool {
-	return m.amount > 0
+	return m.amount.sign() > 0
 }
 
-// IsNegative returns true if the Money amount is less than zero.
+// IsNegative reports whether m < 0.
 func (m Money[T]) IsNegative() bool {
-	return m.amount < 0
+	return m.amount.isNeg()
 }
 
-// Amount returns the internal amount value in the currency's smallest unit.
-// For example, returns cents for USD or pence for GBP.
-func (m Money[T]) Amount() int64 {
-	return m.amount
+// Sign returns -1 if m < 0, 0 if m is zero, and +1 if m > 0.
+func (m Money[T]) Sign() int {
+	return m.amount.sign()
 }
 
 // String returns a formatted string representation of the Money value using the default locale.
@@ -396,15 +390,18 @@ func (m Money[T]) Distribute(chunks int64) (Distribution[T], error) {
 	}
 
 	// Floor division, so that the remainder is never negative.
-	smaller := m.amount / chunks
-	remainder := m.amount % chunks
-	if remainder < 0 {
-		smaller--
-		remainder += chunks
+	negative := m.amount.isNeg()
+	q, r := m.amount.abs().divRem64(uint64(chunks))
+	remainder := int64(r)
+	if negative && r != 0 {
+		// q+1 is at most the magnitude of m, so it fits.
+		q, _ = q.inc()
+		remainder = chunks - remainder
 	}
+	smaller, _ := fromMagnitude128(q, negative)
 	larger := smaller
 	if remainder > 0 {
-		larger++
+		larger, _ = add128(smaller, int128FromInt64(1))
 	}
 	return Distribution[T]{
 		Smaller:      Money[T]{amount: smaller},
@@ -414,54 +411,6 @@ func (m Money[T]) Distribute(chunks int64) (Distribution[T], error) {
 	}, nil
 }
 
-func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*big.Int, error) {
-	if !mode.valid() {
-		return nil, ErrInvalidRoundingMode
-	}
-
-	q := new(big.Int)
-	r := new(big.Int)
-	q.QuoRem(numerator, denominator, r)
-
-	if r.Sign() == 0 || mode == RoundTruncate {
-		return q, nil
-	}
-	if mode == RoundUnnecessary {
-		return nil, ErrInexact
-	}
-
-	absRem := new(big.Int).Abs(r)
-	absDen := new(big.Int).Abs(denominator)
-	twiceRem := new(big.Int).Lsh(absRem, 1)
-	cmp := twiceRem.Cmp(absDen)
-	negativeResult := (numerator.Sign() < 0) != (denominator.Sign() < 0)
-
-	var awayFromZero bool
-	switch mode {
-	case RoundHalfUp:
-		awayFromZero = cmp >= 0
-	case RoundHalfDown:
-		awayFromZero = cmp > 0
-	case RoundHalfEven:
-		awayFromZero = cmp > 0 || (cmp == 0 && q.Bit(0) == 1)
-	case RoundUp:
-		awayFromZero = true
-	case RoundCeiling:
-		awayFromZero = !negativeResult
-	case RoundFloor:
-		awayFromZero = negativeResult
-	}
-
-	if awayFromZero {
-		if negativeResult {
-			q.Sub(q, big.NewInt(1))
-		} else {
-			q.Add(q, big.NewInt(1))
-		}
-	}
-	return q, nil
-}
-
 // Allocate divides m into parts in proportion to the ratios. The sum of the parts is equal to m.
 // It uses the largest remainder method. See docs/rounding-and-overflow.md.
 func (m Money[T]) Allocate(ratios ...int64) ([]Money[T], error) {
@@ -469,15 +418,15 @@ func (m Money[T]) Allocate(ratios ...int64) ([]Money[T], error) {
 		return nil, ErrNoRatios
 	}
 
-	total := int64(0)
+	var total uint64
 	for _, ratio := range ratios {
 		if ratio <= 0 {
 			return nil, ErrNegativeOrZeroRatios
 		}
-		if total > math.MaxInt64-ratio {
+		total += uint64(ratio)
+		if total > 1<<63-1 {
 			return nil, ErrOverflow
 		}
-		total += ratio
 	}
 
 	// Largest remainder method: each part gets its truncated share first.
@@ -486,276 +435,77 @@ func (m Money[T]) Allocate(ratios ...int64) ([]Money[T], error) {
 	parts := make([]Money[T], len(ratios))
 	remainders := make([]uint64, len(ratios))
 	leftover := m.amount
+	magnitude, negative := m.amount.abs(), m.amount.isNeg()
 	for i, ratio := range ratios {
-		// The share is at most m.amount in magnitude, so it always fits.
-		q, r, negative, _ := mulDiv(m.amount, ratio, total)
-		share, _ := fromMagnitude(q, negative)
+		// The share is at most m in magnitude, so it always fits.
+		q, r, _ := magnitude.mulDiv64(uint64(ratio), total)
+		share, _ := fromMagnitude128(q, negative)
 		parts[i] = Money[T]{amount: share}
 		remainders[i] = r
-		leftover -= share
+		leftover, _ = sub128(leftover, share)
 	}
-	if leftover == 0 {
+	if leftover.isZero() {
 		return parts, nil
 	}
 
-	step := int64(1)
-	if leftover < 0 {
-		step = -1
+	// The leftover is smaller than the number of parts, so it fits in int64.
+	count, _ := leftover.int64()
+	step := int128FromInt64(1)
+	if count < 0 {
+		step, count = int128FromInt64(-1), -count
 	}
 	order := make([]int, len(ratios))
 	for i := range order {
 		order[i] = i
 	}
 	slices.SortStableFunc(order, func(a, b int) int {
-		return cmp.Compare(remainders[b], remainders[a])
+		return cmpUint64(remainders[b], remainders[a])
 	})
-	for _, i := range order[:leftover*step] {
-		parts[i].amount += step
+	for _, i := range order[:count] {
+		parts[i].amount, _ = add128(parts[i].amount, step)
 	}
 
 	return parts, nil
 }
 
-// MarshalJSON implements the json.Marshaler interface
-// Serializes the amount as a string to preserve precision
-func (m Money[T]) MarshalJSON() ([]byte, error) {
-	return marshalMoneyJSON(m.amount, m.Currency().Code())
-}
-
-// marshalMoneyJSON writes the JSON form of an amount without reflection
-// when the currency code needs no escaping.
-func marshalMoneyJSON(amount int64, code string) ([]byte, error) {
-	for i := range len(code) {
-		if c := code[i]; c < 0x20 || c > 0x7e || c == '"' || c == '\\' || c == '<' || c == '>' || c == '&' {
-			return json.Marshal(moneyJSON{Amount: strconv.FormatInt(amount, 10), Currency: code})
-		}
-	}
-
-	b := make([]byte, 0, len(`{"amount":"","currency":""}`)+20+len(code))
-	b = append(b, `{"amount":"`...)
-	b = strconv.AppendInt(b, amount, 10)
-	b = append(b, `","currency":"`...)
-	b = append(b, code...)
-	return append(b, `"}`...), nil
-}
-
-type moneyJSON struct {
-	Amount   string `json:"amount"`
-	Currency string `json:"currency"`
-}
-
-// UnmarshalJSON implements the json.Unmarshaler interface
-// Expects amount as a string to maintain precision
-func (m *Money[T]) UnmarshalJSON(data []byte) error {
-	var temp moneyJSON
-	if err := json.Unmarshal(data, &temp); err != nil {
-		return fmt.Errorf("failed to unmarshal money: %w", err)
-	}
-
-	amount, err := parseIntAmount(temp.Amount)
-	if err != nil {
-		return err
-	}
-
-	code := m.Currency().Code()
-	if code != temp.Currency {
-		return fmt.Errorf("%w: expected %s, got %s", ErrCurrencyMismatch, code, temp.Currency)
-	}
-
-	m.amount = amount
-	return nil
-}
-
-// ParseMoney parses a canonical decimal amount into Money using the currency's minor units.
-// Supported format: optional sign (+/-), digits, optional decimal point and digits.
-func ParseMoney[T currency.Unit](amount string) (Money[T], error) {
-	var c T
-	minor, err := parseDecimal(amount, c.MinorUnits())
-	if err != nil {
-		return Money[T]{}, err
-	}
-	return Money[T]{amount: minor}, nil
-}
-
-// parseDecimal parses a canonical decimal amount into minor units.
-func parseDecimal(amount string, minorUnits int) (int64, error) {
-	if amount == "" {
-		return 0, fmt.Errorf("%w: empty amount", ErrInvalidAmountFormat)
-	}
-
-	negative := false
-	if amount[0] == '+' || amount[0] == '-' {
-		negative = amount[0] == '-'
-		amount = amount[1:]
-		if amount == "" {
-			return 0, fmt.Errorf("%w: sign without digits", ErrInvalidAmountFormat)
-		}
-	}
-
-	whole, fractional, hasPoint := strings.Cut(amount, ".")
-	if hasPoint && strings.Contains(fractional, ".") {
-		return 0, fmt.Errorf("%w: multiple decimal separators", ErrInvalidAmountFormat)
-	}
-	if whole == "" {
-		return 0, fmt.Errorf("%w: missing whole part", ErrInvalidAmountFormat)
-	}
-	if !allDigits(whole) {
-		return 0, fmt.Errorf("%w: invalid whole part", ErrInvalidAmountFormat)
-	}
-	if hasPoint && fractional == "" {
-		return 0, fmt.Errorf("%w: missing fractional part", ErrInvalidAmountFormat)
-	}
-	if !allDigits(fractional) {
-		return 0, fmt.Errorf("%w: invalid fractional part", ErrInvalidAmountFormat)
-	}
-	if len(fractional) > minorUnits {
-		return 0, fmt.Errorf("%w: got %d fractional digits, max is %d", ErrScaleMismatch, len(fractional), minorUnits)
-	}
-
-	var magnitude uint64
-	push := func(digit uint64) bool {
-		if magnitude > (math.MaxUint64-digit)/10 {
-			return false
-		}
-		magnitude = magnitude*10 + digit
-		return true
-	}
-	for i := range len(whole) {
-		if !push(uint64(whole[i] - '0')) {
-			return 0, ErrOverflow
-		}
-	}
-	for i := range len(fractional) {
-		if !push(uint64(fractional[i] - '0')) {
-			return 0, ErrOverflow
-		}
-	}
-	for range minorUnits - len(fractional) {
-		if !push(0) {
-			return 0, ErrOverflow
-		}
-	}
-
-	result, ok := fromMagnitude(magnitude, negative)
-	if !ok {
-		return 0, ErrOverflow
-	}
-	return result, nil
-}
-
-func parseIntAmount(amount string) (int64, error) {
-	if amount == "" {
-		return 0, fmt.Errorf("%w: empty amount", ErrInvalidAmountFormat)
-	}
-
-	parsed, err := strconv.ParseInt(amount, 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("%w: %v", ErrInvalidAmountFormat, err)
-	}
-
-	return parsed, nil
-}
-
-func allDigits(s string) bool {
-	for _, ch := range s {
-		if ch < '0' || ch > '9' {
-			return false
-		}
-	}
-	return true
-}
-
-// Value implements driver.Valuer for database/sql.
-// It returns the amount in minor units as int64, for use with an integer column such as BIGINT.
-func (m Money[T]) Value() (driver.Value, error) {
-	return m.amount, nil
-}
-
-// Scan implements sql.Scanner for database/sql.
-// It accepts an int64 amount in minor units, the same amount as integer text,
-// or the JSON form that MarshalJSON writes.
-func (m *Money[T]) Scan(value any) error {
-	switch v := value.(type) {
-	case nil:
-		return fmt.Errorf("cannot scan NULL into Money")
-	case int64:
-		m.amount = v
-		return nil
-	case []byte:
-		return m.scanText(string(v))
-	case string:
-		return m.scanText(v)
+func cmpUint64(a, b uint64) int {
+	switch {
+	case a < b:
+		return -1
+	case a > b:
+		return 1
 	default:
-		return fmt.Errorf("cannot scan type %T into Money", value)
+		return 0
 	}
-}
-
-func (m *Money[T]) scanText(s string) error {
-	if amount, err := strconv.ParseInt(s, 10, 64); err == nil {
-		m.amount = amount
-		return nil
-	}
-	return m.UnmarshalJSON([]byte(s))
-}
-
-// Decimal returns the amount as a canonical decimal string such as "-1234.50".
-// It has no symbol and no group separator, and ParseMoney accepts it.
-func (m Money[T]) Decimal() string {
-	return formatAmount(m.amount, m.Currency().MinorUnits(), canonicalFormatInfo)
-}
-
-var canonicalFormatInfo = currency.FormatInfo{
-	Format:           "0.00",
-	DecimalSeparator: ".",
-	MinusSign:        "-",
-}
-
-// MarshalText implements encoding.TextMarshaler. It writes the canonical decimal form from Decimal.
-func (m Money[T]) MarshalText() ([]byte, error) {
-	return []byte(m.Decimal()), nil
-}
-
-// UnmarshalText implements encoding.TextUnmarshaler. It reads the canonical decimal form with ParseMoney.
-func (m *Money[T]) UnmarshalText(text []byte) error {
-	parsed, err := ParseMoney[T](string(text))
-	if err != nil {
-		return err
-	}
-	*m = parsed
-	return nil
-}
-
-// LogValue implements slog.LogValuer. It logs the decimal amount and the currency code.
-func (m Money[T]) LogValue() slog.Value {
-	return slog.GroupValue(
-		slog.String("amount", m.Decimal()),
-		slog.String("currency", m.Currency().Code()),
-	)
 }
 
 // Sum returns the sum of the values, or zero if there are no values.
-// Returns ErrOverflow if the sum does not fit in int64.
-// An intermediate sum can be larger than int64 if the final sum fits.
+// Returns ErrOverflow if the sum does not fit.
+// An intermediate sum can be larger than the range if the final sum fits.
 func Sum[T currency.Unit](values ...Money[T]) (Money[T], error) {
-	// hi and lo hold a signed 128-bit total, so no intermediate sum can overflow.
-	var hi int64
-	var lo uint64
-	for _, v := range values {
-		var carry uint64
-		lo, carry = bits.Add64(lo, uint64(v.amount), 0)
-		hi += v.amount>>63 + int64(carry)
+	var total int128
+	for i, v := range values {
+		next, ok := add128(total, v.amount)
+		if ok {
+			total = next
+			continue
+		}
+		b := total.big()
+		for _, w := range values[i:] {
+			b.Add(b, w.amount.big())
+		}
+		return NewMoneyFromBigInt[T](b)
 	}
-	if hi != int64(lo)>>63 {
-		return Money[T]{}, ErrOverflow
-	}
-	return Money[T]{amount: int64(lo)}, nil
+	return Money[T]{amount: total}, nil
 }
 
 // Min returns the smallest of the values.
 func Min[T currency.Unit](first Money[T], rest ...Money[T]) Money[T] {
 	result := first
 	for _, v := range rest {
-		result.amount = min(result.amount, v.amount)
+		if v.LessThan(result) {
+			result = v
+		}
 	}
 	return result
 }
@@ -764,7 +514,9 @@ func Min[T currency.Unit](first Money[T], rest ...Money[T]) Money[T] {
 func Max[T currency.Unit](first Money[T], rest ...Money[T]) Money[T] {
 	result := first
 	for _, v := range rest {
-		result.amount = max(result.amount, v.amount)
+		if v.GreaterThan(result) {
+			result = v
+		}
 	}
 	return result
 }

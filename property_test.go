@@ -16,7 +16,7 @@ func TestPropertyAddIsCommutative(t *testing.T) {
 			return leftErr == ErrOverflow && rightErr == ErrOverflow
 		}
 
-		return left.Amount() == right.Amount()
+		return left == right
 	}
 
 	if err := quick.Check(property, nil); err != nil {
@@ -36,7 +36,7 @@ func TestPropertyAddThenSubReturnsOriginal(t *testing.T) {
 			return false
 		}
 
-		return recovered.Amount() == a
+		return recovered == NewMoney[currency.USD](a)
 	}
 
 	if err := quick.Check(property, nil); err != nil {
@@ -53,8 +53,8 @@ func TestPropertyDistributePreservesAmount(t *testing.T) {
 			return false
 		}
 
-		total := (dist.Smaller.Amount() * dist.SmallerCount) +
-			(dist.Larger.Amount() * dist.LargerCount)
+		total := (dist.Smaller.amount64() * dist.SmallerCount) +
+			(dist.Larger.amount64() * dist.LargerCount)
 
 		return total == amount &&
 			dist.SmallerCount+dist.LargerCount == chunks
@@ -76,7 +76,7 @@ func TestPropertyAllocatePreservesAmount(t *testing.T) {
 
 		sum := int64(0)
 		for _, part := range parts {
-			sum += part.Amount()
+			sum += part.amount64()
 		}
 
 		return sum == amount

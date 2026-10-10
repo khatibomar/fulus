@@ -229,7 +229,7 @@ func TestFormatAmount(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := formatAmount(tt.amount, tt.minorUnits, tt.info); got != tt.want {
+			if got := formatAmount(int128FromInt64(tt.amount), tt.minorUnits, tt.info); got != tt.want {
 				t.Errorf("formatAmount() = %+q, want %+q", got, tt.want)
 			}
 		})

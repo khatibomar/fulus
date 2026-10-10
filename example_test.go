@@ -51,8 +51,8 @@ func ExampleParseFormatted() {
 	formatted := inr.Format(loc)
 
 	parsed, err := fulus.ParseFormatted[currency.INR](formatted, loc)
-	fmt.Println(formatted, parsed.Amount(), err)
-	// Output: -₹1,23,45,678.90 -1234567890 <nil>
+	fmt.Println(formatted, parsed.Decimal(), err)
+	// Output: -₹1,23,45,678.90 -12345678.90 <nil>
 }
 
 func ExampleSum() {
@@ -80,7 +80,7 @@ func ExampleMoney_Format() {
 
 func ExampleParseMoney() {
 	price, err := fulus.ParseMoney[currency.USD]("19.99")
-	fmt.Println(price, price.Amount(), err)
+	fmt.Println(price, price.BigInt(), err)
 
 	_, err = fulus.ParseMoney[currency.USD]("19.999")
 	fmt.Println(err != nil)

@@ -166,7 +166,7 @@ func Convert[Base, Quote currency.Unit](m Money[Base], r Rate[Base, Quote], mode
 }
 
 // mulDivRoundShift returns a*n*10^shift/d rounded with mode.
-func mulDivRoundShift(a, n, d int64, shift int, mode RoundingMode) (int64, error) {
+func mulDivRoundShift(a int128, n, d int64, shift int, mode RoundingMode) (int128, error) {
 	scaledN, scaledD, ok := n, d, true
 	switch {
 	case shift > 0:
@@ -178,7 +178,7 @@ func mulDivRoundShift(a, n, d int64, shift int, mode RoundingMode) (int64, error
 		return mulDivRound(a, scaledN, scaledD, mode)
 	}
 
-	num := new(big.Int).Mul(big.NewInt(a), big.NewInt(n))
+	num := new(big.Int).Mul(a.big(), big.NewInt(n))
 	den := big.NewInt(d)
 	pow := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(max(shift, -shift))), nil)
 	if shift > 0 {
@@ -186,14 +186,7 @@ func mulDivRoundShift(a, n, d int64, shift int, mode RoundingMode) (int64, error
 	} else {
 		den.Mul(den, pow)
 	}
-	q, err := divideWithRounding(num, den, mode)
-	if err != nil {
-		return 0, err
-	}
-	if !q.IsInt64() {
-		return 0, ErrOverflow
-	}
-	return q.Int64(), nil
+	return roundBig(num, den, mode)
 }
 
 // mulPow10 returns x*10^n and reports whether the product fits in int64.
@@ -205,12 +198,4 @@ func mulPow10(x int64, n int) (int64, bool) {
 		}
 	}
 	return x, true
-}
-
-// gcd returns the greatest common divisor of a and b.
-func gcd(a, b uint64) uint64 {
-	for b != 0 {
-		a, b = b, a%b
-	}
-	return a
 }
