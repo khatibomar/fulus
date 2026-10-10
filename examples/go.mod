@@ -1,6 +1,6 @@
 module github.com/khatibomar/fulus-examples
 
-go 1.24.0
+go 1.27.2
 
 replace github.com/khatibomar/fulus => ../
 
