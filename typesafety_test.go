@@ -50,6 +50,16 @@ func TestTypeSafety(t *testing.T) {
 			wantErr: "does not satisfy currency.Unit",
 		},
 		{
+			name:    "cross rate middle currencies must agree",
+			body:    `_, _ = fulus.Cross(fulus.MustParseRate[currency.USD, currency.JPY]("150"), fulus.MustParseRate[currency.EUR, currency.USD]("1.1"))`,
+			wantErr: "does not match inferred type",
+		},
+		{
+			name:    "rate base must be the money currency",
+			body:    `_, _ = fulus.Convert(fulus.NewMoney[currency.USD](1), fulus.MustParseRate[currency.EUR, currency.JPY]("160"), fulus.RoundHalfEven)`,
+			wantErr: "does not match inferred type",
+		},
+		{
 			name: "empty struct currency is a currency",
 			body: "var m fulus.Money[currency.USD]; _ = m",
 		},

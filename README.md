@@ -37,11 +37,11 @@ func main() {
 	// as fulus.Money[currency.USD] value in argument to usd.Add
 	// usd.Add(eur)
 
-	ratio := fulus.Ratio[currency.EUR, currency.USD]{
-		Numerator:   104565, // 1.04565 represented as 104565/100000
-		Denominator: 100000,
+	rate, err := fulus.ParseRate[currency.EUR, currency.USD]("1.04565")
+	if err != nil {
+		panic(err)
 	}
-	eurInUsd, _, err := fulus.Convert(eur, ratio, fulus.RoundTruncate)
+	eurInUsd, err := fulus.Convert(eur, rate, fulus.RoundTruncate)
 	if err != nil {
 		panic(err)
 	}
@@ -241,11 +241,11 @@ Use `Convert` with an explicit rounding mode:
 
 ```go
 eur := fulus.NewMoney[currency.EUR](5) // €0.05
-ratio := fulus.Ratio[currency.EUR, currency.USD]{Numerator: 1, Denominator: 2}
+rate := fulus.MustParseRate[currency.EUR, currency.USD]("1/2")
 
-usdTrunc, _, _ := fulus.Convert(eur, ratio, fulus.RoundTruncate) // $0.02
-usdHalfUp, _, _ := fulus.Convert(eur, ratio, fulus.RoundHalfUp)  // $0.03
-usdHalfEven, _, _ := fulus.Convert(eur, ratio, fulus.RoundHalfEven)
+usdTrunc, _ := fulus.Convert(eur, rate, fulus.RoundTruncate) // $0.02
+usdHalfUp, _ := fulus.Convert(eur, rate, fulus.RoundHalfUp)  // $0.03
+usdHalfEven, _ := fulus.Convert(eur, rate, fulus.RoundHalfEven)
 
 fmt.Println(usdTrunc, usdHalfUp, usdHalfEven)
 ```
@@ -310,23 +310,23 @@ fmt.Println(usd) // $123.45
 `ParseMoney` validates fractional scale against the currency minor units and rejects malformed formats.
 `Decimal`, `MarshalText` and `UnmarshalText` use the same canonical form.
 
-## Parse Exchange Rates
+## Exchange Rates
 
-Fulus provides helper functions to parse real-world float or string exchange rates (e.g., from an FX API) into the strict `Ratio` struct used for conversion:
+`Rate[Base, Quote]` is the price of one major unit of `Base` in major units of `Quote`, as markets quote it.
+It is an exact fraction. Its fields are not exported, so a rate is always positive.
 
 ```go
-// Parse a decimal string
-ratioStr, err := fulus.ParseRatioString[currency.EUR, currency.USD]("1.07203")
-if err != nil {
-	panic(err)
-}
+eurUSD, err := fulus.ParseRate[currency.EUR, currency.USD]("1.07203")
+usdJPY, err := fulus.RateFromFloat64[currency.USD, currency.JPY](151.37) // for example from an FX API
 
-// Parse a float64
-ratioFloat, err := fulus.ParseRatioFloat64[currency.EUR, currency.USD](1.07203)
-if err != nil {
-	panic(err)
-}
+usdEUR := eurUSD.Invert()              // Rate[currency.USD, currency.EUR]
+eurJPY, err := fulus.Cross(eurUSD, usdJPY) // Rate[currency.EUR, currency.JPY]
+// fulus.Cross(usdJPY, eurUSD) does not compile.
+
+yen, err := fulus.Convert(fulus.NewMoney[currency.EUR](100), eurJPY, fulus.RoundHalfEven) // ¥162
 ```
+
+`Convert` adjusts for the minor units of each currency.
 
 ## SQL Integration
 
