@@ -122,6 +122,7 @@ Why:
 
 For an integer column that holds minor units, use `BigintMoney[T]`. Fulus does not guess the column type.
 The value 1050 is USD 1050.00 in a `NUMERIC` column and USD 10.50 in minor units, so a guess can be 100 times wrong.
+So `Money.Scan` does not accept an `int64`, and `BigintMoney.Scan` does not accept decimal text.
 
 The column does not store the currency, because the type parameter holds it.
 If a column holds more than one currency, store the currency code in another column and use `AnyMoney.ScanColumns`.

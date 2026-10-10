@@ -502,8 +502,8 @@ func TestMoneyValueAndScan(t *testing.T) {
 		{name: "NUMERIC text", value: []byte("10.50"), want: 1050},
 		{name: "NUMERIC integer text is major units", value: []byte("1050"), want: 105000},
 		{name: "NUMERIC with more scale and zeros", value: "-7.5", want: -750},
-		{name: "int64 is major units", value: int64(99), want: 9900},
-		{name: "negative int64", value: int64(-99), want: -9900},
+		{name: "int64", value: int64(99), wantErr: ErrInvalidAmountFormat},
+		{name: "zero int64", value: int64(0), wantErr: ErrInvalidAmountFormat},
 		{name: "too many fraction digits", value: "12.505", wantErr: ErrScaleMismatch},
 		{name: "JSON is not accepted", value: `{"amount":"1.00","currency":"USD"}`, wantErr: ErrInvalidAmountFormat},
 		{name: "nil", value: nil, wantErr: ErrInvalidAmountFormat},
@@ -531,11 +531,6 @@ func TestMoneyValueAndScan(t *testing.T) {
 				t.Fatalf("Scan(%#v) amount = %d, expected %d", tt.value, scanned.amount64(), tt.want)
 			}
 		})
-	}
-
-	var m Money[currency.USD]
-	if err := m.Scan(int64(math.MaxInt64)); err != nil || m.Decimal() != "9223372036854775807.00" {
-		t.Errorf("Scan(MaxInt64) = %s, %v", m.Decimal(), err)
 	}
 }
 

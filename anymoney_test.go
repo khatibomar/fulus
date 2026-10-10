@@ -238,7 +238,7 @@ func TestAnyMoneyScanColumns(t *testing.T) {
 	}{
 		{name: "text", amount: []byte("-10.50"), code: []byte("eur"), want: -1050, wantCode: "EUR"},
 		{name: "code first", amount: "0.007", code: "KWD", codeFirst: true, want: 7, wantCode: "KWD"},
-		{name: "int64 is major units", amount: int64(3), code: "JPY", want: 3, wantCode: "JPY"},
+		{name: "int64", amount: int64(3), code: "JPY", wantErr: ErrInvalidAmountFormat},
 		{name: "float64", amount: 2.5, code: "USD", want: 250, wantCode: "USD"},
 		{name: "too many fraction digits", amount: "1.005", code: "USD", wantErr: ErrScaleMismatch},
 		{name: "unknown code", amount: "1", code: "XYZ", wantErr: ErrUnknownCurrency},
