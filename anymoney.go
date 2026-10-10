@@ -23,7 +23,7 @@ func NewAnyMoney(amount int64, c currency.Currency) AnyMoney {
 }
 
 // NewAnyMoneyFromCode creates an AnyMoney from an amount in minor units and a registered currency code.
-// Returns ErrUnknownCurrency if currency.ByCode does not find the code.
+// Returns ErrUnknownCurrency if currency.Default() does not have the code.
 func NewAnyMoneyFromCode(amount int64, code string) (AnyMoney, error) {
 	c, ok := currency.ByCode(code)
 	if !ok {
@@ -153,7 +153,8 @@ func (m AnyMoney) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements json.Unmarshaler with the same form as Money.
-// The currency code must be registered in the currency package.
+// The currency code must be in currency.Default(). For another registry, decode the code and the amount,
+// and use NewAnyMoneyFromDecimal.
 func (m *AnyMoney) UnmarshalJSON(data []byte) error {
 	var temp moneyJSON
 	if err := json.Unmarshal(data, &temp); err != nil {

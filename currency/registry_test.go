@@ -141,3 +141,61 @@ func TestRegisterWithoutNumber(t *testing.T) {
 		t.Errorf("Number() = %q, want empty", got)
 	}
 }
+
+func TestRegistryInstance(t *testing.T) {
+	t.Parallel()
+
+	r, err := NewRegistry(USD{}, EUR{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Register(testCurrency{code: "LOCALONLY", number: "991"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := r.ByCode("localonly"); !ok {
+		t.Error("ByCode() does not find the registered currency")
+	}
+	if _, ok := ByCode("LOCALONLY"); ok {
+		t.Error("the Default registry finds a currency of another registry")
+	}
+	if _, ok := r.ByCode("JPY"); ok {
+		t.Error("ByCode() finds a currency that is not in the registry")
+	}
+	if c, ok := r.ByNumber("978"); !ok || c.Code() != "EUR" {
+		t.Errorf("ByNumber(978) = %v, %v", c, ok)
+	}
+	if got := len(r.All()); got != 3 {
+		t.Errorf("len(All()) = %d, want 3", got)
+	}
+
+	if _, err := NewRegistry(USD{}, USD{}); !errors.Is(err, ErrDuplicateCurrency) {
+		t.Errorf("NewRegistry() with a duplicate error = %v", err)
+	}
+
+	var zero Registry
+	if err := zero.Register(USD{}); err != nil {
+		t.Errorf("zero Registry Register() error = %v", err)
+	}
+	if err := zero.Register(nil); !errors.Is(err, ErrInvalidCurrency) {
+		t.Errorf("Register(nil) error = %v", err)
+	}
+
+	all, err := NewRegistry(Builtin()...)
+	if err != nil || len(all.All()) != len(builtin) {
+		t.Errorf("NewRegistry(Builtin()...) = %d currencies, %v", len(all.All()), err)
+	}
+}
+
+type negativeUnits struct{}
+
+func (negativeUnits) Code() string    { return "NEG" }
+func (negativeUnits) MinorUnits() int { return -1 }
+
+func TestRegisterNegativeMinorUnits(t *testing.T) {
+	t.Parallel()
+
+	var r Registry
+	if err := r.Register(negativeUnits{}); !errors.Is(err, ErrInvalidCurrency) {
+		t.Errorf("Register() error = %v", err)
+	}
+}
