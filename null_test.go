@@ -15,11 +15,12 @@ func TestNullMoneySQL(t *testing.T) {
 		value     any
 		wantValid bool
 		want      int64
+		wantValue string
 		wantErr   bool
 	}{
 		{name: "NULL", value: nil, wantValid: false},
-		{name: "int64", value: int64(1050), wantValid: true, want: 1050},
-		{name: "text", value: []byte("-3"), wantValid: true, want: -3},
+		{name: "int64", value: int64(10), wantValid: true, want: 1000, wantValue: "10.00"},
+		{name: "text", value: []byte("-0.03"), wantValid: true, want: -3, wantValue: "-0.03"},
 		{name: "invalid", value: 1.5, wantErr: true},
 	}
 
@@ -49,8 +50,8 @@ func TestNullMoneySQL(t *testing.T) {
 			if !tt.wantValid && v != nil {
 				t.Errorf("Value() = %v, want nil", v)
 			}
-			if tt.wantValid && v != tt.want {
-				t.Errorf("Value() = %v, want %d", v, tt.want)
+			if tt.wantValid && v != tt.wantValue {
+				t.Errorf("Value() = %v, want %s", v, tt.wantValue)
 			}
 		})
 	}

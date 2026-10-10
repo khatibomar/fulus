@@ -19,7 +19,7 @@ These operations give an exact result or an error. They never round.
 | `Allocate`, `Distribute` | Parts whose sum is equal to the value. See [Allocation](#allocation). |
 | `ParseMoney`, `UnmarshalText` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
 | `ParseFormatted` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
-| `UnmarshalJSON`, `Scan` | The exact amount in minor units. |
+| `UnmarshalJSON`, `Scan` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
 
 The parse functions do not round, because a rounded input hides a data error.
 To round an input with more digits, multiply one major unit by the input with `MulFactor`:

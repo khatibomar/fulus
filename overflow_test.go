@@ -78,8 +78,11 @@ func TestRange(t *testing.T) {
 	if _, ok := large.Int64(); ok {
 		t.Error("Int64() of 2^64 reports that it fits")
 	}
-	if _, err := large.Value(); !errors.Is(err, ErrOverflow) {
-		t.Errorf("Value() of 2^64 error = %v", err)
+	if _, err := (BigintMoney[currency.USD]{Money: large}).Value(); !errors.Is(err, ErrOverflow) {
+		t.Errorf("BigintMoney Value() of 2^64 error = %v", err)
+	}
+	if v, err := large.Value(); err != nil || v != "184467440737095516.16" {
+		t.Errorf("Value() of 2^64 = %v, %v", v, err)
 	}
 	back, err := NewMoneyFromBigInt[currency.USD](large.BigInt())
 	if err != nil || back != large {

@@ -102,8 +102,19 @@ Why:
 - Other languages and people can read the payload without a table of minor units.
 - The currency code lets the reader check the currency.
 
-## SQL stores the minor units only
+## SQL stores a decimal
 
-`Value` writes the amount in minor units as `int64`. The column does not store the currency,
-because the type parameter holds it. If a column holds more than one currency, store the currency code in another
-column and use `AnyMoney`.
+`Value` writes the canonical decimal, such as `"10.50"`, for a decimal column such as `NUMERIC(38, 2)`.
+`Scan` reads the decimal text that drivers return for `NUMERIC`.
+
+Why:
+
+- Most finance schemas use `NUMERIC`. A reader of the database sees the real amount.
+- A decimal does not change its value if the minor units change.
+- `NUMERIC(38, x)` holds all 128-bit amounts.
+
+For an integer column that holds minor units, use `BigintMoney[T]`. Fulus does not guess the column type.
+The value 1050 is USD 1050.00 in a `NUMERIC` column and USD 10.50 in minor units, so a guess can be 100 times wrong.
+
+The column does not store the currency, because the type parameter holds it.
+If a column holds more than one currency, store the currency code in another column and use `AnyMoney`.

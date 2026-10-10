@@ -126,6 +126,17 @@ func (a int128) mulInt64(x int64) (int128, bool) {
 	return fromMagnitude128(uint128{hi: hi, lo: lo}, a.isNeg() != (x < 0) && !a.isZero() && x != 0)
 }
 
+// mulPow10 returns a*10^n and reports whether the product fits in int128.
+func (a int128) mulPow10(n int) (int128, bool) {
+	for range n {
+		var ok bool
+		if a, ok = a.mulInt64(10); !ok {
+			return int128{}, false
+		}
+	}
+	return a, true
+}
+
 func (a int128) big() *big.Int {
 	m := a.abs()
 	var buf [16]byte

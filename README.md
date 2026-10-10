@@ -334,27 +334,31 @@ yen, err := fulus.Convert(fulus.NewMoney[currency.EUR](100), eurJPY, fulus.Round
 
 ## SQL Integration
 
-`Money[T]` implements `driver.Valuer` and `sql.Scanner`.
-`Value` writes the amount in minor units as `int64`. Use an integer column such as `BIGINT`.
+`Money[T]` implements `driver.Valuer` and `sql.Scanner` for a decimal column such as `NUMERIC(38, 2)`.
+`Value` writes the canonical decimal, such as `"10.50"`. `Scan` reads the decimal text that drivers return for `NUMERIC`.
+`Scan` returns `ErrScaleMismatch` for a value with more fraction digits than the minor units. It does not round.
 The type parameter holds the currency, so the column does not store it.
 
 ```go
 var m fulus.Money[currency.USD]
-if err := m.Scan(int64(1050)); err != nil {
+if err := m.Scan([]byte("10.50")); err != nil {
 	panic(err)
 }
 
 v, err := m.Value()
-if err != nil {
-	panic(err)
-}
-
-fmt.Println(v) // 1050
+fmt.Println(v, err) // 10.50 <nil>
 ```
 
-`Scan` also accepts integer text and the JSON form from `MarshalJSON`, so rows that hold the old JSON format still load.
+For an integer column such as `BIGINT` that holds minor units, use `BigintMoney[T]`.
+Fulus does not guess the column type, because the value 1050 is USD 1050.00 in a `NUMERIC` column and USD 10.50 in minor units.
 
-Use `NullMoney[T]` for a column that can be NULL. It also writes and reads JSON `null`.
+```go
+var row fulus.BigintMoney[currency.USD]
+err := row.Scan(int64(1050)) // row.Money is $10.50
+```
+
+Use `NullMoney[T]` for a decimal column that can be NULL. It also writes and reads JSON `null`.
+Use `sql.Null[fulus.BigintMoney[T]]` for an integer column that can be NULL.
 
 ## Performance
 

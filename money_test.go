@@ -1,6 +1,7 @@
 package fulus
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -564,27 +565,26 @@ func TestMoneyValueAndScan(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Value() error = %v", err)
 	}
-	if v != int64(1050) {
-		t.Fatalf("Value() = %#v, expected int64(1050)", v)
+	if v != "10.50" {
+		t.Fatalf("Value() = %#v, expected \"10.50\"", v)
 	}
 
 	tests := []struct {
 		name    string
 		value   any
 		want    int64
-		wantErr bool
+		wantErr error
 	}{
 		{name: "Value output round-trip", value: v, want: 1050},
-		{name: "int64", value: int64(99), want: 99},
-		{name: "negative int64", value: int64(-99), want: -99},
-		{name: "integer bytes", value: []byte("1050"), want: 1050},
-		{name: "integer string", value: "-7", want: -7},
-		{name: "JSON string", value: `{"amount":"1.00","currency":"USD"}`, want: 100},
-		{name: "JSON bytes", value: []byte(`{"amount":"1.00","currency":"USD"}`), want: 100},
-		{name: "nil", value: nil, wantErr: true},
-		{name: "currency mismatch", value: `{"amount":"100","currency":"EUR"}`, wantErr: true},
-		{name: "invalid text", value: "12.50", wantErr: true},
-		{name: "unsupported type", value: 1.5, wantErr: true},
+		{name: "NUMERIC text", value: []byte("10.50"), want: 1050},
+		{name: "NUMERIC integer text is major units", value: []byte("1050"), want: 105000},
+		{name: "NUMERIC with more scale and zeros", value: "-7.5", want: -750},
+		{name: "int64 is major units", value: int64(99), want: 9900},
+		{name: "negative int64", value: int64(-99), want: -9900},
+		{name: "too many fraction digits", value: "12.505", wantErr: ErrScaleMismatch},
+		{name: "JSON is not accepted", value: `{"amount":"1.00","currency":"USD"}`, wantErr: ErrInvalidAmountFormat},
+		{name: "nil", value: nil, wantErr: ErrInvalidAmountFormat},
+		{name: "float64", value: 1.5, wantErr: ErrInvalidAmountFormat},
 	}
 
 	for _, tt := range tests {
@@ -593,13 +593,67 @@ func TestMoneyValueAndScan(t *testing.T) {
 
 			var scanned Money[currency.USD]
 			err := scanned.Scan(tt.value)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("Scan(%#v) error = %v, wantErr %v", tt.value, err, tt.wantErr)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("Scan(%#v) error = %v, want %v", tt.value, err, tt.wantErr)
 			}
-			if !tt.wantErr && scanned.amount64() != tt.want {
+			if err == nil && scanned.amount64() != tt.want {
 				t.Fatalf("Scan(%#v) amount = %d, expected %d", tt.value, scanned.amount64(), tt.want)
 			}
 		})
+	}
+
+	var m Money[currency.USD]
+	if err := m.Scan(int64(math.MaxInt64)); err != nil || m.Decimal() != "9223372036854775807.00" {
+		t.Errorf("Scan(MaxInt64) = %s, %v", m.Decimal(), err)
+	}
+}
+
+func TestBigintMoney(t *testing.T) {
+	t.Parallel()
+
+	v, err := BigintMoney[currency.USD]{Money: NewMoney[currency.USD](1050)}.Value()
+	if err != nil || v != int64(1050) {
+		t.Fatalf("Value() = %#v, %v", v, err)
+	}
+	if _, err := (BigintMoney[currency.USD]{Money: maxMoney[currency.USD]()}).Value(); !errors.Is(err, ErrOverflow) {
+		t.Errorf("Value() of the largest amount error = %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		value   any
+		want    int64
+		wantErr error
+	}{
+		{name: "int64", value: int64(1050), want: 1050},
+		{name: "integer text", value: []byte("-7"), want: -7},
+		{name: "decimal text", value: "10.50", wantErr: ErrInvalidAmountFormat},
+		{name: "NULL", value: nil, wantErr: ErrInvalidAmountFormat},
+		{name: "float64", value: 1.5, wantErr: ErrInvalidAmountFormat},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var b BigintMoney[currency.USD]
+			err := b.Scan(tt.value)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("Scan() error = %v, want %v", err, tt.wantErr)
+			}
+			if err == nil && b.Money.amount64() != tt.want {
+				t.Errorf("Scan() = %d, want %d", b.Money.amount64(), tt.want)
+			}
+		})
+	}
+
+	var n sql.Null[BigintMoney[currency.USD]]
+	if err := n.Scan(int64(5)); err != nil || !n.Valid || n.V.Money.amount64() != 5 {
+		t.Errorf("sql.Null Scan() = %+v, %v", n, err)
+	}
+	if v, err := n.Value(); err != nil || v != int64(5) {
+		t.Errorf("sql.Null Value() = %#v, %v", v, err)
+	}
+	if err := n.Scan(nil); err != nil || n.Valid {
+		t.Errorf("sql.Null Scan(nil) = %+v, %v", n, err)
 	}
 }
 

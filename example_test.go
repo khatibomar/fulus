@@ -97,12 +97,13 @@ func ExampleNullMoney() {
 	data, _ := json.Marshal(discount)
 	fmt.Println(discount.Valid, string(data))
 
-	if err := discount.Scan(int64(250)); err != nil {
+	// A driver returns a NUMERIC value as text.
+	if err := discount.Scan([]byte("2.50")); err != nil {
 		panic(err)
 	}
 	value, _ := discount.Value()
 	fmt.Println(discount.Valid, discount.Money, value)
 	// Output:
 	// false null
-	// true $2.50 250
+	// true $2.50 2.50
 }

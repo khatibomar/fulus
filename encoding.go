@@ -157,41 +157,89 @@ func allDigits(s string) bool {
 }
 
 // Value implements driver.Valuer for database/sql.
-// It returns the amount in minor units as int64, for use with an integer column such as BIGINT.
-// Returns ErrOverflow if the amount does not fit in int64.
+// It returns the canonical decimal from Decimal, such as "10.50", for a decimal column such as NUMERIC(38, 2).
+// Use BigintMoney for an integer column that holds minor units.
 func (m Money[T]) Value() (driver.Value, error) {
-	v, ok := m.amount.int64()
+	return m.Decimal(), nil
+}
+
+// Scan implements sql.Scanner for database/sql. It reads a decimal column such as NUMERIC.
+// It accepts decimal text, as drivers return NUMERIC values, and an int64 as a whole number of major units.
+// It does not accept float64, because a float64 is not exact.
+// Returns ErrScaleMismatch if the value has more fraction digits than the minor units.
+// Use BigintMoney for an integer column that holds minor units.
+func (m *Money[T]) Scan(value any) error {
+	var c T
+	switch v := value.(type) {
+	case nil:
+		return fmt.Errorf("%w: cannot scan NULL into Money, use NullMoney", ErrInvalidAmountFormat)
+	case int64:
+		amount, ok := int128FromInt64(v).mulPow10(c.MinorUnits())
+		if !ok {
+			return ErrOverflow
+		}
+		m.amount = amount
+		return nil
+	case []byte:
+		return m.scanDecimal(string(v))
+	case string:
+		return m.scanDecimal(v)
+	default:
+		return fmt.Errorf("%w: cannot scan %T into Money, use a NUMERIC column or BigintMoney", ErrInvalidAmountFormat, value)
+	}
+}
+
+func (m *Money[T]) scanDecimal(s string) error {
+	var c T
+	amount, err := parseDecimal(s, c.MinorUnits())
+	if err != nil {
+		return err
+	}
+	m.amount = amount
+	return nil
+}
+
+// BigintMoney stores a Money value in an integer column, such as BIGINT, as an amount in minor units.
+// Use it only for a column that holds minor units. Money itself stores a decimal for a NUMERIC column.
+// Use sql.Null[BigintMoney[T]] for a column that can be NULL.
+type BigintMoney[T currency.Unit] struct {
+	Money Money[T]
+}
+
+// Value implements driver.Valuer. It returns the amount in minor units as int64.
+// Returns ErrOverflow if the amount does not fit in int64.
+func (b BigintMoney[T]) Value() (driver.Value, error) {
+	v, ok := b.Money.Int64()
 	if !ok {
 		return nil, ErrOverflow
 	}
 	return v, nil
 }
 
-// Scan implements sql.Scanner for database/sql.
-// It accepts an int64 amount in minor units, the same amount as integer text,
-// or the JSON form that MarshalJSON writes.
-func (m *Money[T]) Scan(value any) error {
+// Scan implements sql.Scanner. It accepts an amount in minor units as int64 or as integer text.
+func (b *BigintMoney[T]) Scan(value any) error {
 	switch v := value.(type) {
-	case nil:
-		return fmt.Errorf("cannot scan NULL into Money")
 	case int64:
-		m.amount = int128FromInt64(v)
+		b.Money = Money[T]{amount: int128FromInt64(v)}
 		return nil
 	case []byte:
-		return m.scanText(string(v))
+		return b.scanText(string(v))
 	case string:
-		return m.scanText(v)
+		return b.scanText(v)
+	case nil:
+		return fmt.Errorf("%w: cannot scan NULL into BigintMoney, use sql.Null", ErrInvalidAmountFormat)
 	default:
-		return fmt.Errorf("cannot scan type %T into Money", value)
+		return fmt.Errorf("%w: cannot scan %T into BigintMoney", ErrInvalidAmountFormat, value)
 	}
 }
 
-func (m *Money[T]) scanText(s string) error {
-	if amount, err := parseIntAmount(s); err == nil {
-		m.amount = amount
-		return nil
+func (b *BigintMoney[T]) scanText(s string) error {
+	amount, err := parseIntAmount(s)
+	if err != nil {
+		return err
 	}
-	return m.UnmarshalJSON([]byte(s))
+	b.Money = Money[T]{amount: amount}
+	return nil
 }
 
 // Decimal returns the amount as a canonical decimal string such as "-1234.50".
