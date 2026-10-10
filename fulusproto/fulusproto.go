@@ -42,7 +42,12 @@ func toMoney(decimal, code string) (*money.Money, error) {
 		}
 		fraction = fraction[:nanoDigits]
 	}
-	units, err := strconv.ParseInt(whole, 10, 64)
+	sign := ""
+	if negative {
+		sign = "-"
+	}
+	// The sign is parsed with the units, so that math.MinInt64 fits.
+	units, err := strconv.ParseInt(sign+whole, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("%w: units of %s do not fit in int64", fulus.ErrOverflow, decimal)
 	}
@@ -52,18 +57,18 @@ func toMoney(decimal, code string) (*money.Money, error) {
 		nanos, _ = strconv.Atoi(fraction + strings.Repeat("0", nanoDigits-len(fraction)))
 	}
 	if negative {
-		units, nanos = -units, -nanos
+		nanos = -nanos
 	}
 	return &money.Money{CurrencyCode: code, Units: units, Nanos: int32(nanos)}, nil
 }
 
 // FromMoney returns p as a Money[T].
-// Returns fulus.ErrCurrencyMismatch if the currency code of p is not the code of T,
+// Returns fulus.ErrCurrencyMismatch if the currency code of p is not the code of T. The code is not case-sensitive.
 // fulus.ErrInvalidAmountFormat if p is nil or its nanos are not valid,
 // and fulus.ErrScaleMismatch if p has a fraction digit that is not zero after the minor units of T.
 func FromMoney[T currency.Unit](p *money.Money) (fulus.Money[T], error) {
 	var c T
-	if p != nil && p.GetCurrencyCode() != c.Code() {
+	if p != nil && !strings.EqualFold(p.GetCurrencyCode(), c.Code()) {
 		return fulus.Money[T]{}, fmt.Errorf("%w: expected %s, got %s", fulus.ErrCurrencyMismatch, c.Code(), p.GetCurrencyCode())
 	}
 	decimal, err := fromMoney(p)
