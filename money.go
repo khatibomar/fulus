@@ -133,7 +133,7 @@ func (r RoundingMode) String() string {
 }
 
 // Money represents a monetary value in a specific currency.
-type Money[T currency.Currency] struct {
+type Money[T currency.Unit] struct {
 	// amount stores the monetary value in the currency's smallest unit (e.g., cents for USD)
 	amount int64
 }
@@ -151,7 +151,7 @@ type Distribution struct {
 }
 
 // Ratio represents a fraction used for conversion rates
-type Ratio[F currency.Currency, T currency.Currency] struct {
+type Ratio[F, T currency.Unit] struct {
 	// Numerator is the top number in the fraction (e.g., 107203 for 1.07203)
 	Numerator int64
 	// Denominator is the bottom number in the fraction (e.g., 100000 for precise decimal representation)
@@ -159,7 +159,7 @@ type Ratio[F currency.Currency, T currency.Currency] struct {
 }
 
 // ParseRatioString parses a string representation of an exchange rate into a Ratio
-func ParseRatioString[F currency.Currency, T currency.Currency](rate string) (Ratio[F, T], error) {
+func ParseRatioString[F, T currency.Unit](rate string) (Ratio[F, T], error) {
 	r, ok := new(big.Rat).SetString(rate)
 	if !ok {
 		return Ratio[F, T]{}, fmt.Errorf("%w: %s", ErrInvalidExchangeRate, rate)
@@ -181,7 +181,7 @@ func ParseRatioString[F currency.Currency, T currency.Currency](rate string) (Ra
 
 // ParseRatioFloat64 parses a float64 representation of an exchange rate into a Ratio.
 // It formats the float to a string to avoid floating point precision issues.
-func ParseRatioFloat64[F currency.Currency, T currency.Currency](rate float64) (Ratio[F, T], error) {
+func ParseRatioFloat64[F, T currency.Unit](rate float64) (Ratio[F, T], error) {
 	if rate <= 0 {
 		return Ratio[F, T]{}, fmt.Errorf("%w: rate must be positive", ErrInvalidExchangeRate)
 	}
@@ -190,13 +190,13 @@ func ParseRatioFloat64[F currency.Currency, T currency.Currency](rate float64) (
 }
 
 // Allocation represents how money is divided according to ratios
-type Allocation[T currency.Currency] struct {
+type Allocation[T currency.Unit] struct {
 	Parts []Money[T]
 	Total Money[T]
 }
 
 // ConversionResult holds both the converted amount and the actual ratio used
-type ConversionResult[F currency.Currency, T currency.Currency] struct {
+type ConversionResult[F, T currency.Unit] struct {
 	// Amount stores the resulting converted monetary value
 	Amount int64
 	// ActualRate is the applied rate Amount/source amount, reduced and with a positive denominator.
@@ -209,7 +209,7 @@ type ConversionResult[F currency.Currency, T currency.Currency] struct {
 // (e.g., cents for USD, pence for GBP). For example:
 // USD 10.50 should be passed as 1050
 // EUR 5.99 should be passed as 599
-func NewMoney[T currency.Currency](amount int64) Money[T] {
+func NewMoney[T currency.Unit](amount int64) Money[T] {
 	return Money[T]{amount: amount}
 }
 
@@ -564,7 +564,7 @@ func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
 // The ratio is the price of one major unit of F in major units of T, as markets quote it.
 // For example, a EUR/JPY ratio of 160.25 changes EUR 1.00 to JPY 160.
 // Convert also returns the applied rate after rounding, in the same units as ratio.
-func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode RoundingMode) (Money[T], ConversionResult[F, T], error) {
+func Convert[F, T currency.Unit](m Money[F], ratio Ratio[F, T], mode RoundingMode) (Money[T], ConversionResult[F, T], error) {
 	if ratio.Denominator == 0 {
 		return Money[T]{}, ConversionResult[F, T]{}, ErrZeroDenominator
 	}
@@ -632,7 +632,7 @@ func mulDivRoundShift(a, n, d int64, shift int, mode RoundingMode) (int64, error
 
 // appliedRatio returns the rate result/amount in major units, in lowest terms and with a positive denominator.
 // The amount must not be zero.
-func appliedRatio[F, T currency.Currency](result, amount int64, shift int) (Ratio[F, T], bool) {
+func appliedRatio[F, T currency.Unit](result, amount int64, shift int) (Ratio[F, T], bool) {
 	r := new(big.Rat).SetFrac(big.NewInt(result), big.NewInt(amount))
 	pow := new(big.Rat).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(max(shift, -shift))), nil))
 	if shift > 0 {
@@ -810,7 +810,7 @@ func (m *Money[T]) UnmarshalJSON(data []byte) error {
 
 // ParseMoney parses a canonical decimal amount into Money using the currency's minor units.
 // Supported format: optional sign (+/-), digits, optional decimal point and digits.
-func ParseMoney[T currency.Currency](amount string) (Money[T], error) {
+func ParseMoney[T currency.Unit](amount string) (Money[T], error) {
 	var c T
 	minor, err := parseDecimal(amount, c.MinorUnits())
 	if err != nil {
@@ -978,7 +978,7 @@ func (m Money[T]) LogValue() slog.Value {
 // Sum returns the sum of the values, or zero if there are no values.
 // Returns ErrOverflow if the sum does not fit in int64.
 // An intermediate sum can be larger than int64 if the final sum fits.
-func Sum[T currency.Currency](values ...Money[T]) (Money[T], error) {
+func Sum[T currency.Unit](values ...Money[T]) (Money[T], error) {
 	// hi and lo hold a signed 128-bit total, so no intermediate sum can overflow.
 	var hi int64
 	var lo uint64
@@ -994,7 +994,7 @@ func Sum[T currency.Currency](values ...Money[T]) (Money[T], error) {
 }
 
 // Min returns the smallest of the values.
-func Min[T currency.Currency](first Money[T], rest ...Money[T]) Money[T] {
+func Min[T currency.Unit](first Money[T], rest ...Money[T]) Money[T] {
 	result := first
 	for _, v := range rest {
 		result.amount = min(result.amount, v.amount)
@@ -1003,7 +1003,7 @@ func Min[T currency.Currency](first Money[T], rest ...Money[T]) Money[T] {
 }
 
 // Max returns the largest of the values.
-func Max[T currency.Currency](first Money[T], rest ...Money[T]) Money[T] {
+func Max[T currency.Unit](first Money[T], rest ...Money[T]) Money[T] {
 	result := first
 	for _, v := range rest {
 		result.amount = max(result.amount, v.amount)

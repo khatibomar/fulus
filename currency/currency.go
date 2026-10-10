@@ -20,6 +20,14 @@ type Currency interface {
 	FormatInfo(locale locale.Locale) FormatInfo
 }
 
+// Unit is the constraint for the currency type parameter of fulus.Money.
+// A Unit must be an empty struct type, so that its zero value is the only value
+// and the methods cannot depend on state. For example, fulus.Money[currency.Currency] does not compile.
+type Unit interface {
+	~struct{}
+	Currency
+}
+
 // FormatInfo contains locale-specific currency formatting information
 type FormatInfo struct {
 	Symbol           string // Currency symbol for the locale
