@@ -33,6 +33,10 @@ func TestByCodeAndNumber(t *testing.T) {
 		{name: "unknown code", lookup: func() (Currency, bool) { return ByCode("XYZ") }},
 		{name: "number", lookup: func() (Currency, bool) { return ByNumber("978") }, want: "EUR", ok: true},
 		{name: "unknown number", lookup: func() (Currency, bool) { return ByNumber("000") }},
+		{name: "gold", lookup: func() (Currency, bool) { return ByCode("XAU") }, want: "XAU", ok: true},
+		{name: "silver number", lookup: func() (Currency, bool) { return ByNumber("961") }, want: "XAG", ok: true},
+		{name: "testing code is excluded", lookup: func() (Currency, bool) { return ByCode("XTS") }},
+		{name: "no currency code is excluded", lookup: func() (Currency, bool) { return ByCode("XXX") }},
 	}
 
 	for _, tt := range tests {
@@ -108,5 +112,16 @@ func TestBuiltinIsUnique(t *testing.T) {
 		}
 		codes[c.Code()] = true
 		numbers[c.Number()] = true
+	}
+}
+
+func TestMinorUnitsWithoutISOValue(t *testing.T) {
+	t.Parallel()
+
+	// ISO 4217 defines no minor units for these codes. The generated value comes from CLDR.
+	for _, c := range []Currency{XAU{}, XAG{}, XPT{}, XPD{}, XDR{}, XSU{}, XUA{}} {
+		if got := c.MinorUnits(); got != 2 {
+			t.Errorf("%s.MinorUnits() = %d, want 2", c.Code(), got)
+		}
 	}
 }

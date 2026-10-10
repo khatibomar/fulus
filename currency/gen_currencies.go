@@ -2,7 +2,7 @@
 
 // CLDR Version: 48.2.3
 // The CLDR data is copyright Unicode, Inc. and uses the Unicode License v3. See LICENSE-UNICODE.
-// ISO 4217 Data Last Updated: Fri, 09 Oct 2026 17:12:17 GMT
+// ISO 4217 Data Last Updated: Fri, 09 Oct 2026 17:12:18 GMT
 
 package currency
 
@@ -167,11 +167,19 @@ var builtin = []Currency{
 	WST{},
 	XAD{},
 	XAF{},
+	XAG{},
+	XAU{},
+	XBA{},
+	XBB{},
+	XBC{},
+	XBD{},
 	XCD{},
 	XCG{},
 	XDR{},
 	XOF{},
+	XPD{},
 	XPF{},
+	XPT{},
 	XSU{},
 	XUA{},
 	YER{},
@@ -2583,6 +2591,102 @@ func (XAF) MinorUnits() int { return 0 }
 
 func (XAF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XAF") }
 
+var _ Currency = XAG{}
+
+// XAG is the Silver currency.
+// ISO 4217 defines no minor units for XAG. The minor units come from CLDR.
+type XAG struct{}
+
+func (XAG) Code() string { return "XAG" }
+
+func (XAG) Number() string { return "961" }
+
+func (XAG) Name() string { return "Silver" }
+
+func (XAG) MinorUnits() int { return 2 }
+
+func (XAG) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XAG") }
+
+var _ Currency = XAU{}
+
+// XAU is the Gold currency.
+// ISO 4217 defines no minor units for XAU. The minor units come from CLDR.
+type XAU struct{}
+
+func (XAU) Code() string { return "XAU" }
+
+func (XAU) Number() string { return "959" }
+
+func (XAU) Name() string { return "Gold" }
+
+func (XAU) MinorUnits() int { return 2 }
+
+func (XAU) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XAU") }
+
+var _ Currency = XBA{}
+
+// XBA is the Bond Markets Unit European Composite Unit (EURCO) currency.
+// ISO 4217 defines no minor units for XBA. The minor units come from CLDR.
+type XBA struct{}
+
+func (XBA) Code() string { return "XBA" }
+
+func (XBA) Number() string { return "955" }
+
+func (XBA) Name() string { return "Bond Markets Unit European Composite Unit (EURCO)" }
+
+func (XBA) MinorUnits() int { return 2 }
+
+func (XBA) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XBA") }
+
+var _ Currency = XBB{}
+
+// XBB is the Bond Markets Unit European Monetary Unit (E.M.U.-6) currency.
+// ISO 4217 defines no minor units for XBB. The minor units come from CLDR.
+type XBB struct{}
+
+func (XBB) Code() string { return "XBB" }
+
+func (XBB) Number() string { return "956" }
+
+func (XBB) Name() string { return "Bond Markets Unit European Monetary Unit (E.M.U.-6)" }
+
+func (XBB) MinorUnits() int { return 2 }
+
+func (XBB) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XBB") }
+
+var _ Currency = XBC{}
+
+// XBC is the Bond Markets Unit European Unit of Account 9 (E.U.A.-9) currency.
+// ISO 4217 defines no minor units for XBC. The minor units come from CLDR.
+type XBC struct{}
+
+func (XBC) Code() string { return "XBC" }
+
+func (XBC) Number() string { return "957" }
+
+func (XBC) Name() string { return "Bond Markets Unit European Unit of Account 9 (E.U.A.-9)" }
+
+func (XBC) MinorUnits() int { return 2 }
+
+func (XBC) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XBC") }
+
+var _ Currency = XBD{}
+
+// XBD is the Bond Markets Unit European Unit of Account 17 (E.U.A.-17) currency.
+// ISO 4217 defines no minor units for XBD. The minor units come from CLDR.
+type XBD struct{}
+
+func (XBD) Code() string { return "XBD" }
+
+func (XBD) Number() string { return "958" }
+
+func (XBD) Name() string { return "Bond Markets Unit European Unit of Account 17 (E.U.A.-17)" }
+
+func (XBD) MinorUnits() int { return 2 }
+
+func (XBD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XBD") }
+
 var _ Currency = XCD{}
 
 // XCD is the East Caribbean Dollar currency.
@@ -2616,6 +2720,7 @@ func (XCG) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XC
 var _ Currency = XDR{}
 
 // XDR is the SDR (Special Drawing Right) currency.
+// ISO 4217 defines no minor units for XDR. The minor units come from CLDR.
 type XDR struct{}
 
 func (XDR) Code() string { return "XDR" }
@@ -2643,6 +2748,22 @@ func (XOF) MinorUnits() int { return 0 }
 
 func (XOF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XOF") }
 
+var _ Currency = XPD{}
+
+// XPD is the Palladium currency.
+// ISO 4217 defines no minor units for XPD. The minor units come from CLDR.
+type XPD struct{}
+
+func (XPD) Code() string { return "XPD" }
+
+func (XPD) Number() string { return "964" }
+
+func (XPD) Name() string { return "Palladium" }
+
+func (XPD) MinorUnits() int { return 2 }
+
+func (XPD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XPD") }
+
 var _ Currency = XPF{}
 
 // XPF is the CFP Franc currency.
@@ -2658,9 +2779,26 @@ func (XPF) MinorUnits() int { return 0 }
 
 func (XPF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XPF") }
 
+var _ Currency = XPT{}
+
+// XPT is the Platinum currency.
+// ISO 4217 defines no minor units for XPT. The minor units come from CLDR.
+type XPT struct{}
+
+func (XPT) Code() string { return "XPT" }
+
+func (XPT) Number() string { return "962" }
+
+func (XPT) Name() string { return "Platinum" }
+
+func (XPT) MinorUnits() int { return 2 }
+
+func (XPT) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XPT") }
+
 var _ Currency = XSU{}
 
 // XSU is the Sucre currency.
+// ISO 4217 defines no minor units for XSU. The minor units come from CLDR.
 type XSU struct{}
 
 func (XSU) Code() string { return "XSU" }
@@ -2676,6 +2814,7 @@ func (XSU) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XS
 var _ Currency = XUA{}
 
 // XUA is the ADB Unit of Account currency.
+// ISO 4217 defines no minor units for XUA. The minor units come from CLDR.
 type XUA struct{}
 
 func (XUA) Code() string { return "XUA" }

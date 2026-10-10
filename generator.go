@@ -48,7 +48,12 @@ type CurrencyInfo struct {
 	Name          string // Official currency name
 	MinorUnits    int    // Number of decimal places
 	CashIncrement int64  // Smallest cash amount in minor units
+	// MinorUnitsFromCLDR is true if ISO 4217 defines no minor units, so MinorUnits comes from CLDR.
+	MinorUnitsFromCLDR bool
 }
+
+// excludedCodes holds the ISO 4217 codes that are not currencies: the testing code and the code for no currency.
+var excludedCodes = map[string]bool{"XTS": true, "XXX": true}
 
 type LocaleInfo struct {
 	Numbers Numbers
@@ -140,6 +145,9 @@ var builtin = []Currency{
 var _ Currency = {{.Code}}{}
 
 // {{.Code}} is the {{.Name}} currency.
+{{- if .MinorUnitsFromCLDR}}
+// ISO 4217 defines no minor units for {{.Code}}. The minor units come from CLDR.
+{{- end}}
 type {{.Code}} struct{}
 
 func ({{.Code}}) Code() string { return {{q .Code}} }
@@ -369,27 +377,29 @@ func (g *Generator) fetchISO() error {
 				continue
 			}
 
-			// Skip testing and special purpose codes
-			if strings.HasPrefix(entry.Country, "ZZ") {
+			if excludedCodes[entry.Code] {
+				continue
+			}
+			if _, exists := g.Currencies[entry.Code]; exists {
 				continue
 			}
 
-			minorUnits := 2
-			if entry.MinorUnits != "N.A." {
-				if units, err := strconv.Atoi(entry.MinorUnits); err == nil {
-					minorUnits = units
-				}
+			info := &CurrencyInfo{
+				Code:          entry.Code,
+				Number:        entry.Number,
+				Name:          entry.Currency,
+				CashIncrement: 1,
 			}
-
-			if _, exists := g.Currencies[entry.Code]; !exists {
-				g.Currencies[entry.Code] = &CurrencyInfo{
-					Code:          entry.Code,
-					Number:        entry.Number,
-					Name:          entry.Currency,
-					MinorUnits:    minorUnits,
-					CashIncrement: 1,
+			if entry.MinorUnits == "N.A." {
+				info.MinorUnitsFromCLDR = true
+			} else {
+				units, err := strconv.Atoi(entry.MinorUnits)
+				if err != nil {
+					return fmt.Errorf("fetchISO: minor units of %s: %w", entry.Code, err)
 				}
+				info.MinorUnits = units
 			}
+			g.Currencies[entry.Code] = info
 		}
 	}
 
@@ -608,8 +618,17 @@ func (g *Generator) processCurrencyData() error {
 		return fallback
 	}
 
+	fractions := file.Supplemental.CurrencyData.Fractions
+	defaultDigits, err := strconv.Atoi(fractions["DEFAULT"].Digits)
+	if err != nil {
+		return fmt.Errorf("currencyData.json: default digits: %w", err)
+	}
+
 	for code, info := range g.Currencies {
-		f, ok := file.Supplemental.CurrencyData.Fractions[code]
+		f, ok := fractions[code]
+		if info.MinorUnitsFromCLDR {
+			info.MinorUnits = atoi(f.Digits, defaultDigits)
+		}
 		if !ok || (f.CashDigits == "" && f.CashRounding == "") {
 			continue
 		}
