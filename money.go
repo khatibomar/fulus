@@ -138,15 +138,17 @@ type Money[T currency.Unit] struct {
 	amount int64
 }
 
-// Distribution represents how to split money into chunks
-type Distribution struct {
-	// SmallerChunkSize represents the value of the smaller portions in the distribution
-	SmallerChunkSize int64
-	// SmallerCount represents how many smaller chunks are in the distribution
+// Distribution tells how Distribute splits a value into equal chunks.
+// Larger is Smaller plus 1 minor unit, or equal to Smaller if LargerCount is zero.
+// The sum of all chunks is equal to the value.
+type Distribution[T currency.Unit] struct {
+	// Smaller is the value of each smaller chunk.
+	Smaller Money[T]
+	// SmallerCount is the number of smaller chunks.
 	SmallerCount int64
-	// LargerChunkSize represents the value of the larger portions in the distribution
-	LargerChunkSize int64
-	// LargerCount represents how many larger chunks are in the distribution
+	// Larger is the value of each larger chunk.
+	Larger Money[T]
+	// LargerCount is the number of larger chunks.
 	LargerCount int64
 }
 
@@ -187,12 +189,6 @@ func ParseRatioFloat64[F, T currency.Unit](rate float64) (Ratio[F, T], error) {
 	}
 	s := strconv.FormatFloat(rate, 'f', -1, 64)
 	return ParseRatioString[F, T](s)
-}
-
-// Allocation represents how money is divided according to ratios
-type Allocation[T currency.Unit] struct {
-	Parts []Money[T]
-	Total Money[T]
 }
 
 // ConversionResult holds both the converted amount and the actual ratio used
@@ -425,16 +421,10 @@ func (m Money[T]) Neg() (Money[T], error) {
 	return Money[T]{amount: -m.amount}, nil
 }
 
-// Validate checks if the money amount falls within the specified range [min, max].
-// Returns an error if the amount is outside the range.
-func (m Money[T]) Validate(min, max int64) error {
-	if m.amount < min || m.amount > max {
-		return fmt.Errorf("%w: money amount %s should be in interval [%s, %s]",
-			ErrValidation,
-			m,
-			NewMoney[T](min),
-			NewMoney[T](max),
-		)
+// Validate returns ErrValidation if m is not in the closed interval [low, high].
+func (m Money[T]) Validate(low, high Money[T]) error {
+	if m.amount < low.amount || m.amount > high.amount {
+		return fmt.Errorf("%w: money amount %s should be in interval [%s, %s]", ErrValidation, m, low, high)
 	}
 	return nil
 }
@@ -515,48 +505,29 @@ func (m Money[T]) Format(loc locale.Locale) string {
 	return formatAmount(m.amount, c.MinorUnits(), c.FormatInfo(loc))
 }
 
-// Distribute splits the money amount into the specified number of chunks
-// Returns a Distribution describing how to split the money
-func (m Money[T]) Distribute(chunks int64) (Distribution, error) {
+// Distribute splits m into the given number of chunks with sizes that differ by at most 1 minor unit.
+// Returns ErrInvalidChunks if chunks is not positive.
+func (m Money[T]) Distribute(chunks int64) (Distribution[T], error) {
 	if chunks <= 0 {
-		return Distribution{}, ErrInvalidChunks
+		return Distribution[T]{}, ErrInvalidChunks
 	}
 
-	amount := m.Amount()
-
-	// For even distribution
-	if amount%chunks == 0 {
-		chunkSize := amount / chunks
-		return Distribution{
-			SmallerChunkSize: chunkSize,
-			SmallerCount:     chunks,
-			LargerChunkSize:  chunkSize,
-			LargerCount:      0,
-		}, nil
-	}
-
-	// For uneven distribution
-	smallerChunkSize := amount / chunks
-	largerChunkSize := smallerChunkSize + 1
-	remainder := amount % chunks
-
+	// Floor division, so that the remainder is never negative.
+	smaller := m.amount / chunks
+	remainder := m.amount % chunks
 	if remainder < 0 {
-		smallerChunkSize--
-		largerChunkSize--
-		remainder = -remainder
-		return Distribution{
-			SmallerChunkSize: smallerChunkSize,
-			SmallerCount:     remainder,
-			LargerChunkSize:  largerChunkSize,
-			LargerCount:      chunks - remainder,
-		}, nil
+		smaller--
+		remainder += chunks
 	}
-
-	return Distribution{
-		SmallerChunkSize: smallerChunkSize,
-		SmallerCount:     chunks - remainder,
-		LargerChunkSize:  largerChunkSize,
-		LargerCount:      remainder,
+	larger := smaller
+	if remainder > 0 {
+		larger++
+	}
+	return Distribution[T]{
+		Smaller:      Money[T]{amount: smaller},
+		SmallerCount: chunks - remainder,
+		Larger:       Money[T]{amount: larger},
+		LargerCount:  remainder,
 	}, nil
 }
 
@@ -705,19 +676,20 @@ func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*bi
 	return q, nil
 }
 
-// Allocate divides money according to provided ratios
-func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
+// Allocate divides m into parts in proportion to the ratios. The sum of the parts is equal to m.
+// It uses the largest remainder method. See docs/rounding-and-overflow.md.
+func (m Money[T]) Allocate(ratios ...int64) ([]Money[T], error) {
 	if len(ratios) == 0 {
-		return Allocation[T]{}, ErrNoRatios
+		return nil, ErrNoRatios
 	}
 
 	total := int64(0)
 	for _, ratio := range ratios {
 		if ratio <= 0 {
-			return Allocation[T]{}, ErrNegativeOrZeroRatios
+			return nil, ErrNegativeOrZeroRatios
 		}
 		if total > math.MaxInt64-ratio {
-			return Allocation[T]{}, ErrOverflow
+			return nil, ErrOverflow
 		}
 		total += ratio
 	}
@@ -737,7 +709,7 @@ func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 		leftover -= share
 	}
 	if leftover == 0 {
-		return Allocation[T]{Parts: parts, Total: m}, nil
+		return parts, nil
 	}
 
 	step := int64(1)
@@ -755,7 +727,7 @@ func (m Money[T]) Allocate(ratios []int64) (Allocation[T], error) {
 		parts[i].amount += step
 	}
 
-	return Allocation[T]{Parts: parts, Total: m}, nil
+	return parts, nil
 }
 
 // MarshalJSON implements the json.Marshaler interface

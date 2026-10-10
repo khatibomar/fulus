@@ -499,86 +499,45 @@ func TestString(t *testing.T) {
 }
 
 func TestDistribute(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
-		name        string
-		amount      int64
-		chunks      int64
-		expected    Distribution
-		expectedErr error
+		name         string
+		amount       int64
+		chunks       int64
+		smaller      int64
+		smallerCount int64
+		larger       int64
+		largerCount  int64
+		expectedErr  error
 	}{
-		{
-			name:   "even distribution",
-			amount: 1000,
-			chunks: 4,
-			expected: Distribution{
-				SmallerChunkSize: 250,
-				SmallerCount:     4,
-				LargerChunkSize:  250,
-				LargerCount:      0,
-			},
-			expectedErr: nil,
-		},
-		{
-			name:   "uneven distribution",
-			amount: 1000,
-			chunks: 3,
-			expected: Distribution{
-				SmallerChunkSize: 333,
-				SmallerCount:     2,
-				LargerChunkSize:  334,
-				LargerCount:      1,
-			},
-			expectedErr: nil,
-		},
-		{
-			name:        "invalid chunks",
-			amount:      1000,
-			chunks:      0,
-			expected:    Distribution{},
-			expectedErr: ErrInvalidChunks,
-		},
-		{
-			name:        "negative chunks",
-			amount:      1000,
-			chunks:      -1,
-			expected:    Distribution{},
-			expectedErr: ErrInvalidChunks,
-		},
-		{
-			name:   "negative uneven distribution",
-			amount: -1000,
-			chunks: 3,
-			expected: Distribution{
-				SmallerChunkSize: -334,
-				SmallerCount:     1,
-				LargerChunkSize:  -333,
-				LargerCount:      2,
-			},
-			expectedErr: nil,
-		},
+		{name: "even distribution", amount: 1000, chunks: 4, smaller: 250, smallerCount: 4, larger: 250},
+		{name: "uneven distribution", amount: 1000, chunks: 3, smaller: 333, smallerCount: 2, larger: 334, largerCount: 1},
+		{name: "invalid chunks", amount: 1000, chunks: 0, expectedErr: ErrInvalidChunks},
+		{name: "negative chunks", amount: 1000, chunks: -1, expectedErr: ErrInvalidChunks},
+		{name: "negative uneven distribution", amount: -1000, chunks: 3, smaller: -334, smallerCount: 1, larger: -333, largerCount: 2},
+		{name: "largest amount in one chunk", amount: math.MaxInt64, chunks: 1, smaller: math.MaxInt64, smallerCount: 1, larger: math.MaxInt64},
+		{name: "smallest amount in one chunk", amount: math.MinInt64, chunks: 1, smaller: math.MinInt64, smallerCount: 1, larger: math.MinInt64},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMoney[currency.USD](tt.amount)
-			dist, err := m.Distribute(tt.chunks)
-
-			if err != tt.expectedErr {
-				t.Errorf("Distribute() error = %v, expected error %v", err, tt.expectedErr)
+			t.Parallel()
+			dist, err := NewMoney[currency.USD](tt.amount).Distribute(tt.chunks)
+			if !errors.Is(err, tt.expectedErr) {
+				t.Fatalf("Distribute() error = %v, expected error %v", err, tt.expectedErr)
+			}
+			if err != nil {
 				return
 			}
-
-			if err == nil && dist != tt.expected {
-				t.Errorf("Distribute() = %+v, expected %+v", dist, tt.expected)
-				return
+			want := Distribution[currency.USD]{
+				Smaller:      NewMoney[currency.USD](tt.smaller),
+				SmallerCount: tt.smallerCount,
+				Larger:       NewMoney[currency.USD](tt.larger),
+				LargerCount:  tt.largerCount,
 			}
-
-			if err == nil {
-				total := (dist.SmallerChunkSize * dist.SmallerCount) +
-					(dist.LargerChunkSize * dist.LargerCount)
-				if total != tt.amount {
-					t.Errorf("Distribute() total = %d, expected %d", total, tt.amount)
-				}
+			if dist != want {
+				t.Errorf("Distribute() = %+v, expected %+v", dist, want)
 			}
 		})
 	}
@@ -1092,7 +1051,7 @@ func TestValidate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			m := NewMoney[currency.USD](tt.amount)
-			err := m.Validate(tt.min, tt.max)
+			err := m.Validate(NewMoney[currency.USD](tt.min), NewMoney[currency.USD](tt.max))
 
 			if tt.expectedErr == nil && err == nil {
 				return
@@ -1206,7 +1165,7 @@ func TestAllocate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			money := NewMoney[currency.USD](tt.amount)
-			allocation, err := money.Allocate(tt.ratios)
+			parts, err := money.Allocate(tt.ratios...)
 
 			if err != tt.expectedErr {
 				t.Errorf("expected error %v, got %v", tt.expectedErr, err)
@@ -1215,23 +1174,19 @@ func TestAllocate(t *testing.T) {
 
 			if tt.expectedErr == nil {
 				for i, expected := range tt.expected {
-					if allocation.Parts[i].Amount() != expected {
-						t.Errorf("part %d: expected %d, got %d", i, expected, allocation.Parts[i].Amount())
+					if parts[i].Amount() != expected {
+						t.Errorf("part %d: expected %d, got %d", i, expected, parts[i].Amount())
 					}
 				}
 
 				sum := int64(0)
-				for _, part := range allocation.Parts {
+				for _, part := range parts {
 					sum += part.Amount()
 				}
 				if sum != tt.amount {
 					t.Errorf("sum of parts (%d) does not equal original amount (%d)", sum, tt.amount)
 				}
 
-				if allocation.Total.Amount() != money.Amount() {
-					t.Errorf("Total field (%d) does not match original amount (%d)",
-						allocation.Total.Amount(), money.Amount())
-				}
 			}
 		})
 	}
@@ -1286,7 +1241,7 @@ func TestAllocateRealMoney(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			money := NewMoney[currency.USD](tt.amount)
-			allocation, err := money.Allocate(tt.ratios)
+			parts, err := money.Allocate(tt.ratios...)
 			if err != tt.expectedErr {
 				t.Errorf("expected error %v, got %v", tt.expectedErr, err)
 				return
@@ -1296,14 +1251,14 @@ func TestAllocateRealMoney(t *testing.T) {
 			}
 
 			for i, expected := range tt.expected {
-				if allocation.Parts[i].String() != expected {
+				if parts[i].String() != expected {
 					t.Errorf("part %d: expected %s, got %s",
-						i, expected, allocation.Parts[i].String())
+						i, expected, parts[i].String())
 				}
 			}
 
 			sum := int64(0)
-			for _, part := range allocation.Parts {
+			for _, part := range parts {
 				sum += part.Amount()
 			}
 			if sum != tt.amount {
@@ -1332,13 +1287,13 @@ func ExampleMoney_Allocate() {
 	dollars := NewMoney[currency.USD](10000) // 100.00 USD
 
 	// Allocate in ratio of [1,1,2]
-	allocation, err := dollars.Allocate([]int64{1, 1, 2})
+	parts, err := dollars.Allocate(1, 1, 2)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	for i, part := range allocation.Parts {
+	for i, part := range parts {
 		fmt.Printf("Part %d: %v\n", i+1, part)
 	}
 
@@ -1351,29 +1306,18 @@ func ExampleMoney_Allocate() {
 func ExampleMoney_Distribute() {
 	dollars := NewMoney[currency.USD](10000) // 100.00 USD
 
-	// Distribute into 3 chunks
 	dist, err := dollars.Distribute(3)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	fmt.Printf("Smaller chunks: %d x $%.2f\n",
-		dist.SmallerCount,
-		float64(dist.SmallerChunkSize)/100)
-	fmt.Printf("Larger chunks: %d x $%.2f\n",
-		dist.LargerCount,
-		float64(dist.LargerChunkSize)/100)
-
-	// Verify total
-	total := (dist.SmallerChunkSize * dist.SmallerCount) +
-		(dist.LargerChunkSize * dist.LargerCount)
-	fmt.Printf("Total: $%.2f\n", float64(total)/100)
+	fmt.Printf("Smaller chunks: %d x %v\n", dist.SmallerCount, dist.Smaller)
+	fmt.Printf("Larger chunks: %d x %v\n", dist.LargerCount, dist.Larger)
 
 	// Output:
 	// Smaller chunks: 2 x $33.33
 	// Larger chunks: 1 x $33.34
-	// Total: $100.00
 }
 
 func TestGeneratedFormatContracts(t *testing.T) {
@@ -1457,7 +1401,7 @@ func FuzzDistributeInvariants(f *testing.F) {
 			t.Fatalf("counts must be non-negative: %+v", dist)
 		}
 
-		total := (dist.SmallerChunkSize * dist.SmallerCount) + (dist.LargerChunkSize * dist.LargerCount)
+		total := (dist.Smaller.Amount() * dist.SmallerCount) + (dist.Larger.Amount() * dist.LargerCount)
 		if total != amount {
 			t.Fatalf("distribution total = %d, amount = %d", total, amount)
 		}
@@ -1557,13 +1501,13 @@ func FuzzAllocateInvariants(f *testing.F) {
 	f.Fuzz(func(t *testing.T, amount, r1, r2, r3 int64) {
 		ratios := []int64{boundedPositive(r1), boundedPositive(r2), boundedPositive(r3)}
 		m := NewMoney[currency.USD](amount)
-		allocation, err := m.Allocate(ratios)
+		parts, err := m.Allocate(ratios...)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 
 		sum := int64(0)
-		for _, part := range allocation.Parts {
+		for _, part := range parts {
 			sum += part.Amount()
 		}
 
