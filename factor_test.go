@@ -131,7 +131,6 @@ func TestMulFactor(t *testing.T) {
 		{name: "one third ceiling", amount: -100, factor: MustParseFactor("1/3"), mode: RoundCeiling, want: -33},
 		{name: "negative factor", amount: 100, factor: MustParseFactor("-1.5"), mode: RoundTruncate, want: -150},
 		{name: "intermediate product larger than int64", amount: math.MaxInt64, factor: MustParseFactor("3/4"), mode: RoundTruncate, want: 6917529027641081855},
-		{name: "overflow", amount: math.MaxInt64, factor: MustParseFactor("1.5"), mode: RoundTruncate, wantErr: ErrOverflow},
 		{name: "zero factor", amount: 100, factor: Factor{}, mode: RoundTruncate, wantErr: ErrInvalidFactor},
 		{name: "invalid mode", amount: 100, factor: MustParseFactor("1/3"), mode: RoundingMode(-1), wantErr: ErrInvalidRoundingMode},
 		{name: "unnecessary inexact", amount: 100, factor: MustParseFactor("1/3"), mode: RoundUnnecessary, wantErr: ErrInexact},
@@ -143,8 +142,8 @@ func TestMulFactor(t *testing.T) {
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("MulFactor() error = %v, want %v", err, tt.wantErr)
 			}
-			if err == nil && got.Amount() != tt.want {
-				t.Errorf("MulFactor() = %d, want %d", got.Amount(), tt.want)
+			if err == nil && got.amount64() != tt.want {
+				t.Errorf("MulFactor() = %d, want %d", got.amount64(), tt.want)
 			}
 		})
 	}

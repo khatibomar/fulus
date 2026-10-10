@@ -38,7 +38,7 @@ func TestNullMoneySQL(t *testing.T) {
 				}
 				return
 			}
-			if n.Valid != tt.wantValid || n.Money.Amount() != tt.want {
+			if n.Valid != tt.wantValid || n.Money.amount64() != tt.want {
 				t.Errorf("Scan() = %+v, want valid %v amount %d", n, tt.wantValid, tt.want)
 			}
 

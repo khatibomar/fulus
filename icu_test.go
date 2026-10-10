@@ -118,12 +118,12 @@ func TestFormatMatchesICU(t *testing.T) {
 		checked++
 
 		info := cur.FormatInfo(loc)
-		if got := formatAmount(c.amount, cur.MinorUnits(), info); got != c.expected {
+		if got := formatAmount(int128FromInt64(c.amount), cur.MinorUnits(), info); got != c.expected {
 			t.Errorf("line %d: Format(%s, %s, %d) = %q, ICU gives %q", c.line, c.locale, c.code, c.amount, got, c.expected)
 			failures++
 		}
-		if got, err := parseFormatted(c.expected, cur.MinorUnits(), info); err != nil || got != c.amount {
-			t.Errorf("line %d: ParseFormatted(%q, %s) = %d, %v, want %d", c.line, c.expected, c.locale, got, err, c.amount)
+		if got, err := parseFormatted(c.expected, cur.MinorUnits(), info); err != nil || got != int128FromInt64(c.amount) {
+			t.Errorf("line %d: ParseFormatted(%q, %s) = %s, %v, want %d", c.line, c.expected, c.locale, got.big(), err, c.amount)
 			failures++
 		}
 		if failures >= 20 {

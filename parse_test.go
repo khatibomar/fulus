@@ -22,7 +22,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "indian grouping",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.INR]("-₹1,23,45,678.90", locale.EN_IN)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: -1234567890,
 		},
@@ -30,7 +30,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "negative subpattern",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.CHF]("CHF-1'234.56", locale.DE_CH)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: -123456,
 		},
@@ -38,7 +38,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "space instead of no-break space",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.EUR]("1 234,56 €", locale.FR)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: 123456,
 		},
@@ -46,7 +46,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "ascii minus for unicode minus sign",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.EUR]("-1 234,56 €", locale.SV)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: -123456,
 		},
@@ -54,7 +54,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "fewer fraction digits",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.USD]("$1,234.5", locale.EN)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: 123450,
 		},
@@ -62,7 +62,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "no fraction",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.USD]("$12", locale.EN)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: 1200,
 		},
@@ -70,7 +70,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "missing symbol",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.USD]("1,234.56", locale.EN)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			wantErr: ErrInvalidAmountFormat,
 		},
@@ -78,7 +78,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "wrong decimal separator",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.EUR]("1.234.56 €", locale.DE)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			wantErr: ErrInvalidAmountFormat,
 		},
@@ -86,7 +86,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "wrong group size",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.USD]("$12,34.00", locale.EN)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			wantErr: ErrInvalidAmountFormat,
 		},
@@ -94,7 +94,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "wrong indian group size",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.INR]("₹1,234,567.00", locale.EN_IN)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			wantErr: ErrInvalidAmountFormat,
 		},
@@ -102,7 +102,7 @@ func TestParseFormatted(t *testing.T) {
 			name: "no group separators",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.INR]("₹1234567.00", locale.EN_IN)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: 123456700,
 		},
@@ -110,13 +110,16 @@ func TestParseFormatted(t *testing.T) {
 			name: "too many fraction digits",
 			parse: func() (int64, error) {
 				m, err := ParseFormatted[currency.USD]("$1.234", locale.EN)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			wantErr: ErrScaleMismatch,
 		},
 		{
-			name:    "symbol only",
-			parse:   func() (int64, error) { m, err := ParseFormatted[currency.USD]("$", locale.EN); return m.Amount(), err },
+			name: "symbol only",
+			parse: func() (int64, error) {
+				m, err := ParseFormatted[currency.USD]("$", locale.EN)
+				return m.amount64(), err
+			},
 			wantErr: ErrInvalidAmountFormat,
 		},
 	}
@@ -145,7 +148,10 @@ func TestParseFormattedRoundTrip(t *testing.T) {
 		locale.AR, locale.AR_EG, locale.FA, locale.HE, locale.UR, locale.HI, locale.BN,
 		locale.JA, locale.ZH, locale.KO, locale.RU, locale.TR, locale.TOK, locale.SW,
 	}
-	amounts := []int64{0, 1, -1, 5, 1234, -123456, 1234567890, math.MaxInt64, math.MinInt64}
+	amounts := []int128{maxInt128, minInt128}
+	for _, a := range []int64{0, 1, -1, 5, 1234, -123456, 1234567890, math.MaxInt64, math.MinInt64} {
+		amounts = append(amounts, int128FromInt64(a))
+	}
 
 	for _, c := range currency.All() {
 		for _, loc := range locales {
@@ -154,7 +160,7 @@ func TestParseFormattedRoundTrip(t *testing.T) {
 				formatted := formatAmount(amount, c.MinorUnits(), info)
 				got, err := parseFormatted(formatted, c.MinorUnits(), info)
 				if err != nil || got != amount {
-					t.Errorf("%s %s: parse(%+q) = %d, %v; want %d", c.Code(), loc, formatted, got, err, amount)
+					t.Errorf("%s %s: parse(%+q) = %s, %v; want %s", c.Code(), loc, formatted, got.big(), err, amount.big())
 				}
 			}
 		}

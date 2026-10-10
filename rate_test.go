@@ -205,7 +205,6 @@ func TestConvert(t *testing.T) {
 	}{
 		{name: "simple", amount: 10000, rate: "1.07203", mode: RoundTruncate, expected: 10720},
 		{name: "zero amount", amount: 0, rate: "1.07203", mode: RoundTruncate},
-		{name: "overflow", amount: math.MaxInt64, rate: "2", mode: RoundTruncate, wantErr: ErrOverflow},
 		{name: "truncate positive half", amount: 1, rate: "1/2", mode: RoundTruncate, expected: 0},
 		{name: "half up positive tie", amount: 5, rate: "1/2", mode: RoundHalfUp, expected: 3},
 		{name: "half even positive tie", amount: 5, rate: "1/2", mode: RoundHalfEven, expected: 2},
@@ -222,8 +221,8 @@ func TestConvert(t *testing.T) {
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Convert() error = %v, expected %v", err, tt.wantErr)
 			}
-			if err == nil && got.Amount() != tt.expected {
-				t.Errorf("Convert() = %d, expected %d", got.Amount(), tt.expected)
+			if err == nil && got.amount64() != tt.expected {
+				t.Errorf("Convert() = %d, expected %d", got.amount64(), tt.expected)
 			}
 		})
 	}
@@ -245,7 +244,7 @@ func TestConvertDifferentMinorUnits(t *testing.T) {
 			name: "EUR 1.00 to JPY at 160.25",
 			got: func() (int64, error) {
 				m, err := Convert(NewMoney[currency.EUR](100), MustParseRate[currency.EUR, currency.JPY]("160.25"), RoundHalfEven)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: 160,
 		},
@@ -253,7 +252,7 @@ func TestConvertDifferentMinorUnits(t *testing.T) {
 			name: "USD 1.00 to BHD at 0.376",
 			got: func() (int64, error) {
 				m, err := Convert(NewMoney[currency.USD](100), MustParseRate[currency.USD, currency.BHD]("0.376"), RoundHalfEven)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: 376,
 		},
@@ -261,7 +260,7 @@ func TestConvertDifferentMinorUnits(t *testing.T) {
 			name: "JPY 1000 to USD at 1/150",
 			got: func() (int64, error) {
 				m, err := Convert(NewMoney[currency.JPY](1000), MustParseRate[currency.JPY, currency.USD]("1/150"), RoundHalfUp)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: 667,
 		},
@@ -270,7 +269,7 @@ func TestConvertDifferentMinorUnits(t *testing.T) {
 			got: func() (int64, error) {
 				r, _ := NewRate[currency.JPY, currency.CLF](math.MaxInt64, math.MaxInt64-1)
 				m, err := Convert(NewMoney[currency.JPY](3), r, RoundHalfUp)
-				return m.Amount(), err
+				return m.amount64(), err
 			},
 			want: 30000,
 		},
@@ -340,8 +339,8 @@ func FuzzConvert(f *testing.F) {
 			}
 			return
 		}
-		if err != nil || got.Amount() != want.Int64() {
-			t.Fatalf("Convert(%d, %d/%d) = %d, %v; expected %d", amount, numerator, denominator, got.Amount(), err, want)
+		if err != nil || got.amount64() != want.Int64() {
+			t.Fatalf("Convert(%d, %d/%d) = %d, %v; expected %d", amount, numerator, denominator, got.amount64(), err, want)
 		}
 	})
 }

@@ -4,7 +4,7 @@ This page tells which operations round, how they round, and what happens when a 
 
 ## Amounts
 
-A `Money[T]` value holds one `int64`. The `int64` is the amount in minor units of the currency.
+A `Money[T]` value holds a signed 128-bit integer. The integer is the amount in minor units of the currency.
 For USD, 1 minor unit is 1 cent, so `NewMoney[currency.USD](1050)` is $10.50.
 The minor units come from ISO 4217. `T.MinorUnits()` gives the number of digits after the decimal separator.
 
@@ -119,23 +119,24 @@ The two sizes are different by 1 minor unit.
 
 ## Overflow
 
-The amount is an `int64`, so the range depends on the minor units of the currency:
+The amount is a signed 128-bit integer, so the range depends on the minor units of the currency:
 
 | Minor units | Example | Largest amount |
 |-------------|---------|----------------|
-| 0 | JPY | 9,223,372,036,854,775,807 |
-| 2 | USD | 92,233,720,368,547,758.07 |
-| 3 | BHD | 9,223,372,036,854,775.807 |
-| 4 | CLF | 922,337,203,685,477.5807 |
-| 8 | a custom token | 92,233,720,368.54775807 |
-| 18 | a custom token | 9.223372036854775807 |
+| 0 | JPY | 170,141,183,460,469,231,731,687,303,715,884,105,727 |
+| 2 | USD | 1,701,411,834,604,692,317,316,873,037,158,841,057.27 |
+| 3 | BHD | 170,141,183,460,469,231,731,687,303,715,884,105.727 |
+| 4 | CLF | 17,014,118,346,046,923,173,168,730,371,588,410.5727 |
+| 8 | a custom token | 1,701,411,834,604,692,317,316,873,037,158.84105727 |
+| 18 | a custom token | 170,141,183,460,469,231,731.687303715884105727 |
 
 The smallest amount is the negative of the largest amount, minus 1 minor unit.
 
-Every operation checks for overflow. When the result does not fit in `int64`, the operation returns `ErrOverflow` and the zero value.
+Every operation checks for overflow. When the result does not fit in 128 bits, the operation returns `ErrOverflow` and the zero value.
 It never returns a wrong result.
 
 - `MustAdd`, `MustSub` and `MustMul` panic with `ErrOverflow`. Use them only when you know the range of the values.
+- `Int64` reports false and `Value` returns `ErrOverflow` for an amount that does not fit in `int64`.
 - `Abs` and `Neg` return `ErrOverflow` for the smallest amount, because its positive value does not fit.
 - `RoundCash` returns `ErrOverflow` if the rounded value does not fit.
 - `ParseMoney` and `ParseFormatted` return `ErrOverflow` for an amount that does not fit.
@@ -144,11 +145,12 @@ It never returns a wrong result.
 
 ### Sum
 
-`Sum` adds the values with a 128-bit total. An intermediate total can be larger than `int64`.
+`Sum` adds the values in 128 bits, and changes to `math/big` if an intermediate total does not fit.
+So an intermediate total can be larger than the range.
 `Sum` returns `ErrOverflow` only when the final total does not fit.
 
 ```go
-big := fulus.NewMoney[currency.USD](1 << 62)
-total, err := fulus.Sum(big, big, big.MustMul(-1)) // total is 1 << 62, err is nil
-_, err = big.Add(big)                              // err is ErrOverflow
+largest, _ := fulus.ParseMoney[currency.USD]("1701411834604692317316873037158841057.27")
+total, err := fulus.Sum(largest, largest, largest.MustMul(-1)) // total is largest, err is nil
+_, err = largest.Add(largest)                                 // err is ErrOverflow
 ```

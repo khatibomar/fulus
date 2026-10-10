@@ -1,7 +1,6 @@
 package fulus
 
 import (
-	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -120,13 +119,13 @@ func writeGrouped(b *strings.Builder, digits []byte, primary, secondary, minimum
 }
 
 // formatAmount formats an amount in minor units with the given format information.
-func formatAmount(amount int64, minorUnits int, info currency.FormatInfo) string {
+func formatAmount(amount int128, minorUnits int, info currency.FormatInfo) string {
 	p := parsePattern(info.Format)
 	minorUnits = max(minorUnits, 0)
-	negative := amount < 0
+	negative := amount.isNeg()
 
-	var buf [20]byte
-	digits := strconv.AppendUint(buf[:0], abs64(amount), 10)
+	var buf [40]byte
+	digits := amount.abs().appendDecimal(buf[:0])
 	integer, fraction, fractionPad := []byte{'0'}, digits, minorUnits-len(digits)
 	if len(digits) > minorUnits {
 		integer, fraction, fractionPad = digits[:len(digits)-minorUnits], digits[len(digits)-minorUnits:], 0

@@ -1,10 +1,9 @@
 package fulus
 
 import (
-	"cmp"
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"math/big"
 
 	"github.com/khatibomar/fulus/currency"
 	"github.com/khatibomar/fulus/locale"
@@ -15,13 +14,13 @@ import (
 // Use As to get a type-safe Money[T] before arithmetic in a known currency.
 // The zero value has no currency.
 type AnyMoney struct {
-	amount   int64
+	amount   int128
 	currency currency.Currency
 }
 
 // NewAnyMoney creates an AnyMoney from an amount in minor units and a currency.
 func NewAnyMoney(amount int64, c currency.Currency) AnyMoney {
-	return AnyMoney{amount: amount, currency: c}
+	return AnyMoney{amount: int128FromInt64(amount), currency: c}
 }
 
 // NewAnyMoneyFromCode creates an AnyMoney from an amount in minor units and a registered currency code.
@@ -31,7 +30,7 @@ func NewAnyMoneyFromCode(amount int64, code string) (AnyMoney, error) {
 	if !ok {
 		return AnyMoney{}, fmt.Errorf("%w: %q", ErrUnknownCurrency, code)
 	}
-	return AnyMoney{amount: amount, currency: c}, nil
+	return AnyMoney{amount: int128FromInt64(amount), currency: c}, nil
 }
 
 // ParseAnyMoney parses a canonical decimal amount such as "12.50" in the currency with the given code.
@@ -63,9 +62,14 @@ func As[T currency.Unit](m AnyMoney) (Money[T], error) {
 	return Money[T]{amount: m.amount}, nil
 }
 
-// Amount returns the amount in minor units.
-func (m AnyMoney) Amount() int64 {
-	return m.amount
+// Int64 returns the amount in minor units, and reports whether it fits in int64.
+func (m AnyMoney) Int64() (int64, bool) {
+	return m.amount.int64()
+}
+
+// BigInt returns the amount in minor units.
+func (m AnyMoney) BigInt() *big.Int {
+	return m.amount.big()
 }
 
 // Currency returns the currency, or nil for the zero value.
@@ -75,22 +79,22 @@ func (m AnyMoney) Currency() currency.Currency {
 
 // IsZero returns true if the amount is zero.
 func (m AnyMoney) IsZero() bool {
-	return m.amount == 0
+	return m.amount.isZero()
 }
 
 // Add returns the sum of two values in the same currency.
-// Returns ErrCurrencyMismatch if the currencies are different, and ErrOverflow if the sum does not fit in int64.
+// Returns ErrCurrencyMismatch if the currencies are different, and ErrOverflow if the sum does not fit.
 func (m AnyMoney) Add(other AnyMoney) (AnyMoney, error) {
-	return m.combine(other, add64)
+	return m.combine(other, add128)
 }
 
 // Sub returns the difference of two values in the same currency.
-// Returns ErrCurrencyMismatch if the currencies are different, and ErrOverflow if the result does not fit in int64.
+// Returns ErrCurrencyMismatch if the currencies are different, and ErrOverflow if the result does not fit.
 func (m AnyMoney) Sub(other AnyMoney) (AnyMoney, error) {
-	return m.combine(other, sub64)
+	return m.combine(other, sub128)
 }
 
-func (m AnyMoney) combine(other AnyMoney, op func(a, b int64) (int64, bool)) (AnyMoney, error) {
+func (m AnyMoney) combine(other AnyMoney, op func(a, b int128) (int128, bool)) (AnyMoney, error) {
 	if !m.sameCurrency(other.currency) {
 		return AnyMoney{}, fmt.Errorf("%w: %s and %s", ErrCurrencyMismatch, m.code(), other.code())
 	}
@@ -107,13 +111,13 @@ func (m AnyMoney) Cmp(other AnyMoney) (int, error) {
 	if !m.sameCurrency(other.currency) {
 		return 0, fmt.Errorf("%w: %s and %s", ErrCurrencyMismatch, m.code(), other.code())
 	}
-	return cmp.Compare(m.amount, other.amount), nil
+	return m.amount.cmp(other.amount), nil
 }
 
 // Format returns the value formatted for the locale. The zero value formats as a plain integer.
 func (m AnyMoney) Format(loc locale.Locale) string {
 	if m.currency == nil {
-		return strconv.FormatInt(m.amount, 10)
+		return string(appendInt128(nil, m.amount))
 	}
 	return formatAmount(m.amount, m.currency.MinorUnits(), m.currency.FormatInfo(loc))
 }
@@ -139,11 +143,11 @@ func (m *AnyMoney) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	parsed, err := NewAnyMoneyFromCode(amount, temp.Currency)
-	if err != nil {
-		return err
+	c, ok := currency.ByCode(temp.Currency)
+	if !ok {
+		return fmt.Errorf("%w: %q", ErrUnknownCurrency, temp.Currency)
 	}
-	*m = parsed
+	*m = AnyMoney{amount: amount, currency: c}
 	return nil
 }
 
