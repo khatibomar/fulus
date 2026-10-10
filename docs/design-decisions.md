@@ -124,4 +124,4 @@ For an integer column that holds minor units, use `BigintMoney[T]`. Fulus does n
 The value 1050 is USD 1050.00 in a `NUMERIC` column and USD 10.50 in minor units, so a guess can be 100 times wrong.
 
 The column does not store the currency, because the type parameter holds it.
-If a column holds more than one currency, store the currency code in another column and use `AnyMoney`.
+If a column holds more than one currency, store the currency code in another column and use `AnyMoney.ScanColumns`.

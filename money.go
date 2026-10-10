@@ -2,7 +2,6 @@ package fulus
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 	"slices"
 	"strconv"
@@ -11,9 +10,6 @@ import (
 )
 
 var (
-	// ErrValidation is the error returned when money validation fails
-	ErrValidation = errors.New("money validation error")
-
 	// ErrOverflow indicates an arithmetic operation would overflow
 	ErrOverflow = errors.New("arithmetic operation would overflow")
 
@@ -26,8 +22,8 @@ var (
 	// ErrNoRatios indicates no ratios were provided for allocation
 	ErrNoRatios = errors.New("no ratios provided")
 
-	// ErrNegativeOrZeroRatios indicates negative ratios in allocation
-	ErrNegativeOrZeroRatios = errors.New("ratios must be positive")
+	// ErrInvalidRatios indicates a negative ratio, or ratios that are all zero, in allocation
+	ErrInvalidRatios = errors.New("ratios must not be negative and must not all be zero")
 
 	// ErrInvalidRoundingMode indicates unsupported rounding mode
 	ErrInvalidRoundingMode = errors.New("invalid rounding mode")
@@ -253,25 +249,34 @@ func (m Money[T]) scale(numerator, denominator int64, mode RoundingMode) (Money[
 // If the currency does not implement currency.CashRounder, RoundCash returns the value unchanged.
 // Returns ErrOverflow if the result does not fit.
 func (m Money[T]) RoundCash(mode RoundingMode) (Money[T], error) {
-	if !mode.valid() {
-		return Money[T]{}, ErrInvalidRoundingMode
-	}
-
-	rounder, ok := any(m.Currency()).(currency.CashRounder)
-	if !ok || rounder.CashIncrement() <= 1 {
-		return m, nil
-	}
-
-	increment := rounder.CashIncrement()
-	steps, err := mulDivRound(m.amount, 1, increment, mode)
+	result, err := roundCash(m.amount, m.Currency(), mode)
 	if err != nil {
 		return Money[T]{}, err
 	}
+	return Money[T]{amount: result}, nil
+}
+
+// roundCash rounds an amount to the cash increment of c. A nil c or a currency without a cash rule does not round.
+func roundCash(amount int128, c currency.Currency, mode RoundingMode) (int128, error) {
+	if !mode.valid() {
+		return int128{}, ErrInvalidRoundingMode
+	}
+
+	rounder, ok := c.(currency.CashRounder)
+	if !ok || rounder.CashIncrement() <= 1 {
+		return amount, nil
+	}
+
+	increment := rounder.CashIncrement()
+	steps, err := mulDivRound(amount, 1, increment, mode)
+	if err != nil {
+		return int128{}, err
+	}
 	result, ok := steps.mulInt64(increment)
 	if !ok {
-		return Money[T]{}, ErrOverflow
+		return int128{}, ErrOverflow
 	}
-	return Money[T]{amount: result}, nil
+	return result, nil
 }
 
 // Abs returns the absolute value of m.
@@ -293,12 +298,9 @@ func (m Money[T]) Neg() (Money[T], error) {
 	return Money[T]{amount: result}, nil
 }
 
-// Validate returns ErrValidation if m is not in the closed interval [low, high].
-func (m Money[T]) Validate(low, high Money[T]) error {
-	if m.LessThan(low) || m.GreaterThan(high) {
-		return fmt.Errorf("%w: money amount %s should be in interval [%s, %s]", ErrValidation, m, low, high)
-	}
-	return nil
+// InRange reports whether m is in the closed interval [low, high].
+func (m Money[T]) InRange(low, high Money[T]) bool {
+	return m.GreaterThanOrEqual(low) && m.LessThanOrEqual(high)
 }
 
 // Cmp returns -1 if m < other, 0 if m == other, and +1 if m > other.
@@ -391,35 +393,46 @@ func (m Money[T]) Distribute(chunks int64) (Distribution[T], error) {
 }
 
 // Allocate divides m into parts in proportion to the ratios. The sum of the parts is equal to m.
+// A ratio can be zero, and its part is zero. At least one ratio must be positive.
 // It uses the largest remainder method. See docs/rounding-and-overflow.md.
 func (m Money[T]) Allocate(ratios ...int64) ([]Money[T], error) {
+	return allocate[Money[T]](m.amount, ratios)
+}
+
+// allocate divides amount in proportion to the ratios, into parts of type P.
+// P is a struct type with only the amount field, so that Money[T] does not need a second slice.
+func allocate[P ~struct{ amount int128 }](amount int128, ratios []int64) ([]P, error) {
 	if len(ratios) == 0 {
 		return nil, ErrNoRatios
 	}
 
 	var total uint64
 	for _, ratio := range ratios {
-		if ratio <= 0 {
-			return nil, ErrNegativeOrZeroRatios
+		if ratio < 0 {
+			return nil, ErrInvalidRatios
 		}
 		total += uint64(ratio)
 		if total > 1<<63-1 {
 			return nil, ErrOverflow
 		}
 	}
+	if total == 0 {
+		return nil, ErrInvalidRatios
+	}
 
 	// Largest remainder method: each part gets its truncated share first.
 	// Then the leftover minor units go one by one to the parts with the largest remainders.
 	// Ties go to the part with the lower index.
-	parts := make([]Money[T], len(ratios))
+	// A part with a zero ratio has a zero remainder, so it never gets a leftover unit.
+	parts := make([]P, len(ratios))
 	remainders := make([]uint64, len(ratios))
-	leftover := m.amount
-	magnitude, negative := m.amount.abs(), m.amount.isNeg()
+	leftover := amount
+	magnitude, negative := amount.abs(), amount.isNeg()
 	for i, ratio := range ratios {
-		// The share is at most m in magnitude, so it always fits.
+		// The share is at most the amount in magnitude, so it always fits.
 		q, r, _ := magnitude.mulDiv64(uint64(ratio), total)
 		share, _ := fromMagnitude128(q, negative)
-		parts[i] = Money[T]{amount: share}
+		parts[i] = P{amount: share}
 		remainders[i] = r
 		leftover, _ = sub128(leftover, share)
 	}
@@ -441,7 +454,8 @@ func (m Money[T]) Allocate(ratios ...int64) ([]Money[T], error) {
 		return cmpUint64(remainders[b], remainders[a])
 	})
 	for _, i := range order[:count] {
-		parts[i].amount, _ = add128(parts[i].amount, step)
+		share, _ := add128(struct{ amount int128 }(parts[i]).amount, step)
+		parts[i] = P{amount: share}
 	}
 
 	return parts, nil

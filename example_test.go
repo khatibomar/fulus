@@ -83,3 +83,37 @@ func ExampleNullMoney() {
 	// false null
 	// true USD 2.50 2.50
 }
+
+func ExampleMoney_InRange() {
+	low, high := fulus.NewMoney[currency.USD](100), fulus.NewMoney[currency.USD](10000)
+	fmt.Println(fulus.NewMoney[currency.USD](2500).InRange(low, high))
+	fmt.Println(fulus.NewMoney[currency.USD](50).InRange(low, high))
+	// Output:
+	// true
+	// false
+}
+
+func ExampleAnyMoney_MulFactor() {
+	price, err := fulus.ParseAnyMoney("12.50", "EUR")
+	if err != nil {
+		panic(err)
+	}
+	vat, err := price.MulFactor(fulus.Percent(19), fulus.RoundHalfUp)
+	fmt.Println(vat, err)
+	// Output: EUR 2.38 <nil>
+}
+
+func ExampleAnyMoney_ScanColumns() {
+	var price fulus.AnyMoney
+	amount, code := price.ScanColumns()
+
+	// rows.Scan(amount, code) calls Scan for each column, with the values from the driver.
+	if err := amount.Scan([]byte("12.50")); err != nil {
+		panic(err)
+	}
+	if err := code.Scan([]byte("EUR")); err != nil {
+		panic(err)
+	}
+	fmt.Println(price)
+	// Output: EUR 12.50
+}

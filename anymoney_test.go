@@ -91,7 +91,20 @@ func TestAs(t *testing.T) {
 	if _, err := As[currency.USD](AnyMoney{}); !errors.Is(err, ErrCurrencyMismatch) {
 		t.Errorf("As[USD](zero value) error = %v, want %v", err, ErrCurrencyMismatch)
 	}
+	_, err = As[currency.USD](NewAnyMoney(10000, fourDigitUSD{}))
+	if !errors.Is(err, ErrCurrencyMismatch) {
+		t.Fatalf("As[USD]() with other minor units error = %v, want %v", err, ErrCurrencyMismatch)
+	}
+	if want := "currency mismatch: expected USD with 2 minor units, got USD with 4 minor units"; err.Error() != want {
+		t.Errorf("As[USD]() error = %q, want %q", err, want)
+	}
 }
+
+// fourDigitUSD has the code of USD but other minor units.
+type fourDigitUSD struct{}
+
+func (fourDigitUSD) Code() string    { return "USD" }
+func (fourDigitUSD) MinorUnits() int { return 4 }
 
 func TestAnyMoneyArithmetic(t *testing.T) {
 	t.Parallel()
@@ -111,6 +124,24 @@ func TestAnyMoneyArithmetic(t *testing.T) {
 		{name: "add zero value", op: func() (AnyMoney, error) { return AnyMoney{}.Add(usd(1)) }, wantErr: ErrCurrencyMismatch},
 		{name: "add overflow", op: func() (AnyMoney, error) { return maxMoney[currency.USD]().Any().Add(usd(1)) }, wantErr: ErrOverflow},
 		{name: "sub overflow", op: func() (AnyMoney, error) { return minMoney[currency.USD]().Any().Sub(usd(1)) }, wantErr: ErrOverflow},
+		{name: "add other minor units", op: func() (AnyMoney, error) { return usd(100).Add(NewAnyMoney(1, fourDigitUSD{})) }, wantErr: ErrCurrencyMismatch},
+		{name: "mul", op: func() (AnyMoney, error) { return usd(-25).Mul(4) }, want: -100},
+		{name: "mul overflow", op: func() (AnyMoney, error) { return maxMoney[currency.USD]().Any().Mul(2) }, wantErr: ErrOverflow},
+		{name: "div", op: func() (AnyMoney, error) { return usd(100).Div(3, RoundHalfUp) }, want: 33},
+		{name: "div rounds", op: func() (AnyMoney, error) { return usd(-5).Div(2, RoundFloor) }, want: -3},
+		{name: "div by zero", op: func() (AnyMoney, error) { return usd(100).Div(0, RoundHalfUp) }, wantErr: ErrDivisionByZero},
+		{name: "div invalid mode", op: func() (AnyMoney, error) { return usd(100).Div(3, 0) }, wantErr: ErrInvalidRoundingMode},
+		{name: "mul factor", op: func() (AnyMoney, error) { return usd(1000).MulFactor(Percent(15), RoundHalfEven) }, want: 150},
+		{name: "mul zero factor", op: func() (AnyMoney, error) { return usd(1000).MulFactor(Factor{}, RoundHalfEven) }, wantErr: ErrInvalidFactor},
+		{name: "mul factor inexact", op: func() (AnyMoney, error) { return usd(1).MulFactor(Percent(50), RoundUnnecessary) }, wantErr: ErrInexact},
+		{name: "round cash", op: func() (AnyMoney, error) { return NewAnyMoney(1003, currency.CHF{}).RoundCash(RoundHalfUp) }, want: 1005},
+		{name: "round cash without rule", op: func() (AnyMoney, error) { return usd(1003).RoundCash(RoundHalfUp) }, want: 1003},
+		{name: "round cash zero value", op: func() (AnyMoney, error) { return AnyMoney{}.RoundCash(RoundHalfUp) }, want: 0},
+		{name: "round cash invalid mode", op: func() (AnyMoney, error) { return usd(1).RoundCash(0) }, wantErr: ErrInvalidRoundingMode},
+		{name: "abs", op: func() (AnyMoney, error) { return usd(-7).Abs() }, want: 7},
+		{name: "abs positive", op: func() (AnyMoney, error) { return usd(7).Abs() }, want: 7},
+		{name: "neg", op: func() (AnyMoney, error) { return usd(7).Neg() }, want: -7},
+		{name: "neg overflow", op: func() (AnyMoney, error) { return minMoney[currency.USD]().Any().Neg() }, wantErr: ErrOverflow},
 	}
 
 	for _, tt := range tests {
@@ -132,6 +163,148 @@ func TestAnyMoneyArithmetic(t *testing.T) {
 	}
 	if _, err := usd(1).Cmp(eur); !errors.Is(err, ErrCurrencyMismatch) {
 		t.Errorf("Cmp() mismatch error = %v", err)
+	}
+	if got, err := usd(-7).Neg(); err != nil || got.Currency() != (currency.USD{}) {
+		t.Errorf("Neg() = %v, %v; want the currency USD", got, err)
+	}
+}
+
+func TestAnyMoneySign(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		amount             int64
+		sign               int
+		positive, negative bool
+	}{
+		{amount: -3, sign: -1, negative: true},
+		{amount: 0, sign: 0},
+		{amount: 3, sign: 1, positive: true},
+	}
+	for _, tt := range tests {
+		m := NewAnyMoney(tt.amount, currency.EUR{})
+		if m.Sign() != tt.sign || m.IsPositive() != tt.positive || m.IsNegative() != tt.negative {
+			t.Errorf("%d: Sign() = %d, IsPositive() = %v, IsNegative() = %v", tt.amount, m.Sign(), m.IsPositive(), m.IsNegative())
+		}
+	}
+}
+
+func TestAnyMoneyAllocate(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		amount  int64
+		ratios  []int64
+		want    []int64
+		wantErr error
+	}{
+		{name: "thirds", amount: 100, ratios: []int64{1, 1, 1}, want: []int64{34, 33, 33}},
+		{name: "zero ratio", amount: -100, ratios: []int64{0, 1, 1}, want: []int64{0, -50, -50}},
+		{name: "no ratios", amount: 100, wantErr: ErrNoRatios},
+		{name: "all zero", amount: 100, ratios: []int64{0}, wantErr: ErrInvalidRatios},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			parts, err := NewAnyMoney(tt.amount, currency.EUR{}).Allocate(tt.ratios...)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("Allocate() error = %v, want %v", err, tt.wantErr)
+			}
+			if len(parts) != len(tt.want) {
+				t.Fatalf("Allocate() = %v, want %v", parts, tt.want)
+			}
+			for i, p := range parts {
+				if p.amount64() != tt.want[i] || p.Currency() != (currency.EUR{}) {
+					t.Errorf("part %d = %v, want EUR %d", i, p, tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestAnyMoneyScanColumns(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		amount    any
+		code      any
+		codeFirst bool
+		want      int64
+		wantCode  string
+		wantErr   error
+	}{
+		{name: "text", amount: []byte("-10.50"), code: []byte("eur"), want: -1050, wantCode: "EUR"},
+		{name: "code first", amount: "0.007", code: "KWD", codeFirst: true, want: 7, wantCode: "KWD"},
+		{name: "int64 is major units", amount: int64(3), code: "JPY", want: 3, wantCode: "JPY"},
+		{name: "float64", amount: 2.5, code: "USD", want: 250, wantCode: "USD"},
+		{name: "too many fraction digits", amount: "1.005", code: "USD", wantErr: ErrScaleMismatch},
+		{name: "unknown code", amount: "1", code: "XYZ", wantErr: ErrUnknownCurrency},
+		{name: "NULL amount", amount: nil, code: "USD", wantErr: ErrInvalidAmountFormat},
+		{name: "NULL code", amount: "1", code: nil, wantErr: ErrUnknownCurrency},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := NewAnyMoney(99, currency.CHF{})
+			amount, code := m.ScanColumns()
+			first, second := func() error { return amount.Scan(tt.amount) }, func() error { return code.Scan(tt.code) }
+			if tt.codeFirst {
+				first, second = second, first
+			}
+			err := first()
+			if err == nil {
+				if m.amount64() != 99 {
+					t.Fatalf("m changed after one column: %v", m)
+				}
+				err = second()
+			}
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("Scan() error = %v, want %v", err, tt.wantErr)
+			}
+			if err != nil {
+				if m.amount64() != 99 || m.Currency() != (currency.CHF{}) {
+					t.Errorf("m changed after an error: %v", m)
+				}
+				return
+			}
+			if m.amount64() != tt.want || m.Currency().Code() != tt.wantCode {
+				t.Errorf("Scan() = %v, want %d %s", m, tt.want, tt.wantCode)
+			}
+		})
+	}
+}
+
+func TestAnyMoneyScanColumnsNextRow(t *testing.T) {
+	t.Parallel()
+
+	var m AnyMoney
+	amount, code := m.ScanColumns()
+	rows := []struct {
+		amount, code string
+		want         string
+	}{
+		{amount: "1.5", code: "XYZ"},
+		{amount: "1.5", code: "USD", want: "USD 1.50"},
+		{amount: "7", code: "EUR", want: "EUR 7.00"},
+	}
+	for _, row := range rows {
+		err := amount.Scan(row.amount)
+		if err == nil {
+			err = code.Scan(row.code)
+		}
+		if row.want == "" {
+			if err == nil {
+				t.Fatalf("Scan(%q, %q) succeeded", row.amount, row.code)
+			}
+			continue
+		}
+		if err != nil || m.String() != row.want {
+			t.Errorf("Scan(%q, %q) = %v, %v; want %s", row.amount, row.code, m, err, row.want)
+		}
 	}
 }
 
@@ -162,13 +335,14 @@ func TestAnyMoneyJSON(t *testing.T) {
 		{name: "unknown currency", input: `{"amount":"1","currency":"XYZ"}`, wantErr: ErrUnknownCurrency},
 		{name: "invalid amount", input: `{"amount":"1.5x","currency":"USD"}`, wantErr: ErrInvalidAmountFormat},
 		{name: "too many fraction digits", input: `{"amount":"1.555","currency":"USD"}`, wantErr: ErrScaleMismatch},
+		{name: "null does not change the value", input: `null`, want: 5, code: "CHF"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			var m AnyMoney
+			m := NewAnyMoney(5, currency.CHF{})
 			err := json.Unmarshal([]byte(tt.input), &m)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("Unmarshal() error = %v, want %v", err, tt.wantErr)

@@ -124,6 +124,8 @@ The largest value is about 1.7 × 10^36 for a currency with 2 minor units.
 Every operation returns `ErrOverflow` instead of a wrong result when the result does not fit.
 A currency with many minor units has a smaller range.
 For example, a token with 18 minor units can hold about 1.7 × 10^20 units.
+A `Rate` or a `Factor` is a fraction of two `int64` terms, so it holds at most about 18 significant digits.
+`ParseRate` and `ParseFactor` return `ErrOverflow` for a value with more digits.
 
 ### Documentation
 
@@ -207,6 +209,7 @@ fmt.Println(usd10.Equal(usd20))            // false
 fmt.Println(usd10.IsZero())                // false
 fmt.Println(usd10.IsPositive())            // true
 fmt.Println(usd10.Cmp(usd20))              // -1
+fmt.Println(usd10.InRange(usd10, usd20))   // true
 ```
 
 ## Rounding Modes
@@ -263,6 +266,10 @@ if err != nil {
 eur, err := fulus.As[currency.EUR](price) // ErrCurrencyMismatch if price is not in EUR
 ```
 
+`AnyMoney` also has `Mul`, `Div`, `MulFactor`, `RoundCash`, `Abs`, `Neg` and `Allocate`, with the same rules as `Money[T]`.
+`Add`, `Sub` and `Cmp` return `ErrCurrencyMismatch` for two different currencies.
+Two currencies are the same only if they have the same code and the same minor units.
+
 `currency.ByCode` and `currency.ByNumber` find a currency by its ISO 4217 code.
 `currency.Register` adds a custom currency to the default registry, so that `AnyMoney` can use it.
 To keep custom currencies out of the global state, for example for each tenant or in a test, use a `currency.Registry`:
@@ -277,6 +284,7 @@ price, err := fulus.NewAnyMoneyFromDecimal("12.50", c)
 
 `AnyMoney` uses the same JSON form as `Money[T]`: `{"amount":"12.50","currency":"EUR"}`.
 The amount is a decimal string, so it does not lose digits in JavaScript and does not depend on the minor units of the reader.
+The currency code is not case-sensitive. A JSON `null` does not change the value. Use `NullMoney[T]` to tell `null` from zero.
 
 ## Locales
 
@@ -356,6 +364,20 @@ err := row.Scan(int64(1050)) // row.Money is $10.50
 
 Use `NullMoney[T]` for a decimal column that can be NULL. It also writes and reads JSON `null`.
 Use `sql.Null[fulus.BigintMoney[T]]` for an integer column that can be NULL.
+
+SQLite gives a `float64` for a `NUMERIC` value with a fraction. `Scan` accepts a `float64` only if it has
+at most 15 significant digits, because a `float64` always keeps 15 digits.
+For larger amounts in SQLite, use a `TEXT` column or `BigintMoney[T]`.
+
+For an `AnyMoney` in two columns, an amount and a currency code, use `ScanColumns`:
+
+```go
+var price fulus.AnyMoney
+amount, code := price.ScanColumns()
+err := row.Scan(amount, code)
+
+_, err = db.Exec("INSERT INTO prices (amount, currency) VALUES ($1, $2)", price.Decimal(), price.Currency().Code())
+```
 
 ## Protocol Buffers
 

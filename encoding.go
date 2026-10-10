@@ -1,10 +1,13 @@
 package fulus
 
 import (
+	"bytes"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
+	"strconv"
 	"strings"
 
 	"github.com/khatibomar/fulus/currency"
@@ -42,16 +45,20 @@ type moneyJSON struct {
 
 // UnmarshalJSON implements json.Unmarshaler. It reads the form that MarshalJSON writes.
 // The amount can have fewer fraction digits than the minor units, but not more.
+// The currency code is not case-sensitive. A JSON null does not change m. Use NullMoney to tell null from zero.
 // Returns ErrCurrencyMismatch if the currency code is not the code of T,
 // and ErrScaleMismatch if the amount has more fraction digits than the minor units.
 func (m *Money[T]) UnmarshalJSON(data []byte) error {
+	if isJSONNull(data) {
+		return nil
+	}
 	var temp moneyJSON
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return fmt.Errorf("failed to unmarshal money: %w", err)
 	}
 
 	c := m.Currency()
-	if c.Code() != temp.Currency {
+	if !strings.EqualFold(c.Code(), temp.Currency) {
 		return fmt.Errorf("%w: expected %s, got %s", ErrCurrencyMismatch, c.Code(), temp.Currency)
 	}
 
@@ -61,6 +68,11 @@ func (m *Money[T]) UnmarshalJSON(data []byte) error {
 	}
 	m.amount = amount
 	return nil
+}
+
+// isJSONNull reports whether data is the JSON literal null.
+func isJSONNull(data []byte) bool {
+	return string(bytes.TrimSpace(data)) == "null"
 }
 
 // ParseMoney parses a canonical decimal amount into Money using the currency's minor units.
@@ -165,38 +177,63 @@ func (m Money[T]) Value() (driver.Value, error) {
 
 // Scan implements sql.Scanner for database/sql. It reads a decimal column such as NUMERIC.
 // It accepts decimal text, as drivers return NUMERIC values, and an int64 as a whole number of major units.
-// It does not accept float64, because a float64 is not exact.
+// It accepts a float64, as SQLite returns for a NUMERIC column, only if it has at most 15 significant digits.
 // Returns ErrScaleMismatch if the value has more fraction digits than the minor units.
 // Use BigintMoney for an integer column that holds minor units.
 func (m *Money[T]) Scan(value any) error {
 	var c T
-	switch v := value.(type) {
-	case nil:
-		return fmt.Errorf("%w: cannot scan NULL into Money, use NullMoney", ErrInvalidAmountFormat)
-	case int64:
-		amount, ok := int128FromInt64(v).mulPow10(c.MinorUnits())
-		if !ok {
-			return ErrOverflow
-		}
-		m.amount = amount
-		return nil
-	case []byte:
-		return m.scanDecimal(string(v))
-	case string:
-		return m.scanDecimal(v)
-	default:
-		return fmt.Errorf("%w: cannot scan %T into Money, use a NUMERIC column or BigintMoney", ErrInvalidAmountFormat, value)
-	}
-}
-
-func (m *Money[T]) scanDecimal(s string) error {
-	var c T
-	amount, err := parseDecimal(s, c.MinorUnits())
+	amount, err := scanDecimal(value, c.MinorUnits())
 	if err != nil {
 		return err
 	}
 	m.amount = amount
 	return nil
+}
+
+// scanDecimal returns the amount in minor units of a database value from a decimal column.
+// Text is a decimal, and an int64 is a whole number of major units.
+// A float64 must have at most maxFloatDigits significant digits, so that its decimal form is the stored decimal.
+func scanDecimal(value any, minorUnits int) (int128, error) {
+	switch v := value.(type) {
+	case nil:
+		return int128{}, fmt.Errorf("%w: cannot scan NULL into Money, use NullMoney", ErrInvalidAmountFormat)
+	case int64:
+		amount, ok := int128FromInt64(v).mulPow10(minorUnits)
+		if !ok {
+			return int128{}, ErrOverflow
+		}
+		return amount, nil
+	case float64:
+		s, err := floatDecimal(v)
+		if err != nil {
+			return int128{}, err
+		}
+		return parseDecimal(s, minorUnits)
+	case []byte:
+		return parseDecimal(string(v), minorUnits)
+	case string:
+		return parseDecimal(v, minorUnits)
+	default:
+		return int128{}, fmt.Errorf("%w: cannot scan %T into Money, use a NUMERIC column or BigintMoney", ErrInvalidAmountFormat, value)
+	}
+}
+
+// maxFloatDigits is the number of significant decimal digits that a float64 always keeps.
+const maxFloatDigits = 15
+
+// floatDecimal returns the shortest decimal form of f that gives f again, such as "10.5".
+// Returns ErrInvalidAmountFormat if f is not finite or has more than maxFloatDigits significant digits,
+// because then the decimal form can be different from the decimal that the database got.
+func floatDecimal(f float64) (string, error) {
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return "", fmt.Errorf("%w: float64 %v is not finite", ErrInvalidAmountFormat, f)
+	}
+	s := strconv.FormatFloat(f, 'f', -1, 64)
+	digits := strings.TrimLeft(strings.ReplaceAll(strings.TrimPrefix(s, "-"), ".", ""), "0")
+	if len(digits) > maxFloatDigits {
+		return "", fmt.Errorf("%w: float64 %s has more than %d significant digits, use a decimal type", ErrInvalidAmountFormat, s, maxFloatDigits)
+	}
+	return s, nil
 }
 
 // BigintMoney stores a Money value in an integer column, such as BIGINT, as an amount in minor units.
