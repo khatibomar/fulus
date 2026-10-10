@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/big"
 	"math/bits"
+	"strings"
 )
 
 // mul64 returns a*b and reports whether the product fits in int64.
@@ -168,4 +169,29 @@ func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*bi
 		}
 	}
 	return q, nil
+}
+
+// parseRat parses a base 10 decimal such as "-1.25" or a fraction such as "1/3".
+// Unlike big.Rat.SetString, it does not accept exponents, base prefixes such as "0x" or "010/1", or underscores.
+func parseRat(s string) (*big.Rat, bool) {
+	sign := ""
+	if s != "" && (s[0] == '-' || s[0] == '+') {
+		sign, s = s[:1], s[1:]
+	}
+	if num, den, isFraction := strings.Cut(s, "/"); isFraction {
+		if num == "" || den == "" || !allDigits(num) || !allDigits(den) {
+			return nil, false
+		}
+		n, _ := new(big.Int).SetString(sign+num, 10)
+		d, _ := new(big.Int).SetString(den, 10)
+		if d.Sign() == 0 {
+			return nil, false
+		}
+		return new(big.Rat).SetFrac(n, d), true
+	}
+	whole, fraction, _ := strings.Cut(s, ".")
+	if whole+fraction == "" || !allDigits(whole) || !allDigits(fraction) {
+		return nil, false
+	}
+	return new(big.Rat).SetString(sign + s)
 }

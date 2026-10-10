@@ -61,6 +61,22 @@ func TestParseRate(t *testing.T) {
 		{name: "invalid", rate: "abc", wantErr: ErrInvalidExchangeRate},
 		{name: "too many digits", rate: "0.0000000000000000000001", wantErr: ErrOverflow},
 		{name: "exponent", rate: "1e999999999", wantErr: ErrInvalidExchangeRate},
+		{name: "leading zeros", rate: "010.50", wantNum: 21, wantDen: 2},
+		{name: "fraction with leading zeros", rate: "010/100", wantNum: 1, wantDen: 10},
+		{name: "plus sign", rate: "+1.5", wantNum: 3, wantDen: 2},
+		{name: "no whole part", rate: ".5", wantNum: 1, wantDen: 2},
+		{name: "hex", rate: "0x10", wantErr: ErrInvalidExchangeRate},
+		{name: "binary fraction", rate: "0b11/1", wantErr: ErrInvalidExchangeRate},
+		{name: "octal prefix", rate: "0o17/1", wantErr: ErrInvalidExchangeRate},
+		{name: "hex denominator", rate: "1/0x0A", wantErr: ErrInvalidExchangeRate},
+		{name: "hex float", rate: "0x1p-2", wantErr: ErrInvalidExchangeRate},
+		{name: "underscore", rate: "1_000", wantErr: ErrInvalidExchangeRate},
+		{name: "negative denominator", rate: "1/-3", wantErr: ErrInvalidExchangeRate},
+		{name: "zero denominator", rate: "1/0", wantErr: ErrInvalidExchangeRate},
+		{name: "empty denominator", rate: "1/", wantErr: ErrInvalidExchangeRate},
+		{name: "two points", rate: "1.2.3", wantErr: ErrInvalidExchangeRate},
+		{name: "point only", rate: ".", wantErr: ErrInvalidExchangeRate},
+		{name: "space", rate: " 1.5", wantErr: ErrInvalidExchangeRate},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -55,9 +55,8 @@ func ParseFactor(s string) (Factor, error) {
 		return NewFactor(numerator, denominator)
 	}
 
-	// An exponent such as "1e999999999" can make big.Rat allocate a very large number, so it is not accepted.
-	r, ok := new(big.Rat).SetString(text)
-	if !ok || strings.ContainsAny(text, "eE") {
+	r, ok := parseRat(text)
+	if !ok {
 		return Factor{}, fmt.Errorf("%w: %q", ErrInvalidFactor, s)
 	}
 	if percent {
