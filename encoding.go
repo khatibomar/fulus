@@ -176,9 +176,10 @@ func (m Money[T]) Value() (driver.Value, error) {
 }
 
 // Scan implements sql.Scanner for database/sql. It reads a decimal column such as NUMERIC.
-// It accepts decimal text, as drivers return NUMERIC values, and an int64 as a whole number of major units.
+// It accepts decimal text, as drivers return NUMERIC values.
 // It accepts a float64, as SQLite returns for a NUMERIC column, only if it has at most 15 significant digits.
 // Returns ErrScaleMismatch if the value has more fraction digits than the minor units.
+// Returns ErrInvalidAmountFormat for an int64, because an int64 can be minor units from an integer column.
 // Use BigintMoney for an integer column that holds minor units.
 func (m *Money[T]) Scan(value any) error {
 	var c T
@@ -191,18 +192,14 @@ func (m *Money[T]) Scan(value any) error {
 }
 
 // scanDecimal returns the amount in minor units of a database value from a decimal column.
-// Text is a decimal, and an int64 is a whole number of major units.
 // A float64 must have at most maxFloatDigits significant digits, so that its decimal form is the stored decimal.
+// An int64 is not accepted, because it can be major units from NUMERIC or minor units from BIGINT.
 func scanDecimal(value any, minorUnits int) (int128, error) {
 	switch v := value.(type) {
 	case nil:
 		return int128{}, fmt.Errorf("%w: cannot scan NULL into Money, use NullMoney", ErrInvalidAmountFormat)
 	case int64:
-		amount, ok := int128FromInt64(v).mulPow10(minorUnits)
-		if !ok {
-			return int128{}, ErrOverflow
-		}
-		return amount, nil
+		return int128{}, fmt.Errorf("%w: cannot scan int64 %d into a decimal amount, use BigintMoney for minor units or a NUMERIC or TEXT column", ErrInvalidAmountFormat, v)
 	case float64:
 		s, err := floatDecimal(v)
 		if err != nil {

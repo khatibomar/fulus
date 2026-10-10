@@ -365,9 +365,11 @@ err := row.Scan(int64(1050)) // row.Money is $10.50
 Use `NullMoney[T]` for a decimal column that can be NULL. It also writes and reads JSON `null`.
 Use `sql.Null[fulus.BigintMoney[T]]` for an integer column that can be NULL.
 
-SQLite gives a `float64` for a `NUMERIC` value with a fraction. `Scan` accepts a `float64` only if it has
-at most 15 significant digits, because a `float64` always keeps 15 digits.
-For larger amounts in SQLite, use a `TEXT` column or `BigintMoney[T]`.
+`Scan` returns `ErrInvalidAmountFormat` for an `int64`, because an `int64` can be minor units from a `BIGINT` column.
+
+SQLite gives a `float64` for a `NUMERIC` value with a fraction, and an `int64` for a whole value.
+`Scan` accepts a `float64` only if it has at most 15 significant digits, because a `float64` always keeps 15 digits.
+In SQLite, use a `TEXT` column or `BigintMoney[T]`.
 
 For an `AnyMoney` in two columns, an amount and a currency code, use `ScanColumns`:
 

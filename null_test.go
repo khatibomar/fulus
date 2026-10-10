@@ -19,7 +19,7 @@ func TestNullMoneySQL(t *testing.T) {
 		wantErr   bool
 	}{
 		{name: "NULL", value: nil, wantValid: false},
-		{name: "int64", value: int64(10), wantValid: true, want: 1000, wantValue: "10.00"},
+		{name: "int64", value: int64(10), wantErr: true},
 		{name: "text", value: []byte("-0.03"), wantValid: true, want: -3, wantValue: "-0.03"},
 		{name: "float64", value: 1.5, wantValid: true, want: 150, wantValue: "1.50"},
 		{name: "invalid", value: true, wantErr: true},
