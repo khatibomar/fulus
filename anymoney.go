@@ -273,7 +273,12 @@ func (m *AnyMoney) UnmarshalJSON(data []byte) error {
 // sameCurrency reports whether c has the code and the minor units of the currency of m.
 // The minor units must agree, because the amount is in minor units.
 func (m AnyMoney) sameCurrency(c currency.Currency) bool {
-	return m.currency != nil && c != nil && m.currency.Code() == c.Code() && m.currency.MinorUnits() == c.MinorUnits()
+	return sameCurrency(m.currency, c)
+}
+
+// sameCurrency reports whether a and b are not nil and have the same code and minor units.
+func sameCurrency(a, b currency.Currency) bool {
+	return a != nil && b != nil && a.Code() == b.Code() && a.MinorUnits() == b.MinorUnits()
 }
 
 // describe returns the code of c for an error message.
