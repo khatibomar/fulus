@@ -65,6 +65,15 @@ func TestParseFactor(t *testing.T) {
 		{factor: "1/0", wantErr: ErrInvalidFactor},
 		{factor: "", wantErr: ErrInvalidFactor},
 		{factor: "%", wantErr: ErrInvalidFactor},
+		{factor: "010/100", num: 1, den: 10},
+		{factor: "0012345678901234567.5", num: 24691357802469135, den: 2},
+		{factor: "0x10", wantErr: ErrInvalidFactor},
+		{factor: "0b11/1", wantErr: ErrInvalidFactor},
+		{factor: "1/0x0A", wantErr: ErrInvalidFactor},
+		{factor: "0x1p-2", wantErr: ErrInvalidFactor},
+		{factor: "1_000", wantErr: ErrInvalidFactor},
+		{factor: "1/-3", wantErr: ErrInvalidFactor},
+		{factor: "-/3", wantErr: ErrInvalidFactor},
 	}
 	for _, tt := range tests {
 		t.Run(tt.factor, func(t *testing.T) {
