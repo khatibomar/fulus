@@ -138,6 +138,29 @@ Every operation returns `ErrOverflow` instead of a wrong result when the result 
 A currency with many minor units has a smaller range.
 For example, a token with 18 minor units cannot hold more than about 9.2 units.
 
+### Documentation
+
+- [Rounding and overflow](docs/rounding-and-overflow.md): which operations round, how they round, and the range of each currency.
+- [Design decisions](docs/design-decisions.md): why Fulus uses `int64` minor units and generics, and what that costs.
+- [Release notes](https://github.com/khatibomar/fulus/releases), [CONTRIBUTING](CONTRIBUTING.md) and [SECURITY](SECURITY.md).
+
+### Comparison
+
+| | Fulus | [Rhymond/go-money](https://github.com/Rhymond/go-money) | [bojanz/currency](https://github.com/bojanz/currency) |
+|---|---|---|---|
+| Amount | `int64` minor units | `int64` minor units | Arbitrary-precision decimal |
+| Currency check | Compile time, with a type parameter | Run time | Run time |
+| Digits after the minor units | No | No | Yes |
+| Overflow | `ErrOverflow` | Not checked | No overflow |
+| Rounding | 7 modes, explicit in each call | To a whole major unit only | 5 modes |
+| Leftover units of an allocation | Largest remainder | One each to the first parts | One each to the first parts |
+| Locale formatting | All CLDR locales, checked against ICU | One format for each currency | CLDR modern locales |
+| Parse formatted amounts | Yes | No | Yes |
+| Dependencies | None | None | `cockroachdb/apd` |
+
+Use Fulus when the currency is known at compile time and `int64` minor units are enough.
+Use `bojanz/currency` when you need more digits than the minor units, or a range larger than `int64`.
+
 ## Arithmetic Operations
 
 Fulus provides basic arithmetic methods with built-in overflow and error checking:
@@ -256,6 +279,7 @@ eur, err := fulus.As[currency.EUR](price) // ErrCurrencyMismatch if price is not
 `Format` uses the CLDR pattern of the locale, including the negative pattern and Indian digit grouping.
 `String` uses `DefaultLocale()`. Change it with `SetDefaultLocale`, which is safe for concurrent use.
 `locale.Match` finds the best supported locale for a tag such as `en_US.UTF-8` or `fr-CA-u-nu-latn`.
+`TestFormatMatchesICU` compares `Format` with ICU, an independent CLDR implementation, for more than 25,000 cases.
 
 ```go
 loc, ok := locale.Match("en_IN.UTF-8")
@@ -340,6 +364,24 @@ Results of `go test -bench . -benchmem` on an AMD Ryzen AI 9 HX PRO 370:
 | `Format` | 120 ns | 1 |
 | `ParseMoney` | 18 ns | 0 |
 | `MarshalJSON` (with `json.Marshal`) | 190 ns | 4 |
+
+## Stability
+
+Fulus uses [semantic versioning](https://semver.org/).
+
+- Before v1.0.0, a release can have breaking changes. The [release notes](https://github.com/khatibomar/fulus/releases) list them.
+- From v1.0.0, a minor or patch release does not remove or change an exported name.
+- To remove a name, we first mark it with `Deprecated:` in its doc comment and in the release notes.
+  We remove it only in the next major version.
+- An update of the CLDR data is not a breaking change. It can change the output of `Format` in a minor release.
+  Do not store the output of `Format`. Store the amount with `Value`, `MarshalJSON` or `Decimal`.
+- CI compares the API of each pull request with the latest release.
+
+## License
+
+Fulus uses the [Apache License 2.0](LICENSE).
+The generated locale and currency data comes from [CLDR](https://cldr.unicode.org/), which uses the
+[Unicode License v3](LICENSE-UNICODE).
 
 ## Credits
 

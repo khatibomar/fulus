@@ -1,6 +1,7 @@
 package fulus_test
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/khatibomar/fulus"
@@ -62,4 +63,46 @@ func ExampleSum() {
 	)
 	fmt.Println(total, err)
 	// Output: $12.00 <nil>
+}
+
+func ExampleMoney_Format() {
+	price := fulus.NewMoney[currency.EUR](-123456789)
+	fmt.Println(price.Format(locale.EN))
+	fmt.Println(price.Format(locale.DE_CH))
+
+	// Some locales use a no-break space U+00A0 or a narrow no-break space U+202F.
+	fmt.Printf("%+q\n", price.Format(locale.FR))
+	// Output:
+	// -€1,234,567.89
+	// EUR-1'234'567.89
+	// "-1\u202f234\u202f567,89\u00a0\u20ac"
+}
+
+func ExampleParseMoney() {
+	price, err := fulus.ParseMoney[currency.USD]("19.99")
+	fmt.Println(price, price.Amount(), err)
+
+	_, err = fulus.ParseMoney[currency.USD]("19.999")
+	fmt.Println(err != nil)
+	// Output:
+	// $19.99 1999 <nil>
+	// true
+}
+
+func ExampleNullMoney() {
+	var discount fulus.NullMoney[currency.USD]
+	if err := discount.Scan(nil); err != nil {
+		panic(err)
+	}
+	data, _ := json.Marshal(discount)
+	fmt.Println(discount.Valid, string(data))
+
+	if err := discount.Scan(int64(250)); err != nil {
+		panic(err)
+	}
+	value, _ := discount.Value()
+	fmt.Println(discount.Valid, discount.Money, value)
+	// Output:
+	// false null
+	// true $2.50 250
 }

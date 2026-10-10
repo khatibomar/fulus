@@ -1,0 +1,93 @@
+# Design decisions
+
+This page tells why Fulus works as it does, and what each decision costs.
+
+## The amount is an int64 in minor units
+
+`Money[T]` holds one `int64`, the amount in minor units. For USD, the minor unit is the cent.
+
+Why:
+
+- Integer arithmetic is exact. The value 0.1 + 0.2 is exactly 0.3. With `float64` it is not.
+- Operations are fast and do not allocate. `Add` takes 1 to 2 ns. See the README for more benchmarks.
+- A `Money[T]` value is 8 bytes. You can compare it with `==` and use it as a map key.
+- A database stores it in a `BIGINT` column without a conversion.
+
+Cost:
+
+- The range is limited. For a currency with 2 minor units, the largest amount is about 92 quadrillion.
+  For a currency with 18 minor units, it is about 9.2 units. See [Rounding and overflow](rounding-and-overflow.md).
+- An amount cannot have more digits than the minor units. A price per unit such as $0.0042 needs another type,
+  or a custom currency with more minor units.
+
+Every operation returns `ErrOverflow` when a result does not fit. Fulus never returns a wrong result.
+If you need a larger range, use a decimal type with arbitrary precision.
+
+## The currency is a type parameter
+
+The currency is the type parameter `T` of `Money[T]`. It is not a field.
+
+Why:
+
+- The compiler stops you from mixing currencies. `usd.Add(eur)` does not compile.
+- The value does not store the currency, so it stays 8 bytes.
+- A function can require a currency in its signature, for example `func Charge(m fulus.Money[currency.EUR])`.
+- A conversion must name both currencies: `Ratio[currency.EUR, currency.USD]`.
+
+Cost:
+
+- The currency must be known at compile time. For a currency that is known only at run time, for example from a
+  database row, use `AnyMoney`. `AnyMoney` checks the currency at run time and returns `ErrCurrencyMismatch`.
+  Use `As[T]` to change an `AnyMoney` into a `Money[T]`.
+- Each currency is a type. The generated `currency` package has one type for each ISO 4217 currency.
+
+## Rounding is always explicit
+
+Each operation that can round takes a `RoundingMode`. There is no default mode.
+
+Why: different domains need different rules. Tax rules often need `RoundHalfUp`. Accounting often needs `RoundHalfEven`.
+A hidden default causes errors that are difficult to find. When the mode is in the call, a reviewer can see it.
+
+The operations that cannot round, such as `Add` and `Allocate`, do not take a mode.
+The parse functions do not round. They return `ErrScaleMismatch` when the input has too many digits.
+
+## Errors and not panics
+
+Every operation that can fail returns an error. `MustAdd`, `MustSub` and `MustMul` panic instead.
+Use them only when you know the range of the values.
+
+## The minor units come from ISO 4217
+
+`MinorUnits` comes from the ISO 4217 list. CLDR has other digits for some currencies, for display.
+Fulus uses ISO 4217 because payment systems and banks use it.
+`Format` always writes all the minor units, so it does not lose data.
+
+## Formatting uses CLDR data in generated tables
+
+`Format` uses the CLDR currency patterns, symbols and separators.
+`generator.go` reads the CLDR JSON data and writes Go tables in `locale/gen_locale.go` and `currency/gen_currencies.go`.
+
+Why:
+
+- Fulus has no dependencies outside the standard library.
+- A lookup is an index into a table. It does not parse data at run time.
+- `TestFormatMatchesICU` compares the result with ICU, an independent CLDR implementation.
+
+Cost:
+
+- The tables add about 0.6 MB to each binary that imports Fulus.
+- Fulus writes Latin digits only. It does not write Arabic-Indic or other digits.
+- `locale.Match` does not use the CLDR likely subtags. For example, `zh-TW` gives `zh`, not `zh-Hant`.
+
+## JSON writes the amount as a string
+
+`MarshalJSON` writes `{"amount":"1050","currency":"USD"}`. The amount is a string of minor units.
+
+Why: JavaScript and many JSON parsers read numbers as `float64`. A `float64` is exact only up to 2^53.
+A string keeps all the digits of an `int64`. The currency code lets the reader check the currency.
+
+## SQL stores the minor units only
+
+`Value` writes the amount in minor units as `int64`. The column does not store the currency,
+because the type parameter holds it. If a column holds more than one currency, store the currency code in another
+column and use `AnyMoney`.
