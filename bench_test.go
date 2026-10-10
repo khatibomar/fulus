@@ -134,3 +134,14 @@ func BenchmarkParsing(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkAnyMoneyAdd(b *testing.B) {
+	x := NewMoney[currency.USD](1050).Any()
+	y := NewMoney[currency.USD](250).Any()
+	b.ReportAllocs()
+	for b.Loop() {
+		if _, err := x.Add(y); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
