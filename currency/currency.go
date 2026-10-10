@@ -27,16 +27,19 @@ type FormatInfo struct {
 	GroupSeparator   string // Thousands separator
 	DecimalSeparator string // Decimal separator
 	MinusSign        string // Negative number prefix
+	// MinimumGroupingDigits is the smallest number of digits before the first group separator. Zero means 1.
+	MinimumGroupingDigits int
 }
 
 // formatInfo returns the CLDR format information of a currency code in a locale.
 func formatInfo(loc locale.Locale, code string) FormatInfo {
-	n := loc.Numbers()
+	n := loc.CurrencyNumbers(code)
 	return FormatInfo{
-		Symbol:           loc.CurrencySymbol(code),
-		Format:           n.CurrencyFormat,
-		GroupSeparator:   n.GroupSeparator,
-		DecimalSeparator: n.DecimalSeparator,
-		MinusSign:        n.MinusSign,
+		Symbol:                loc.CurrencySymbol(code),
+		Format:                n.CurrencyFormat,
+		GroupSeparator:        n.GroupSeparator,
+		DecimalSeparator:      n.DecimalSeparator,
+		MinusSign:             n.MinusSign,
+		MinimumGroupingDigits: n.MinimumGroupingDigits,
 	}
 }

@@ -99,7 +99,42 @@ func TestFormatCLDRPatterns(t *testing.T) {
 		{
 			name:   "two digit grouping",
 			format: func() string { return NewMoney[currency.AMD](123456789).Format(locale.TOK) },
-			want:   "֏1\u00a023\u00a045\u00a067,89",
+			want:   "AMD\u00a01\u00a023\u00a045\u00a067,89",
+		},
+		{
+			name:   "currency spacing after alphabetic symbol",
+			format: func() string { return NewMoney[currency.BHD](5).Format(locale.EN) },
+			want:   "BHD\u00a00.005",
+		},
+		{
+			name:   "currency spacing before alphabetic symbol",
+			format: func() string { return NewMoney[currency.XAF](-5).Format(locale.AGQ) },
+			want:   "-5\u00a0FCFA",
+		},
+		{
+			name:   "minimum grouping digits",
+			format: func() string { return NewMoney[currency.EUR](100000).Format(locale.ES) },
+			want:   "1000,00\u00a0€",
+		},
+		{
+			name:   "minimum grouping digits reached",
+			format: func() string { return NewMoney[currency.EUR](1000000).Format(locale.ES) },
+			want:   "10.000,00\u00a0€",
+		},
+		{
+			name:   "currency group separator",
+			format: func() string { return NewMoney[currency.EUR](123456).Format(locale.DE_AT) },
+			want:   "€\u00a01.234,56",
+		},
+		{
+			name:   "currency pattern override",
+			format: func() string { return NewMoney[currency.EUR](123456).Format(locale.EN_SK) },
+			want:   "€1\u00a0234,56",
+		},
+		{
+			name:   "currency decimal separator override",
+			format: func() string { return NewMoney[currency.CVE](1234567).Format(locale.PT_CV) },
+			want:   "12\u00a0345$67\u00a0\u200b",
 		},
 		{
 			name:   "positive subpattern",
