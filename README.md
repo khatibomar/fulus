@@ -1,8 +1,8 @@
 # Fulus
 
 ![CI status](https://github.com/khatibomar/fulus/actions/workflows/main.yml/badge.svg)
-[![GoDoc](https://godoc.org/github.com/khatibomar/fulus?status.png)](http://godoc.org/github.com/khatibomar/fulus)
-[![Go Report](https://goreportcard.com/badge/github.com/khatibomar/fulus)](https://goreportcard.com/report/github.com/khatibomar/fulus)
+[![Go Reference](https://pkg.go.dev/badge/github.com/khatibomar/fulus.svg)](https://pkg.go.dev/github.com/khatibomar/fulus)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/khatibomar/fulus/badge)](https://scorecard.dev/viewer/?uri=github.com/khatibomar/fulus)
 
 <img src="https://github.com/user-attachments/assets/2b058650-0966-40e3-b629-fa6c3512bd46"/>
 
