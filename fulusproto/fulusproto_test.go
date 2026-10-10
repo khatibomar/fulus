@@ -36,6 +36,18 @@ func TestToMoney(t *testing.T) {
 			m, _ := fulus.ParseMoney[currency.JPY]("9223372036854775808")
 			return ToMoney(m)
 		}, wantErr: fulus.ErrOverflow},
+		{name: "smallest units", got: func() (*money.Money, error) {
+			m, _ := fulus.ParseMoney[currency.JPY]("-9223372036854775808")
+			return ToMoney(m)
+		}, wantUnits: math.MinInt64},
+		{name: "negative units overflow", got: func() (*money.Money, error) {
+			m, _ := fulus.ParseMoney[currency.JPY]("-9223372036854775809")
+			return ToMoney(m)
+		}, wantErr: fulus.ErrOverflow},
+		{name: "smallest units with nanos", got: func() (*money.Money, error) {
+			m, _ := fulus.ParseMoney[currency.USD]("-9223372036854775808.50")
+			return ToMoney(m)
+		}, wantUnits: math.MinInt64, wantNanos: -500_000_000},
 		{name: "any", got: func() (*money.Money, error) { return ToMoneyAny(fulus.NewAnyMoney(250, currency.EUR{})) }, wantUnits: 2, wantNanos: 500_000_000},
 		{name: "any without currency", got: func() (*money.Money, error) { return ToMoneyAny(fulus.AnyMoney{}) }, wantErr: fulus.ErrUnknownCurrency},
 	}
@@ -70,6 +82,7 @@ func TestFromMoney(t *testing.T) {
 		{name: "mixed signs", in: &money.Money{CurrencyCode: "USD", Units: 1, Nanos: -1}, wantErr: fulus.ErrInvalidAmountFormat},
 		{name: "nanos out of range", in: &money.Money{CurrencyCode: "USD", Nanos: 1_000_000_000}, wantErr: fulus.ErrInvalidAmountFormat},
 		{name: "currency mismatch", in: &money.Money{CurrencyCode: "EUR", Units: 1}, wantErr: fulus.ErrCurrencyMismatch},
+		{name: "lower case currency", in: &money.Money{CurrencyCode: "usd", Units: 1}, want: "1.00"},
 		{name: "nil", in: nil, wantErr: fulus.ErrInvalidAmountFormat},
 	}
 	for _, tt := range tests {
