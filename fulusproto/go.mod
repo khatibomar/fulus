@@ -2,10 +2,8 @@ module github.com/khatibomar/fulus/fulusproto
 
 go 1.27.2
 
-replace github.com/khatibomar/fulus => ../
-
 require (
-	github.com/khatibomar/fulus v0.0.0
+	github.com/khatibomar/fulus v1.0.0-beta.5
 	google.golang.org/genproto v0.0.0-20261005182115-fad411399dd8
 )
 

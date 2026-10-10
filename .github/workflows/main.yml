@@ -133,6 +133,8 @@ jobs:
         cache: true
     - name: Compare the API with the latest release
       shell: bash
+      env:
+        GOWORK: 'off'
       run: |
         base=$(git describe --tags --abbrev=0 --match 'v*')
         go run golang.org/x/exp/cmd/gorelease@latest -base="$base" | tee "$RUNNER_TEMP/report.txt"
