@@ -81,6 +81,11 @@ A change that removes or changes an exported name needs a deprecation first, aft
 2. Create a signed tag, for example `git tag -s v1.2.3 -m v1.2.3`, and push it.
 3. The release workflow checks the signature, creates the GitHub release with a source archive,
    and adds the SLSA provenance. See [SECURITY](SECURITY.md#verify-a-release).
+4. If `fulusproto` changed, set its `require` of `github.com/khatibomar/fulus` to the new tag,
+   run `GOWORK=off go mod tidy` in `fulusproto`, merge the change, and push a signed tag such as `fulusproto/v1.2.3`.
+
+The `go.work` file lets the modules in this repository use the local `fulus` code.
+A user of `fulusproto` does not get it, so `fulusproto/go.mod` must require a released version of `fulus`.
 
 CI also checks the coverage of the `fulus` and `format` packages with `make cover`,
 and reports the benchmark changes of each pull request in the job summary.
