@@ -9,7 +9,7 @@ This page tells why Fulus works as it does, and what each decision costs.
 Why:
 
 - Integer arithmetic is exact. The value 0.1 + 0.2 is exactly 0.3. With `float64` it is not.
-- Operations are fast and do not allocate. `Add` takes about 2 ns. See the README for more benchmarks.
+- Operations are fast and do not allocate. `Add` takes about 2 ns. See the [README](../README.md#performance) for more benchmarks.
 - A `Money[T]` value is 16 bytes. You can compare it with `==` and use it as a map key.
 - The range is large enough for currencies and tokens with many minor units.
   A token with 18 minor units holds more than 10^20 units. With `int64`, it holds only about 9.2 units.
