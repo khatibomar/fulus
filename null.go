@@ -10,7 +10,7 @@ import (
 
 // NullMoney is a Money value that can be NULL in a database or null in JSON.
 // It works like sql.NullInt64.
-type NullMoney[T currency.Currency] struct {
+type NullMoney[T currency.Unit] struct {
 	Money Money[T]
 	// Valid is true if Money is not NULL.
 	Valid bool

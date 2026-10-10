@@ -13,7 +13,7 @@ import (
 // Group separators are optional. If they are present, the group sizes must agree with the pattern.
 // A space group separator is ignored and not checked.
 // The fraction can have fewer digits than the minor units, but not more.
-func ParseFormatted[T currency.Currency](s string, loc locale.Locale) (Money[T], error) {
+func ParseFormatted[T currency.Unit](s string, loc locale.Locale) (Money[T], error) {
 	var c T
 	minor, err := parseFormatted(s, c.MinorUnits(), c.FormatInfo(loc))
 	if err != nil {

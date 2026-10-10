@@ -56,7 +56,7 @@ func (m Money[T]) Any() AnyMoney {
 
 // As returns m as a Money[T].
 // Returns ErrCurrencyMismatch if the currency code of m is not the code of T.
-func As[T currency.Currency](m AnyMoney) (Money[T], error) {
+func As[T currency.Unit](m AnyMoney) (Money[T], error) {
 	var c T
 	if !m.sameCurrency(c) {
 		return Money[T]{}, fmt.Errorf("%w: expected %s, got %s", ErrCurrencyMismatch, c.Code(), m.code())

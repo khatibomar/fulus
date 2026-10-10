@@ -145,9 +145,15 @@ func TestDefaultLocale(t *testing.T) {
 	wg.Wait()
 }
 
-type quotedCodeCurrency struct{ currency.USD }
+type quotedCodeCurrency struct{}
 
-func (quotedCodeCurrency) Code() string { return `Q"<&>` }
+func (quotedCodeCurrency) Code() string    { return `Q"<&>` }
+func (quotedCodeCurrency) Number() string  { return "" }
+func (quotedCodeCurrency) Name() string    { return "Quoted" }
+func (quotedCodeCurrency) MinorUnits() int { return 2 }
+func (quotedCodeCurrency) FormatInfo(loc locale.Locale) currency.FormatInfo {
+	return currency.USD{}.FormatInfo(loc)
+}
 
 func TestMarshalJSONEscapesCode(t *testing.T) {
 	t.Parallel()

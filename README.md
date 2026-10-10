@@ -64,6 +64,9 @@ This prevents common mistakes like:
 
 Don't see your currency in the list? No problem! You can easily create custom currency types that are specific to your financial domain's needs.
 
+A currency type must be an empty struct type. `Money[T]` uses the constraint `currency.Unit`,
+so a type with fields or an interface type such as `currency.Currency` does not compile.
+
 Let's introduce kanna currency.
 
 ```go
