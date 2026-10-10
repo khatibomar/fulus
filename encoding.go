@@ -44,10 +44,10 @@ type moneyJSON struct {
 }
 
 // UnmarshalJSON implements json.Unmarshaler. It reads the form that MarshalJSON writes.
-// The amount can have fewer fraction digits than the minor units, but not more.
+// The amount can have fewer fraction digits than the minor units. More digits must be zeros.
 // The currency code is not case-sensitive. A JSON null does not change m. Use NullMoney to tell null from zero.
 // Returns ErrCurrencyMismatch if the currency code is not the code of T,
-// and ErrScaleMismatch if the amount has more fraction digits than the minor units.
+// and ErrScaleMismatch if a fraction digit after the minor units is not zero.
 func (m *Money[T]) UnmarshalJSON(data []byte) error {
 	if isJSONNull(data) {
 		return nil
@@ -117,6 +117,10 @@ func parseDecimal(amount string, minorUnits int) (int128, error) {
 	if !allDigits(fractional) {
 		return int128{}, fmt.Errorf("%w: invalid fractional part", ErrInvalidAmountFormat)
 	}
+	// Zeros after the minor units do not change the value, for example "10.5000" from a NUMERIC(19, 4) column.
+	if len(fractional) > minorUnits && strings.Trim(fractional[minorUnits:], "0") == "" {
+		fractional = fractional[:minorUnits]
+	}
 	if len(fractional) > minorUnits {
 		return int128{}, fmt.Errorf("%w: got %d fractional digits, max is %d", ErrScaleMismatch, len(fractional), minorUnits)
 	}
@@ -178,7 +182,7 @@ func (m Money[T]) Value() (driver.Value, error) {
 // Scan implements sql.Scanner for database/sql. It reads a decimal column such as NUMERIC.
 // It accepts decimal text, as drivers return NUMERIC values.
 // It accepts a float64, as SQLite returns for a NUMERIC column, only if it has at most 15 significant digits.
-// Returns ErrScaleMismatch if the value has more fraction digits than the minor units.
+// Returns ErrScaleMismatch if a fraction digit after the minor units is not zero.
 // Returns ErrInvalidAmountFormat for an int64, because an int64 can be minor units from an integer column.
 // Use BigintMoney for an integer column that holds minor units.
 func (m *Money[T]) Scan(value any) error {

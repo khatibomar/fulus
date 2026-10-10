@@ -54,7 +54,7 @@ Why: different domains need different rules. Tax rules often need `RoundHalfUp`.
 A hidden default causes errors that are difficult to find. When the mode is in the call, a reviewer can see it.
 
 The operations that cannot round, such as `Add` and `Allocate`, do not take a mode.
-The parse functions do not round. They return `ErrScaleMismatch` when the input has too many digits.
+The parse functions do not round. They return `ErrScaleMismatch` when the input has a digit that is not zero after the minor units.
 
 ## Errors and not panics
 
@@ -105,7 +105,7 @@ Why:
   A string keeps all the digits of a 128-bit amount.
 - A decimal does not depend on the minor units of the reader. If ISO 4217 changes the minor units of a currency,
   a payload in minor units changes its value without an error. A decimal payload keeps its value,
-  or gives `ErrScaleMismatch` if it has more fraction digits than the reader accepts.
+  or gives `ErrScaleMismatch` if it has a digit that is not zero after the minor units of the reader.
 - Other languages and people can read the payload without a table of minor units.
 - The currency code lets the reader check the currency.
 

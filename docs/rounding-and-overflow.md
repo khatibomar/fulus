@@ -17,9 +17,9 @@ These operations give an exact result or an error. They never round.
 | `Add`, `Sub`, `Mul`, `Neg`, `Abs` | The exact result, or `ErrOverflow`. |
 | `Sum` | The exact sum, or `ErrOverflow`. See [Sum](#sum). |
 | `Allocate`, `Distribute` | Parts whose sum is equal to the value. See [Allocation](#allocation). |
-| `ParseMoney`, `UnmarshalText` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
-| `format.Parse` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
-| `UnmarshalJSON`, `Scan` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
+| `ParseMoney`, `UnmarshalText` | The exact value. A digit that is not zero after the minor units gives `ErrScaleMismatch`. |
+| `format.Parse` | The exact value. A digit that is not zero after the minor units gives `ErrScaleMismatch`. |
+| `UnmarshalJSON`, `Scan` | The exact value. A digit that is not zero after the minor units gives `ErrScaleMismatch`. |
 
 The parse functions do not round, because a rounded input hides a data error.
 To round an input with more digits, multiply one major unit by the input with `MulFactor`:

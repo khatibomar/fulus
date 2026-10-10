@@ -60,7 +60,7 @@ func toMoney(decimal, code string) (*money.Money, error) {
 // FromMoney returns p as a Money[T].
 // Returns fulus.ErrCurrencyMismatch if the currency code of p is not the code of T,
 // fulus.ErrInvalidAmountFormat if p is nil or its nanos are not valid,
-// and fulus.ErrScaleMismatch if p has more fraction digits than the minor units of T.
+// and fulus.ErrScaleMismatch if p has a fraction digit that is not zero after the minor units of T.
 func FromMoney[T currency.Unit](p *money.Money) (fulus.Money[T], error) {
 	var c T
 	if p != nil && p.GetCurrencyCode() != c.Code() {

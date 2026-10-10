@@ -13,9 +13,9 @@ import (
 // It ignores spaces and bidirectional marks, and it accepts "-" in place of the minus sign of the locale.
 // Group separators are optional. If they are present, the group sizes must agree with the pattern.
 // A space group separator is ignored and not checked.
-// The fraction can have fewer digits than the minor units, but not more.
+// The fraction can have fewer digits than the minor units. More digits must be zeros.
 // Returns fulus.ErrInvalidAmountFormat if s does not agree with the pattern,
-// and fulus.ErrScaleMismatch if the fraction has more digits than the minor units.
+// and fulus.ErrScaleMismatch if a fraction digit after the minor units is not zero.
 func Parse[T currency.Unit](s string, loc locale.Locale) (fulus.Money[T], error) {
 	var c T
 	decimal, err := parseFormatted(s, InfoFor(c, loc))

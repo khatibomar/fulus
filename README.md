@@ -341,7 +341,8 @@ yen, err := fulus.Convert(fulus.NewMoney[currency.EUR](100), eurJPY, fulus.Round
 
 `Money[T]` implements `driver.Valuer` and `sql.Scanner` for a decimal column such as `NUMERIC(38, 2)`.
 `Value` writes the canonical decimal, such as `"10.50"`. `Scan` reads the decimal text that drivers return for `NUMERIC`.
-`Scan` returns `ErrScaleMismatch` for a value with more fraction digits than the minor units. It does not round.
+`Scan` returns `ErrScaleMismatch` for a value with a digit that is not zero after the minor units. It does not round.
+Zeros after the minor units are accepted, so a `NUMERIC(19, 4)` value such as `"10.5000"` reads as USD 10.50.
 The type parameter holds the currency, so the column does not store it.
 
 ```go
@@ -394,7 +395,7 @@ m, err := fulusproto.FromMoney[currency.USD](p)                 // USD 10.50
 ```
 
 A conversion does not round. `ToMoney` returns `ErrInexact` for a value with more than 9 fraction digits that are not zero,
-and `FromMoney` returns `ErrScaleMismatch` for a value with more fraction digits than the minor units.
+and `FromMoney` returns `ErrScaleMismatch` for a value with a digit that is not zero after the minor units.
 
 ## Performance
 
