@@ -18,7 +18,66 @@ permissions:
   contents: read # to fetch code (actions/checkout)
 
 jobs:
-  build:
+  test:
+    name: test (Go ${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # minimum is the version in go.mod. stable is the latest Go release.
+        go: [minimum, stable]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go == 'stable' && 'stable' || '' }}
+        go-version-file: ${{ matrix.go == 'minimum' && 'go.mod' || '' }}
+        cache: true
+    - run: go vet ./...
+    - run: go build -v ./...
+    - run: go test -race ./...
+    - name: Test the examples module
+      working-directory: examples
+      run: go test ./...
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+        cache: true
+    # Released golangci-lint v2.13.2 and staticcheck v0.8.1 cannot read Go 1.27.2 export data, so build them with x/tools v0.51.0.
+    - name: Build linters
+      working-directory: ${{ runner.temp }}
+      run: |
+        mkdir lint && cd lint
+        go mod init lint
+        go get github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2 honnef.co/go/tools/cmd/staticcheck@v0.8.1 golang.org/x/tools@v0.51.0
+        go build -o "$RUNNER_TEMP/bin/" github.com/golangci/golangci-lint/v2/cmd/golangci-lint honnef.co/go/tools/cmd/staticcheck
+        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+    - name: golangci-lint
+      run: golangci-lint run ./...
+    - name: staticcheck
+      run: staticcheck ./...
+    - name: govulncheck
+      run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  fuzz:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+        cache: true
+    - run: make fuzz FUZZ_TIME=15s
+
+  generated:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -27,11 +86,29 @@ jobs:
       with:
         go-version-file: go.mod
         cache: true
-        check-latest: true
-    - run: go vet ./...
-    - run: go build -v ./...
-    - run: go test -v ./...
-    
-    - uses: dominikh/staticcheck-action@v1
+    - name: Check that the generated files agree with the generator
+      run: make check-gen
+
+  api:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
       with:
-        version: "latest"
+        fetch-depth: 0
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+        cache: true
+    - name: Compare the API with the latest release
+      shell: bash
+      run: |
+        base=$(git describe --tags --abbrev=0 --match 'v*')
+        go run golang.org/x/exp/cmd/gorelease@latest -base="$base" | tee "$RUNNER_TEMP/report.txt"
+        cat "$RUNNER_TEMP/report.txt" >> "$GITHUB_STEP_SUMMARY"
+        # A stable release must not have incompatible changes. A prerelease such as v1.0.0-beta.4 can have them.
+        if [[ "$base" != *-* ]] && grep -q "^## incompatible changes" "$RUNNER_TEMP/report.txt"; then
+          echo "::error::incompatible API changes since $base"
+          exit 1
+        fi

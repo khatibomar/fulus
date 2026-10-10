@@ -1538,8 +1538,11 @@ func FuzzConvert(f *testing.F) {
 			t.Fatalf("result mismatch: converted=%d result=%d", converted.Amount(), result.Amount)
 		}
 
-		if amount == 0 && result.ActualRate.Denominator != 1 {
-			t.Fatalf("zero amount must produce denominator=1, got %d", result.ActualRate.Denominator)
+		if amount == 0 && result.ActualRate != ratio {
+			t.Fatalf("zero amount must keep the requested ratio %v, got %v", ratio, result.ActualRate)
+		}
+		if amount != 0 && result.ActualRate.Denominator <= 0 {
+			t.Fatalf("actual rate must have a positive denominator, got %v", result.ActualRate)
 		}
 	})
 }
