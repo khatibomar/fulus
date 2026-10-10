@@ -179,3 +179,35 @@ func TestAnyMoneyJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestAnyMoneyAccessors(t *testing.T) {
+	t.Parallel()
+
+	m := NewAnyMoney(-1050, currency.EUR{})
+	tests := []struct {
+		name string
+		got  any
+		want any
+	}{
+		{"BigInt", m.BigInt().String(), "-1050"},
+		{"IsZero", m.IsZero(), false},
+		{"zero IsZero", NewAnyMoney(0, currency.EUR{}).IsZero(), true},
+		{"Decimal", m.Decimal(), "-10.50"},
+		{"String", m.String(), "EUR -10.50"},
+		{"zero value Decimal", AnyMoney{}.Decimal(), "0"},
+		{"zero value String", AnyMoney{}.String(), "0"},
+	}
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("%s = %v, want %v", tt.name, tt.got, tt.want)
+		}
+	}
+
+	b, err := json.Marshal(AnyMoney{})
+	if err != nil || string(b) != `{"amount":"0","currency":""}` {
+		t.Errorf("Marshal() of the zero value = %s, %v", b, err)
+	}
+	if _, err := NewAnyMoneyFromDecimal("1", nil); !errors.Is(err, ErrUnknownCurrency) {
+		t.Errorf("NewAnyMoneyFromDecimal() with nil currency error = %v", err)
+	}
+}

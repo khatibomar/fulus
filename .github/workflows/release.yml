@@ -1,0 +1,51 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to create the release
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    - name: Check that the tag is signed
+      run: |
+        git cat-file tag "$GITHUB_REF_NAME" | grep -qE -- '-----BEGIN (PGP|SSH) SIGNATURE-----' \
+          || { echo "::error::tag $GITHUB_REF_NAME is not signed"; exit 1; }
+    - name: Create the source archive
+      run: git archive --format=tar.gz --prefix="fulus-$GITHUB_REF_NAME/" -o "fulus-$GITHUB_REF_NAME.tar.gz" "$GITHUB_REF_NAME"
+    - name: Calculate the hashes
+      id: hash
+      run: echo "hashes=$(sha256sum fulus-*.tar.gz | base64 -w0)" >> "$GITHUB_OUTPUT"
+    - name: Create the release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        flags=(--verify-tag --generate-notes)
+        if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+          flags+=(--prerelease)
+        fi
+        gh release create "$GITHUB_REF_NAME" fulus-*.tar.gz "${flags[@]}"
+
+  provenance:
+    needs: archive
+    permissions:
+      actions: read # to read the workflow path
+      id-token: write # to sign the provenance
+      contents: write # to upload the provenance to the release
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+    with:
+      base64-subjects: ${{ needs.archive.outputs.hashes }}
+      provenance-name: provenance.intoto.jsonl
+      upload-assets: true

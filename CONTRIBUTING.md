@@ -74,3 +74,13 @@ A comment tells what the code does now. It does not tell the history of the code
 
 Read the [stability policy](README.md#stability). CI compares the API with the latest release.
 A change that removes or changes an exported name needs a deprecation first, after v1.0.0.
+
+## Releases
+
+1. Make sure that CI passes on `main`, including the API and minor units checks.
+2. Create a signed tag, for example `git tag -s v1.2.3 -m v1.2.3`, and push it.
+3. The release workflow checks the signature, creates the GitHub release with a source archive,
+   and adds the SLSA provenance. See [SECURITY](SECURITY.md#verify-a-release).
+
+CI also checks the coverage of the `fulus` and `format` packages with `make cover`,
+and reports the benchmark changes of each pull request in the job summary.
