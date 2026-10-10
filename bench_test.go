@@ -23,7 +23,7 @@ func BenchmarkArithmetic(b *testing.B) {
 	for i := range values {
 		values[i] = NewMoney[currency.USD](int64(i) * 1000)
 	}
-	ratio := Ratio[currency.USD, currency.USD]{Numerator: 107203, Denominator: 100000}
+	ratio := MustParseRate[currency.USD, currency.USD]("1.07203")
 
 	b.Run("Add", func(b *testing.B) {
 		for b.Loop() {
@@ -57,7 +57,7 @@ func BenchmarkArithmetic(b *testing.B) {
 	})
 	b.Run("Convert", func(b *testing.B) {
 		for b.Loop() {
-			benchMoney, _, benchErr = Convert(m, ratio, RoundHalfEven)
+			benchMoney, benchErr = Convert(m, ratio, RoundHalfEven)
 		}
 	})
 	b.Run("RoundCash", func(b *testing.B) {

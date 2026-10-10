@@ -32,7 +32,8 @@ Why:
 - The compiler stops you from mixing currencies. `usd.Add(eur)` does not compile.
 - The value does not store the currency, so it stays 8 bytes.
 - A function can require a currency in its signature, for example `func Charge(m fulus.Money[currency.EUR])`.
-- A conversion must name both currencies: `Ratio[currency.EUR, currency.USD]`.
+- A conversion must name both currencies: `Rate[currency.EUR, currency.USD]`.
+  `Cross(Rate[A, B], Rate[B, C])` gives a `Rate[A, C]`, so the compiler checks a triangulation.
 - The constraint `currency.Unit` accepts only empty struct types. So `Money[currency.Currency]` and a currency type
   with fields do not compile. The methods of the currency cannot depend on state.
   `TestTypeSafety` type-checks these rules.

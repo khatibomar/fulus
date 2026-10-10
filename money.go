@@ -44,9 +44,6 @@ var (
 	// ErrInvalidChunks indicates an invalid number of chunks for distribution
 	ErrInvalidChunks = errors.New("number of chunks must be positive")
 
-	// ErrZeroDenominator indicates division by zero in conversion
-	ErrZeroDenominator = errors.New("denominator cannot be zero")
-
 	// ErrDivisionByZero indicates division by zero
 	ErrDivisionByZero = errors.New("division by zero")
 
@@ -65,7 +62,7 @@ var (
 	// ErrScaleMismatch indicates decimal digits exceed currency minor units
 	ErrScaleMismatch = errors.New("amount scale exceeds currency minor units")
 
-	// ErrInvalidExchangeRate indicates an invalid exchange rate format or value
+	// ErrInvalidExchangeRate indicates an exchange rate that is not positive, cannot be parsed, or is the zero Rate
 	ErrInvalidExchangeRate = errors.New("invalid exchange rate")
 
 	// ErrInvalidFactor indicates a multiplication factor that cannot be parsed
@@ -150,54 +147,6 @@ type Distribution[T currency.Unit] struct {
 	Larger Money[T]
 	// LargerCount is the number of larger chunks.
 	LargerCount int64
-}
-
-// Ratio represents a fraction used for conversion rates
-type Ratio[F, T currency.Unit] struct {
-	// Numerator is the top number in the fraction (e.g., 107203 for 1.07203)
-	Numerator int64
-	// Denominator is the bottom number in the fraction (e.g., 100000 for precise decimal representation)
-	Denominator int64
-}
-
-// ParseRatioString parses a string representation of an exchange rate into a Ratio
-func ParseRatioString[F, T currency.Unit](rate string) (Ratio[F, T], error) {
-	r, ok := new(big.Rat).SetString(rate)
-	if !ok {
-		return Ratio[F, T]{}, fmt.Errorf("%w: %s", ErrInvalidExchangeRate, rate)
-	}
-
-	if r.Sign() <= 0 {
-		return Ratio[F, T]{}, fmt.Errorf("%w: rate must be positive", ErrInvalidExchangeRate)
-	}
-
-	if !r.Num().IsInt64() || !r.Denom().IsInt64() {
-		return Ratio[F, T]{}, ErrOverflow
-	}
-
-	return Ratio[F, T]{
-		Numerator:   r.Num().Int64(),
-		Denominator: r.Denom().Int64(),
-	}, nil
-}
-
-// ParseRatioFloat64 parses a float64 representation of an exchange rate into a Ratio.
-// It formats the float to a string to avoid floating point precision issues.
-func ParseRatioFloat64[F, T currency.Unit](rate float64) (Ratio[F, T], error) {
-	if rate <= 0 {
-		return Ratio[F, T]{}, fmt.Errorf("%w: rate must be positive", ErrInvalidExchangeRate)
-	}
-	s := strconv.FormatFloat(rate, 'f', -1, 64)
-	return ParseRatioString[F, T](s)
-}
-
-// ConversionResult holds both the converted amount and the actual ratio used
-type ConversionResult[F, T currency.Unit] struct {
-	// Amount stores the resulting converted monetary value
-	Amount int64
-	// ActualRate is the applied rate Amount/source amount, reduced and with a positive denominator.
-	// For a zero source amount it is the requested ratio.
-	ActualRate Ratio[F, T]
 }
 
 // NewMoney creates a new Money instance with the given amount and currency.
@@ -529,103 +478,6 @@ func (m Money[T]) Distribute(chunks int64) (Distribution[T], error) {
 		Larger:       Money[T]{amount: larger},
 		LargerCount:  remainder,
 	}, nil
-}
-
-// Convert changes m to the currency T at ratio and rounds the result with mode.
-// The ratio is the price of one major unit of F in major units of T, as markets quote it.
-// For example, a EUR/JPY ratio of 160.25 changes EUR 1.00 to JPY 160.
-// Convert also returns the applied rate after rounding, in the same units as ratio.
-func Convert[F, T currency.Unit](m Money[F], ratio Ratio[F, T], mode RoundingMode) (Money[T], ConversionResult[F, T], error) {
-	if ratio.Denominator == 0 {
-		return Money[T]{}, ConversionResult[F, T]{}, ErrZeroDenominator
-	}
-
-	if !mode.valid() {
-		return Money[T]{}, ConversionResult[F, T]{}, ErrInvalidRoundingMode
-	}
-
-	var from F
-	var to T
-	shift := to.MinorUnits() - from.MinorUnits()
-
-	roundedAmount, err := mulDivRoundShift(m.amount, ratio.Numerator, ratio.Denominator, shift, mode)
-	if err != nil {
-		return Money[T]{}, ConversionResult[F, T]{}, err
-	}
-
-	actualRate := ratio
-	if m.amount != 0 {
-		var ok bool
-		actualRate, ok = appliedRatio[F, T](roundedAmount, m.amount, shift)
-		if !ok {
-			return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
-		}
-	}
-
-	result := ConversionResult[F, T]{
-		Amount:     roundedAmount,
-		ActualRate: actualRate,
-	}
-
-	return NewMoney[T](roundedAmount), result, nil
-}
-
-// mulDivRoundShift returns a*n*10^shift/d rounded with mode.
-func mulDivRoundShift(a, n, d int64, shift int, mode RoundingMode) (int64, error) {
-	scaledN, scaledD, ok := n, d, true
-	switch {
-	case shift > 0:
-		scaledN, ok = mulPow10(n, shift)
-	case shift < 0:
-		scaledD, ok = mulPow10(d, -shift)
-	}
-	if ok {
-		return mulDivRound(a, scaledN, scaledD, mode)
-	}
-
-	num := new(big.Int).Mul(big.NewInt(a), big.NewInt(n))
-	den := big.NewInt(d)
-	pow := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(max(shift, -shift))), nil)
-	if shift > 0 {
-		num.Mul(num, pow)
-	} else {
-		den.Mul(den, pow)
-	}
-	q, err := divideWithRounding(num, den, mode)
-	if err != nil {
-		return 0, err
-	}
-	if !q.IsInt64() {
-		return 0, ErrOverflow
-	}
-	return q.Int64(), nil
-}
-
-// appliedRatio returns the rate result/amount in major units, in lowest terms and with a positive denominator.
-// The amount must not be zero.
-func appliedRatio[F, T currency.Unit](result, amount int64, shift int) (Ratio[F, T], bool) {
-	r := new(big.Rat).SetFrac(big.NewInt(result), big.NewInt(amount))
-	pow := new(big.Rat).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(max(shift, -shift))), nil))
-	if shift > 0 {
-		r.Quo(r, pow)
-	} else {
-		r.Mul(r, pow)
-	}
-	if !r.Num().IsInt64() || !r.Denom().IsInt64() {
-		return Ratio[F, T]{}, false
-	}
-	return Ratio[F, T]{Numerator: r.Num().Int64(), Denominator: r.Denom().Int64()}, true
-}
-
-// mulPow10 returns x*10^n and reports whether the product fits in int64.
-func mulPow10(x int64, n int) (int64, bool) {
-	for range n {
-		var ok bool
-		if x, ok = mul64(x, 10); !ok {
-			return 0, false
-		}
-	}
-	return x, true
 }
 
 func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*big.Int, error) {

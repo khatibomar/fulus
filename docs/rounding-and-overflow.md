@@ -38,7 +38,7 @@ These operations take a `RoundingMode`. They do not have a default mode.
 | `Div(d, mode)` | amount / d |
 | `MulFrac(n, d, mode)` | amount × n / d |
 | `MulDecimal(f, mode)` | amount × f, where f is a decimal such as `"0.0825"` or a fraction such as `"1/3"` |
-| `Convert(m, ratio, mode)` | amount × ratio, with the ratio in major units of each currency |
+| `Convert(m, rate, mode)` | amount × rate, with the rate in major units of each currency |
 | `RoundCash(mode)` | amount / increment, rounded, then multiplied by the increment |
 
 Each operation calculates the exact result first, and then it rounds one time.
@@ -84,17 +84,18 @@ A currency without a cash rule does not change. A custom currency can implement 
 
 ## Exchange rates
 
-`Ratio` holds an exchange rate as an exact fraction.
-`ParseRatioString` reads a decimal string exactly. For example, `"1.07203"` gives 107203/100000.
-`ParseRatioFloat64` writes the float as the shortest decimal string that gives the same float, and then reads that string.
-So `0.1` gives 1/10, not the binary value of the float.
+`Rate[Base, Quote]` holds an exchange rate as an exact positive fraction in lowest terms.
+It is the price of one major unit of `Base` in major units of `Quote`, as markets quote it.
+The fields are not exported, so a rate is always valid, except the zero `Rate`. `Convert` returns `ErrInvalidExchangeRate` for the zero `Rate`.
 
-The ratio is the price of one major unit of the source currency in major units of the target currency, as markets quote it.
-For example, a EUR/JPY ratio of 160.25 changes EUR 1.00 to JPY 160. `Convert` adjusts for the different minor units.
+- `ParseRate` reads a decimal string such as `"1.07203"` or a fraction such as `"1/3"` exactly.
+- `RateFromFloat64` writes the float as the shortest decimal string that gives the same float, and then reads that string.
+  So `0.1` gives 1/10, not the binary value of the float.
+- `Invert` returns the exact rate in the other direction, as a `Rate[Quote, Base]`.
+- `Cross` returns the exact rate from A to C through B. The compiler checks that the middle currencies agree.
 
-`Convert` returns a `ConversionResult`. Its `ActualRate` is the rate after rounding: the result divided by the source amount.
-For example, €3.33 at 1/3 with `RoundHalfUp` gives $1.11, and the actual rate is 111/333 = 1/3.
-For a zero source amount, `ActualRate` is the requested ratio.
+`Convert` adjusts for the minor units of each currency. For example, a EUR/JPY rate of 160.25 changes EUR 1.00 to JPY 160.
+It calculates the exact result and rounds one time.
 
 ## Allocation
 
@@ -137,7 +138,7 @@ It never returns a wrong result.
 - `Abs` and `Neg` return `ErrOverflow` for the smallest amount, because its positive value does not fit.
 - `RoundCash` returns `ErrOverflow` if the rounded value does not fit.
 - `ParseMoney` and `ParseFormatted` return `ErrOverflow` for an amount that does not fit.
-- `ParseRatioString` returns `ErrOverflow` if the numerator or the denominator does not fit.
+- `ParseRate` and `Cross` return `ErrOverflow` if the numerator or the denominator does not fit in `int64`.
 - `AnyMoney.Add` and `AnyMoney.Sub` have the same checks as `Money[T]`.
 
 ### Sum
