@@ -16,7 +16,7 @@ func ExampleMoney_MulFactor() {
 		panic(err)
 	}
 	fmt.Println(tax)
-	// Output: $0.83
+	// Output: USD 0.83
 }
 
 func ExampleMoney_RoundCash() {
@@ -41,7 +41,7 @@ func ExampleAs() {
 	_, err = fulus.As[currency.USD](price)
 	fmt.Println(err)
 	// Output:
-	// €12.50 <nil>
+	// EUR 12.50 <nil>
 	// currency mismatch: expected USD, got EUR
 }
 
@@ -62,7 +62,7 @@ func ExampleSum() {
 		fulus.NewMoney[currency.USD](-50),
 	)
 	fmt.Println(total, err)
-	// Output: $12.00 <nil>
+	// Output: USD 12.00 <nil>
 }
 
 func ExampleMoney_Format() {
@@ -85,7 +85,7 @@ func ExampleParseMoney() {
 	_, err = fulus.ParseMoney[currency.USD]("19.999")
 	fmt.Println(err != nil)
 	// Output:
-	// $19.99 1999 <nil>
+	// USD 19.99 1999 <nil>
 	// true
 }
 
@@ -105,5 +105,5 @@ func ExampleNullMoney() {
 	fmt.Println(discount.Valid, discount.Money, value)
 	// Output:
 	// false null
-	// true $2.50 2.50
+	// true USD 2.50 2.50
 }

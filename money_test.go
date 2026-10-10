@@ -406,31 +406,31 @@ func TestString(t *testing.T) {
 		{
 			name:     "positive currency.USD",
 			amount:   1050,
-			expected: "$10.50",
+			expected: "USD 10.50",
 			curr:     currency.USD{},
 		},
 		{
 			name:     "negative currency.USD",
 			amount:   -1050,
-			expected: "-$10.50",
+			expected: "USD -10.50",
 			curr:     currency.USD{},
 		},
 		{
 			name:     "zero currency.USD",
 			amount:   0,
-			expected: "$0.00",
+			expected: "USD 0.00",
 			curr:     currency.USD{},
 		},
 		{
 			name:     "JPY no decimals",
 			amount:   1000,
-			expected: "¥1,000",
+			expected: "JPY 1000",
 			curr:     currency.JPY{},
 		},
 		{
 			name:     "EUR positive",
 			amount:   1999,
-			expected: "€19.99",
+			expected: "EUR 19.99",
 			curr:     currency.EUR{},
 		},
 	}
@@ -661,8 +661,8 @@ func TestZeroValueMoney(t *testing.T) {
 	t.Parallel()
 
 	var m Money[currency.USD]
-	if got := m.String(); got != "$0.00" {
-		t.Errorf("String() = %q, expected %q", got, "$0.00")
+	if got := m.String(); got != "USD 0.00" {
+		t.Errorf("String() = %q, expected %q", got, "USD 0.00")
 	}
 	if got := m.Currency().Code(); got != "USD" {
 		t.Errorf("Currency().Code() = %q, expected %q", got, "USD")
@@ -963,19 +963,19 @@ func TestAllocateRealMoney(t *testing.T) {
 			name:     "split $100 equally",
 			amount:   10000, // $100.00
 			ratios:   []int64{1, 1},
-			expected: []string{"$50.00", "$50.00"},
+			expected: []string{"USD 50.00", "USD 50.00"},
 		},
 		{
 			name:     "split $100 in thirds",
 			amount:   10000, // $100.00
 			ratios:   []int64{1, 1, 1},
-			expected: []string{"$33.34", "$33.33", "$33.33"},
+			expected: []string{"USD 33.34", "USD 33.33", "USD 33.33"},
 		},
 		{
 			name:     "split $50.50 by ratio 1:2",
 			amount:   5050, // $50.50
 			ratios:   []int64{1, 2},
-			expected: []string{"$16.83", "$33.67"},
+			expected: []string{"USD 16.83", "USD 33.67"},
 		},
 		{
 			name:        "empty ratios",
@@ -1043,9 +1043,9 @@ func ExampleMoney_Allocate() {
 	}
 
 	// Output:
-	// Part 1: $25.00
-	// Part 2: $25.00
-	// Part 3: $50.00
+	// Part 1: USD 25.00
+	// Part 2: USD 25.00
+	// Part 3: USD 50.00
 }
 
 func ExampleMoney_Distribute() {
@@ -1061,8 +1061,8 @@ func ExampleMoney_Distribute() {
 	fmt.Printf("Larger chunks: %d x %v\n", dist.LargerCount, dist.Larger)
 
 	// Output:
-	// Smaller chunks: 2 x $33.33
-	// Larger chunks: 1 x $33.34
+	// Smaller chunks: 2 x USD 33.33
+	// Larger chunks: 1 x USD 33.34
 }
 
 func TestGeneratedFormatContracts(t *testing.T) {

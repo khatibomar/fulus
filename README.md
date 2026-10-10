@@ -45,12 +45,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(eurInUsd) // $5.22
+	fmt.Println(eurInUsd) // USD 5.22
 	usd, err = usd.Add(eurInUsd)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(usd)                   // $15.22
+	fmt.Println(usd)                   // USD 15.22
 	fmt.Println(usd.Format(locale.FR)) // 15,22 $US
 }
 ```
@@ -115,9 +115,9 @@ func (k KANNA) FormatInfo(loc locale.Locale) currency.FormatInfo {
 
 func main() {
 	kanna := fulus.NewMoney[KANNA](-1000000)
-	fmt.Println(kanna) // -🐉 10,000.00
+	fmt.Println(kanna.Format(locale.EN)) // -🐉 10,000.00
 	kanna, _ = kanna.Mul(2)
-	fmt.Println(kanna)                   // -🐉 20,000.00
+	fmt.Println(kanna)                   // KANNA -20000.00
 	fmt.Println(kanna.Format(locale.JA)) // ⛔20⚔︎000🦖00 🐲
 }
 ```
@@ -287,7 +287,7 @@ The amount is a decimal string, so it does not lose digits in JavaScript and doe
 ## Locales
 
 `Format` uses the CLDR pattern of the locale, including the negative pattern and Indian digit grouping.
-`String` uses `DefaultLocale()`. Change it with `SetDefaultLocale`, which is safe for concurrent use.
+`String` does not use a locale. It gives the code and the canonical decimal, for example `USD -1234.50`, so logs and tests do not change with the environment.
 `locale.Match` finds the best supported locale for a tag such as `en_US.UTF-8` or `fr-CA-u-nu-latn`.
 `TestFormatMatchesICU` compares `Format` with ICU, an independent CLDR implementation, for more than 25,000 cases.
 
@@ -308,7 +308,7 @@ usd, err := fulus.ParseMoney[currency.USD]("123.45")
 if err != nil {
 	panic(err)
 }
-fmt.Println(usd) // $123.45
+fmt.Println(usd) // USD 123.45
 ```
 
 `ParseMoney` validates fractional scale against the currency minor units and rejects malformed formats.
