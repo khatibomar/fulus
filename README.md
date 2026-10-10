@@ -387,6 +387,7 @@ Fulus uses [semantic versioning](https://semver.org/).
 - To remove a name, we first mark it with `Deprecated:` in its doc comment and in the release notes.
   We remove it only in the next major version.
 - An update of the CLDR data is not a breaking change. It can change the output of `Format` in a minor release.
+- A change of the minor units of a currency is a breaking change. CI checks the minor units against the latest release.
   Do not store the output of `Format`. Store the amount with `Value`, `MarshalJSON` or `Decimal`.
 - CI compares the API of each pull request with the latest release.
 

@@ -69,6 +69,10 @@ Fulus uses ISO 4217 because payment systems and banks use it.
 ISO 4217 defines no minor units for some codes, for example the metals XAU, XAG, XPT and XPD, and XDR.
 For these codes, the generator uses the CLDR digits and writes this in the doc comment of the type.
 The generator does not include XTS (the testing code) and XXX (no currency).
+
+A change of the minor units is a breaking change, because an amount in minor units that is stored somewhere
+changes its value. `TestMinorUnitsDoNotChange` compares the generated data with `currency/testdata/minor_units.golden`,
+and CI compares that file with the latest release.
 `Format` always writes all the minor units, so it does not lose data.
 
 ## Formatting uses CLDR data in generated tables
