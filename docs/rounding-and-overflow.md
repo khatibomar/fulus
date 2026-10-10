@@ -18,7 +18,7 @@ These operations give an exact result or an error. They never round.
 | `Sum` | The exact sum, or `ErrOverflow`. See [Sum](#sum). |
 | `Allocate`, `Distribute` | Parts whose sum is equal to the value. See [Allocation](#allocation). |
 | `ParseMoney`, `UnmarshalText` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
-| `ParseFormatted` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
+| `format.Parse` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
 | `UnmarshalJSON`, `Scan` | The exact value. More fraction digits than the minor units give `ErrScaleMismatch`. |
 
 The parse functions do not round, because a rounded input hides a data error.
@@ -139,7 +139,7 @@ It never returns a wrong result.
 - `Int64` reports false and `Value` returns `ErrOverflow` for an amount that does not fit in `int64`.
 - `Abs` and `Neg` return `ErrOverflow` for the smallest amount, because its positive value does not fit.
 - `RoundCash` returns `ErrOverflow` if the rounded value does not fit.
-- `ParseMoney` and `ParseFormatted` return `ErrOverflow` for an amount that does not fit.
+- `ParseMoney` and `format.Parse` return `ErrOverflow` for an amount that does not fit.
 - `ParseRate` and `Cross` return `ErrOverflow` if the numerator or the denominator does not fit in `int64`.
 - `AnyMoney.Add` and `AnyMoney.Sub` have the same checks as `Money[T]`.
 

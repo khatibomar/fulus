@@ -52,7 +52,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(usd)                   // USD 15.22
-	fmt.Println(usd.Format(locale.FR)) // 15,22 $US
+	fmt.Println(format.Money(usd, locale.FR)) // 15,22 $US
 }
 ```
 
@@ -77,49 +77,30 @@ import (
 	"fmt"
 
 	"github.com/khatibomar/fulus"
-	"github.com/khatibomar/fulus/currency"
+	"github.com/khatibomar/fulus/format"
 	"github.com/khatibomar/fulus/locale"
 )
 
-var _ currency.Currency = KANNA{}
-
+// A currency needs only Code and MinorUnits.
 type KANNA struct{}
 
-func (k KANNA) Code() string { return "KANNA" }
+func (KANNA) Code() string    { return "KANNA" }
+func (KANNA) MinorUnits() int { return 2 }
 
-func (k KANNA) Name() string { return "Kanna Kamui" }
-
-func (k KANNA) Number() string { return "001" }
-
-func (k KANNA) MinorUnits() int { return 2 }
-
-func (k KANNA) FormatInfo(loc locale.Locale) currency.FormatInfo {
-	switch loc {
-	case locale.JA:
-		return currency.FormatInfo{
-			Symbol:           "🐲",
-			Format:           "#,##0.00 ¤",
-			GroupSeparator:   "⚔︎",
-			DecimalSeparator: "🦖",
-			MinusSign:        "⛔",
-		}
-	default:
-		return currency.FormatInfo{
-			Symbol:           "🐉",
-			Format:           "¤ #,##0.00",
-			GroupSeparator:   ",",
-			DecimalSeparator: ".",
-			MinusSign:        "-",
-		}
+// FormatInfo is optional. It implements format.Formatter. Without it, format uses the CLDR data of the code.
+func (KANNA) FormatInfo(loc locale.Locale) format.Info {
+	if loc == locale.JA {
+		return format.Info{Symbol: "🐲", Pattern: "#,##0.00 ¤", GroupSeparator: "⚔︎", DecimalSeparator: "🦖", MinusSign: "⛔"}
 	}
+	return format.Info{Symbol: "🐉", Pattern: "¤ #,##0.00", GroupSeparator: ",", DecimalSeparator: ".", MinusSign: "-"}
 }
 
 func main() {
 	kanna := fulus.NewMoney[KANNA](-1000000)
-	fmt.Println(kanna.Format(locale.EN)) // -🐉 10,000.00
+	fmt.Println(format.Money(kanna, locale.EN)) // -🐉 10,000.00
 	kanna, _ = kanna.Mul(2)
-	fmt.Println(kanna)                   // KANNA -20000.00
-	fmt.Println(kanna.Format(locale.JA)) // ⛔20⚔︎000🦖00 🐲
+	fmt.Println(kanna)                          // KANNA -20000.00
+	fmt.Println(format.Money(kanna, locale.JA)) // ⛔20⚔︎000🦖00 🐲
 }
 ```
 
@@ -130,9 +111,11 @@ func main() {
 - Safe decimal arithmetic using integer math
 - Support for distribution and allocation of money (largest remainder method)
 - Runtime currencies with `AnyMoney` and a currency registry
-- Seven explicit rounding modes plus `RoundUnnecessary`, multiplication by fractions and decimals, and CLDR cash rounding
-- CLDR formatting and parsing of localized strings, with locale matching from BCP 47 and POSIX tags
-- JSON, text, `log/slog` and database/sql support, with `NullMoney` for NULL values
+- Seven explicit rounding modes plus `RoundUnnecessary`, a `Factor` type for rates, percentages and basis points, and CLDR cash rounding
+- Exact exchange rates with `Rate[Base, Quote]`, and cross rates that the compiler checks
+- CLDR formatting and parsing of localized strings in the `format` package, with locale matching from BCP 47 and POSIX tags
+- JSON with decimal strings, text, `log/slog`, and database/sql for `NUMERIC` and `BIGINT` columns, with `NullMoney` for NULL values
+- `google.type.Money` conversion in the separate `fulusproto` module
 
 ### Limits
 
@@ -156,7 +139,7 @@ For example, a token with 18 minor units can hold about 1.7 × 10^20 units.
 | Currency check | Compile time, with a type parameter | Run time | Run time |
 | Digits after the minor units | No | No | Yes |
 | Overflow | `ErrOverflow` | Not checked | No overflow |
-| Rounding | 7 modes, explicit in each call | To a whole major unit only | 5 modes |
+| Rounding | 7 modes and `RoundUnnecessary`, explicit in each call | To a whole major unit only | 5 modes |
 | Leftover units of an allocation | Largest remainder | One each to the first parts | One each to the first parts |
 | Locale formatting | All CLDR locales, checked against ICU | One format for each currency | CLDR modern locales |
 | Parse formatted amounts | Yes | No | Yes |
@@ -186,17 +169,17 @@ usd5, err := usd10.Div(2, fulus.RoundHalfUp)
 // Multiplication by a Factor, with explicit rounding.
 // Parse a Factor one time, for example in a package-level variable.
 var salesTax = fulus.MustParseFactor("8.25%")
-tip, err := usd10.MulFactor(fulus.Percent(15), fulus.RoundHalfEven) // $1.50
-tax, err := usd10.MulFactor(salesTax, fulus.RoundHalfUp)            // $0.83
-fee, err := usd10.MulFactor(fulus.Bps(25), fulus.RoundHalfUp)       // $0.03
+tip, err := usd10.MulFactor(fulus.Percent(15), fulus.RoundHalfEven) // USD 1.50
+tax, err := usd10.MulFactor(salesTax, fulus.RoundHalfUp)            // USD 0.83
+fee, err := usd10.MulFactor(fulus.Bps(25), fulus.RoundHalfUp)       // USD 0.03
 
 // Sum, Min and Max
 total, err := fulus.Sum(usd10, usd20, usd5)
 cheapest := fulus.Min(usd10, usd20, usd5)
 
 // Absolute value and Negation
-absUsd, err := fulus.NewMoney[currency.USD](-1000).Abs() // $10.00
-negUsd, err := usd10.Neg()                               // -$10.00
+absUsd, err := fulus.NewMoney[currency.USD](-1000).Abs() // USD 10.00
+negUsd, err := usd10.Neg()                               // USD -10.00
 ```
 
 For ergonomic method chaining when you are confident about bounds (panics on overflow), you can use the `Must` variants:
@@ -207,7 +190,7 @@ usd20 := fulus.NewMoney[currency.USD](2000)
 usd30 := fulus.NewMoney[currency.USD](3000)
 
 // Method chaining
-result := usd10.MustAdd(usd20).MustSub(usd30).MustMul(2) // $0.00
+result := usd10.MustAdd(usd20).MustSub(usd30).MustMul(2) // USD 0.00
 ```
 
 ## Comparison Operations
@@ -247,8 +230,8 @@ Use `Convert` with an explicit rounding mode:
 eur := fulus.NewMoney[currency.EUR](5) // €0.05
 rate := fulus.MustParseRate[currency.EUR, currency.USD]("1/2")
 
-usdTrunc, _ := fulus.Convert(eur, rate, fulus.RoundTruncate) // $0.02
-usdHalfUp, _ := fulus.Convert(eur, rate, fulus.RoundHalfUp)  // $0.03
+usdTrunc, _ := fulus.Convert(eur, rate, fulus.RoundTruncate) // USD 0.02
+usdHalfUp, _ := fulus.Convert(eur, rate, fulus.RoundHalfUp)  // USD 0.03
 usdHalfEven, _ := fulus.Convert(eur, rate, fulus.RoundHalfEven)
 
 fmt.Println(usdTrunc, usdHalfUp, usdHalfEven)
@@ -291,6 +274,7 @@ err = reg.Register(KANNA{})
 c, ok := reg.ByCode("KANNA")
 price, err := fulus.NewAnyMoneyFromDecimal("12.50", c)
 ```
+
 `AnyMoney` uses the same JSON form as `Money[T]`: `{"amount":"12.50","currency":"EUR"}`.
 The amount is a decimal string, so it does not lose digits in JavaScript and does not depend on the minor units of the reader.
 
@@ -340,7 +324,7 @@ usdEUR := eurUSD.Invert()              // Rate[currency.USD, currency.EUR]
 eurJPY, err := fulus.Cross(eurUSD, usdJPY) // Rate[currency.EUR, currency.JPY]
 // fulus.Cross(usdJPY, eurUSD) does not compile.
 
-yen, err := fulus.Convert(fulus.NewMoney[currency.EUR](100), eurJPY, fulus.RoundHalfEven) // ¥162
+yen, err := fulus.Convert(fulus.NewMoney[currency.EUR](100), eurJPY, fulus.RoundHalfEven) // JPY 162
 ```
 
 `Convert` adjusts for the minor units of each currency.
