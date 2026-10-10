@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"strconv"
 
 	"github.com/khatibomar/fulus/currency"
@@ -82,24 +81,24 @@ func (m AnyMoney) IsZero() bool {
 // Add returns the sum of two values in the same currency.
 // Returns ErrCurrencyMismatch if the currencies are different, and ErrOverflow if the sum does not fit in int64.
 func (m AnyMoney) Add(other AnyMoney) (AnyMoney, error) {
-	return m.combine(other, (*big.Int).Add)
+	return m.combine(other, add64)
 }
 
 // Sub returns the difference of two values in the same currency.
 // Returns ErrCurrencyMismatch if the currencies are different, and ErrOverflow if the result does not fit in int64.
 func (m AnyMoney) Sub(other AnyMoney) (AnyMoney, error) {
-	return m.combine(other, (*big.Int).Sub)
+	return m.combine(other, sub64)
 }
 
-func (m AnyMoney) combine(other AnyMoney, op func(z, x, y *big.Int) *big.Int) (AnyMoney, error) {
+func (m AnyMoney) combine(other AnyMoney, op func(a, b int64) (int64, bool)) (AnyMoney, error) {
 	if !m.sameCurrency(other.currency) {
 		return AnyMoney{}, fmt.Errorf("%w: %s and %s", ErrCurrencyMismatch, m.code(), other.code())
 	}
-	result := op(new(big.Int), big.NewInt(m.amount), big.NewInt(other.amount))
-	if !result.IsInt64() {
+	result, ok := op(m.amount, other.amount)
+	if !ok {
 		return AnyMoney{}, ErrOverflow
 	}
-	return AnyMoney{amount: result.Int64(), currency: m.currency}, nil
+	return AnyMoney{amount: result, currency: m.currency}, nil
 }
 
 // Cmp compares two values in the same currency and returns -1, 0 or +1.
