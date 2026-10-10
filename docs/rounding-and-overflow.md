@@ -22,11 +22,12 @@ These operations give an exact result or an error. They never round.
 | `UnmarshalJSON`, `Scan` | The exact amount in minor units. |
 
 The parse functions do not round, because a rounded input hides a data error.
-To round an input with more digits, multiply one major unit by the input with `MulDecimal`:
+To round an input with more digits, multiply one major unit by the input with `MulFactor`:
 
 ```go
 one := fulus.NewMoney[currency.USD](100)                    // $1.00
-price, err := one.MulDecimal("19.999", fulus.RoundHalfEven) // $20.00
+f, err := fulus.ParseFactor("19.999")
+price, err := one.MulFactor(f, fulus.RoundHalfEven) // $20.00
 ```
 
 ## Operations that round
@@ -36,15 +37,15 @@ These operations take a `RoundingMode`. They do not have a default mode.
 | Operation | Exact result before rounding |
 |-----------|------------------------------|
 | `Div(d, mode)` | amount / d |
-| `MulFrac(n, d, mode)` | amount × n / d |
-| `MulDecimal(f, mode)` | amount × f, where f is a decimal such as `"0.0825"` or a fraction such as `"1/3"` |
+| `MulFactor(f, mode)` | amount × f, where f is a `Factor` such as `ParseFactor("0.0825")`, `Percent(15)` or `Bps(25)` |
 | `Convert(m, rate, mode)` | amount × rate, with the rate in major units of each currency |
 | `RoundCash(mode)` | amount / increment, rounded, then multiplied by the increment |
 
 Each operation calculates the exact result first, and then it rounds one time.
 The product amount × n uses 128 bits, so it cannot overflow before the division.
-`MulDecimal` reads the factor as an exact fraction. It does not use floating point.
-A factor whose numerator or denominator does not fit in `int64` uses `math/big`.
+`ParseFactor` reads a decimal, a fraction such as `"1/3"` or a percentage such as `"8.25%"` as an exact fraction.
+It does not use floating point. It does not accept an exponent such as `"1e3"`.
+`ParseFactor` returns `ErrOverflow` if the numerator or the denominator does not fit in `int64`.
 
 An unknown mode or the zero mode gives `ErrInvalidRoundingMode`. A zero divisor gives `ErrDivisionByZero` or `ErrZeroDenominator`.
 

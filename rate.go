@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/khatibomar/fulus/currency"
 )
@@ -31,8 +32,9 @@ func NewRate[Base, Quote currency.Unit](numerator, denominator int64) (Rate[Base
 // Returns ErrInvalidExchangeRate if the rate cannot be parsed or is not positive,
 // and ErrOverflow if a term of the fraction in lowest terms does not fit in int64.
 func ParseRate[Base, Quote currency.Unit](s string) (Rate[Base, Quote], error) {
+	// An exponent such as "1e999999999" can make big.Rat allocate a very large number, so it is not accepted.
 	r, ok := new(big.Rat).SetString(s)
-	if !ok {
+	if !ok || strings.ContainsAny(s, "eE") {
 		return Rate[Base, Quote]{}, fmt.Errorf("%w: %q", ErrInvalidExchangeRate, s)
 	}
 	if r.Sign() <= 0 {

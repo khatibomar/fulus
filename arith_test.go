@@ -120,38 +120,3 @@ func FuzzParseMoneyDecimalRoundTrip(f *testing.F) {
 		}
 	})
 }
-
-func TestParseFactor(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		factor string
-		num    int64
-		den    int64
-		ok     bool
-	}{
-		{factor: "0.0825", num: 825, den: 10000, ok: true},
-		{factor: "-1.5", num: -15, den: 10, ok: true},
-		{factor: "+2", num: 2, den: 1, ok: true},
-		{factor: ".5", num: 5, den: 10, ok: true},
-		{factor: "123456789012345678", num: 123456789012345678, den: 1, ok: true},
-		{factor: "1234567890123456789", ok: false},
-		{factor: "1/3", ok: false},
-		{factor: "1e3", ok: false},
-		{factor: "1.2.3", ok: false},
-		{factor: ".", ok: false},
-		{factor: "-", ok: false},
-		{factor: "", ok: false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.factor, func(t *testing.T) {
-			t.Parallel()
-
-			num, den, ok := parseFactor(tt.factor)
-			if ok != tt.ok || (ok && (num != tt.num || den != tt.den)) {
-				t.Errorf("parseFactor(%q) = %d/%d, %v; want %d/%d, %v", tt.factor, num, den, ok, tt.num, tt.den, tt.ok)
-			}
-		})
-	}
-}

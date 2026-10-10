@@ -6,7 +6,7 @@
 // precision and correctness.
 //
 // The package supports:
-//   - type-safe arithmetic across currency types (Add, Sub, Mul, Div, MulFrac, MulDecimal, Abs, Neg)
+//   - type-safe arithmetic across currency types (Add, Sub, Mul, Div, MulFactor, Abs, Neg)
 //   - seven explicit rounding modes and CLDR cash rounding
 //   - runtime currencies with AnyMoney and the currency registry
 //   - CLDR formatting and parsing of localized strings
