@@ -38,14 +38,14 @@ func main() {
 	m1, err = m1.Mul(10)
 	printErr(err)
 
-	err = m1.Validate(config.Money.Min, config.Money.Max)
+	err = m1.Validate(money.New(config.Money.Min), money.New(config.Money.Max))
 	printErr(err)
 	fmt.Printf("%s is valid\n", m1.String())
 
 	m1, err = m1.Mul(50)
 	printErr(err)
 
-	err = m1.Validate(config.Money.Min, config.Money.Max)
+	err = m1.Validate(money.New(config.Money.Min), money.New(config.Money.Max))
 	printErr(err)
 	fmt.Println(m1)
 }

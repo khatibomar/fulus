@@ -13,7 +13,7 @@ var (
 	benchString   string
 	benchErr      error
 	benchBytes    []byte
-	benchAllocate Allocation[currency.USD]
+	benchAllocate []Money[currency.USD]
 )
 
 func BenchmarkArithmetic(b *testing.B) {
@@ -68,7 +68,7 @@ func BenchmarkArithmetic(b *testing.B) {
 	})
 	b.Run("Allocate", func(b *testing.B) {
 		for b.Loop() {
-			benchAllocate, benchErr = m.Allocate([]int64{1, 2, 3})
+			benchAllocate, benchErr = m.Allocate(1, 2, 3)
 		}
 	})
 	b.Run("Sum10", func(b *testing.B) {

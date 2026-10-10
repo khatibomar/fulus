@@ -106,7 +106,7 @@ It uses the largest remainder method:
 3. If two remainders are equal, the part with the lower index gets the unit first.
 
 ```go
-parts, _ := fulus.NewMoney[currency.USD](100).Allocate([]int64{1, 1, 1})
+parts, _ := fulus.NewMoney[currency.USD](100).Allocate(1, 1, 1)
 // $0.34 $0.33 $0.33
 ```
 

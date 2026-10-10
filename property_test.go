@@ -53,8 +53,8 @@ func TestPropertyDistributePreservesAmount(t *testing.T) {
 			return false
 		}
 
-		total := (dist.SmallerChunkSize * dist.SmallerCount) +
-			(dist.LargerChunkSize * dist.LargerCount)
+		total := (dist.Smaller.Amount() * dist.SmallerCount) +
+			(dist.Larger.Amount() * dist.LargerCount)
 
 		return total == amount &&
 			dist.SmallerCount+dist.LargerCount == chunks
@@ -69,17 +69,17 @@ func TestPropertyAllocatePreservesAmount(t *testing.T) {
 	property := func(amount int64, r1, r2, r3 uint8) bool {
 		ratios := []int64{int64(r1) + 1, int64(r2) + 1, int64(r3) + 1}
 
-		allocation, err := NewMoney[currency.USD](amount).Allocate(ratios)
+		parts, err := NewMoney[currency.USD](amount).Allocate(ratios...)
 		if err != nil {
 			return false
 		}
 
 		sum := int64(0)
-		for _, part := range allocation.Parts {
+		for _, part := range parts {
 			sum += part.Amount()
 		}
 
-		return sum == amount && allocation.Total.Amount() == amount
+		return sum == amount
 	}
 
 	if err := quick.Check(property, nil); err != nil {
