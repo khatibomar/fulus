@@ -126,7 +126,7 @@ func main() {
 - Safe decimal arithmetic using integer math
 - Support for distribution and allocation of money (largest remainder method)
 - Runtime currencies with `AnyMoney` and a currency registry
-- Seven explicit rounding modes, multiplication by fractions and decimals, and CLDR cash rounding
+- Seven explicit rounding modes plus `RoundUnnecessary`, multiplication by fractions and decimals, and CLDR cash rounding
 - CLDR formatting and parsing of localized strings, with locale matching from BCP 47 and POSIX tags
 - JSON, text, `log/slog` and database/sql support, with `NullMoney` for NULL values
 
@@ -230,6 +230,9 @@ fmt.Println(usd10.Cmp(usd20))              // -1
 | `RoundUp` | 3 | -3 | 3 |
 | `RoundCeiling` | 3 | -2 | 3 |
 | `RoundFloor` | 2 | -3 | 2 |
+
+`RoundUnnecessary` does not round. It returns `ErrInexact` when the exact result needs rounding.
+The zero `RoundingMode` is not valid, so an unset mode returns `ErrInvalidRoundingMode`.
 
 Use `Convert` with an explicit rounding mode:
 

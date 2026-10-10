@@ -76,14 +76,18 @@ var (
 
 	// ErrUnknownCurrency indicates a currency code that is not registered
 	ErrUnknownCurrency = errors.New("unknown currency")
+
+	// ErrInexact indicates a result that needs rounding when the mode is RoundUnnecessary
+	ErrInexact = errors.New("result is not exact")
 )
 
 // RoundingMode controls how a result between two minor units is rounded.
+// The zero value is not a valid mode, so an operation with an unset mode returns ErrInvalidRoundingMode.
 type RoundingMode int
 
 const (
-	// RoundTruncate rounds toward zero (default behavior).
-	RoundTruncate RoundingMode = iota
+	// RoundTruncate rounds toward zero.
+	RoundTruncate RoundingMode = iota + 1
 	// RoundHalfUp rounds to nearest, ties away from zero.
 	RoundHalfUp
 	// RoundHalfEven rounds to nearest, ties to even. This is also known as banker's rounding.
@@ -96,10 +100,36 @@ const (
 	RoundCeiling
 	// RoundFloor rounds toward negative infinity.
 	RoundFloor
+	// RoundUnnecessary does not round. An operation returns ErrInexact if the exact result needs rounding.
+	RoundUnnecessary
 )
 
 func (r RoundingMode) valid() bool {
-	return r >= RoundTruncate && r <= RoundFloor
+	return r >= RoundTruncate && r <= RoundUnnecessary
+}
+
+// String returns the name of the mode, for example "HalfEven".
+func (r RoundingMode) String() string {
+	switch r {
+	case RoundTruncate:
+		return "Truncate"
+	case RoundHalfUp:
+		return "HalfUp"
+	case RoundHalfEven:
+		return "HalfEven"
+	case RoundHalfDown:
+		return "HalfDown"
+	case RoundUp:
+		return "Up"
+	case RoundCeiling:
+		return "Ceiling"
+	case RoundFloor:
+		return "Floor"
+	case RoundUnnecessary:
+		return "Unnecessary"
+	default:
+		return "RoundingMode(" + strconv.Itoa(int(r)) + ")"
+	}
 }
 
 // Money represents a monetary value in a specific currency.
@@ -304,9 +334,9 @@ func (m Money[T]) scale(numerator, denominator int64, mode RoundingMode) (Money[
 	if !mode.valid() {
 		return Money[T]{}, ErrInvalidRoundingMode
 	}
-	result, ok := mulDivRound(m.amount, numerator, denominator, mode)
-	if !ok {
-		return Money[T]{}, ErrOverflow
+	result, err := mulDivRound(m.amount, numerator, denominator, mode)
+	if err != nil {
+		return Money[T]{}, err
 	}
 	return Money[T]{amount: result}, nil
 }
@@ -363,9 +393,9 @@ func (m Money[T]) RoundCash(mode RoundingMode) (Money[T], error) {
 	}
 
 	increment := rounder.CashIncrement()
-	steps, ok := mulDivRound(m.amount, 1, increment, mode)
-	if !ok {
-		return Money[T]{}, ErrOverflow
+	steps, err := mulDivRound(m.amount, 1, increment, mode)
+	if err != nil {
+		return Money[T]{}, err
 	}
 	result, ok := mul64(steps, increment)
 	if !ok {
@@ -547,13 +577,14 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode Roundin
 	var to T
 	shift := to.MinorUnits() - from.MinorUnits()
 
-	roundedAmount, ok := mulDivRoundShift(m.amount, ratio.Numerator, ratio.Denominator, shift, mode)
-	if !ok {
-		return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
+	roundedAmount, err := mulDivRoundShift(m.amount, ratio.Numerator, ratio.Denominator, shift, mode)
+	if err != nil {
+		return Money[T]{}, ConversionResult[F, T]{}, err
 	}
 
 	actualRate := ratio
 	if m.amount != 0 {
+		var ok bool
 		actualRate, ok = appliedRatio[F, T](roundedAmount, m.amount, shift)
 		if !ok {
 			return Money[T]{}, ConversionResult[F, T]{}, ErrOverflow
@@ -568,8 +599,8 @@ func Convert[F, T currency.Currency](m Money[F], ratio Ratio[F, T], mode Roundin
 	return NewMoney[T](roundedAmount), result, nil
 }
 
-// mulDivRoundShift returns a*n*10^shift/d rounded with mode. It reports false if the result does not fit in int64.
-func mulDivRoundShift(a, n, d int64, shift int, mode RoundingMode) (int64, bool) {
+// mulDivRoundShift returns a*n*10^shift/d rounded with mode.
+func mulDivRoundShift(a, n, d int64, shift int, mode RoundingMode) (int64, error) {
 	scaledN, scaledD, ok := n, d, true
 	switch {
 	case shift > 0:
@@ -590,10 +621,13 @@ func mulDivRoundShift(a, n, d int64, shift int, mode RoundingMode) (int64, bool)
 		den.Mul(den, pow)
 	}
 	q, err := divideWithRounding(num, den, mode)
-	if err != nil || !q.IsInt64() {
-		return 0, false
+	if err != nil {
+		return 0, err
 	}
-	return q.Int64(), true
+	if !q.IsInt64() {
+		return 0, ErrOverflow
+	}
+	return q.Int64(), nil
 }
 
 // appliedRatio returns the rate result/amount in major units, in lowest terms and with a positive denominator.
@@ -634,6 +668,9 @@ func divideWithRounding(numerator, denominator *big.Int, mode RoundingMode) (*bi
 
 	if r.Sign() == 0 || mode == RoundTruncate {
 		return q, nil
+	}
+	if mode == RoundUnnecessary {
+		return nil, ErrInexact
 	}
 
 	absRem := new(big.Int).Abs(r)

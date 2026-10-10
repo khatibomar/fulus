@@ -1,6 +1,7 @@
 package fulus
 
 import (
+	"errors"
 	"math"
 	"math/big"
 	"testing"
@@ -44,15 +45,21 @@ func checkMulDivRound(t *testing.T, a, n, d int64) {
 	}
 
 	product := new(big.Int).Mul(big.NewInt(a), big.NewInt(n))
-	for mode := RoundTruncate; mode <= RoundFloor; mode++ {
-		got, gotOK := mulDivRound(a, n, d, mode)
-		ref, err := divideWithRounding(product, big.NewInt(d), mode)
-		if err != nil {
-			t.Fatalf("reference error: %v", err)
+	for mode := RoundTruncate; mode <= RoundUnnecessary; mode++ {
+		got, gotErr := mulDivRound(a, n, d, mode)
+		ref, refErr := divideWithRounding(product, big.NewInt(d), mode)
+		var want int64
+		wantErr := refErr
+		if trunc, _ := divideWithRounding(product, big.NewInt(d), RoundTruncate); !trunc.IsInt64() {
+			wantErr = ErrOverflow
+		} else if refErr == nil {
+			var ok bool
+			if want, ok = bigResult(ref); !ok {
+				wantErr = ErrOverflow
+			}
 		}
-		want, wantOK := bigResult(ref)
-		if gotOK != wantOK || (gotOK && got != want) {
-			t.Errorf("mulDivRound(%d, %d, %d, %d) = %d, %v; want %d, %v", a, n, d, mode, got, gotOK, want, wantOK)
+		if !errors.Is(gotErr, wantErr) || (gotErr == nil && got != want) {
+			t.Errorf("mulDivRound(%d, %d, %d, %v) = %d, %v; want %d, %v", a, n, d, mode, got, gotErr, want, wantErr)
 		}
 	}
 }

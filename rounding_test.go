@@ -195,3 +195,48 @@ func TestRoundCash(t *testing.T) {
 		})
 	}
 }
+
+func TestRoundingModeValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		amount  int64
+		mode    RoundingMode
+		want    int64
+		wantErr error
+	}{
+		{name: "zero mode", amount: 5, mode: 0, wantErr: ErrInvalidRoundingMode},
+		{name: "unnecessary exact", amount: 6, mode: RoundUnnecessary, want: 3},
+		{name: "unnecessary inexact", amount: 5, mode: RoundUnnecessary, wantErr: ErrInexact},
+		{name: "unnecessary negative inexact", amount: -5, mode: RoundUnnecessary, wantErr: ErrInexact},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := NewMoney[currency.USD](tt.amount).Div(2, tt.mode)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("Div() error = %v, expected %v", err, tt.wantErr)
+			}
+			if err == nil && got.Amount() != tt.want {
+				t.Errorf("Div() = %d, expected %d", got.Amount(), tt.want)
+			}
+		})
+	}
+}
+
+func TestRoundingModeString(t *testing.T) {
+	t.Parallel()
+
+	tests := map[RoundingMode]string{
+		RoundTruncate:    "Truncate",
+		RoundHalfEven:    "HalfEven",
+		RoundUnnecessary: "Unnecessary",
+		0:                "RoundingMode(0)",
+	}
+	for mode, want := range tests {
+		if got := mode.String(); got != want {
+			t.Errorf("String() = %q, expected %q", got, want)
+		}
+	}
+}
