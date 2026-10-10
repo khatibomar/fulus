@@ -135,6 +135,20 @@ c, ok := reg.ByCode("KANNA")
 price, err := fulus.NewAnyMoneyFromDecimal("12.50", c)
 ```
 
+`ParseAnyMoneyIn`, `UnmarshalJSONIn` and `ScanColumnsIn` find the currency code in a registry that you give.
+`ParseAnyMoney`, `UnmarshalJSON` and `ScanColumns` use `currency.Default()`.
+To decode a field of a struct with a registry, decode the field into a `json.RawMessage` first:
+
+```go
+var req struct {
+	Price json.RawMessage `json:"price"`
+}
+err := json.Unmarshal(body, &req)
+
+var price fulus.AnyMoney
+err = price.UnmarshalJSONIn(req.Price, reg)
+```
+
 `AnyMoney` uses the same JSON form as `Money[T]`: `{"amount":"12.50","currency":"EUR"}`.
 The amount is a decimal string, so it does not lose digits in JavaScript and does not depend on the minor units of the reader.
 The currency code is not case-sensitive. A JSON `null` does not change the value. Use `NullMoney[T]` to tell `null` from zero.
@@ -240,7 +254,8 @@ SQLite gives a `float64` for a `NUMERIC` value with a fraction, and an `int64` f
 `Scan` accepts a `float64` only if it has at most 15 significant digits, because a `float64` always keeps 15 digits.
 In SQLite, use a `TEXT` column or `BigintMoney[T]`.
 
-For an `AnyMoney` in two columns, an amount and a currency code, use `ScanColumns`:
+For an `AnyMoney` in two columns, an amount and a currency code, use `ScanColumns`.
+Use `ScanColumnsIn` to find the code in a registry other than `currency.Default()`.
 
 ```go
 var price fulus.AnyMoney

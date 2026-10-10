@@ -392,3 +392,84 @@ func TestAnyMoneyAccessors(t *testing.T) {
 		t.Errorf("NewAnyMoneyFromDecimal() with nil currency error = %v", err)
 	}
 }
+
+// tenantPoints is a custom currency that only a tenant registry has.
+type tenantPoints struct{}
+
+func (tenantPoints) Code() string    { return "PTS" }
+func (tenantPoints) MinorUnits() int { return 3 }
+
+func TestAnyMoneyRegistry(t *testing.T) {
+	t.Parallel()
+
+	reg, err := currency.NewRegistry(tenantPoints{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decoders := []struct {
+		name   string
+		decode func(amount, code string, r *currency.Registry) (AnyMoney, error)
+	}{
+		{name: "parse", decode: ParseAnyMoneyIn},
+		{
+			name: "JSON",
+			decode: func(amount, code string, r *currency.Registry) (AnyMoney, error) {
+				var m AnyMoney
+				data, err := json.Marshal(moneyJSON{Amount: amount, Currency: code})
+				if err != nil {
+					return AnyMoney{}, err
+				}
+				err = m.UnmarshalJSONIn(data, r)
+				return m, err
+			},
+		},
+		{
+			name: "SQL",
+			decode: func(amount, code string, r *currency.Registry) (AnyMoney, error) {
+				var m AnyMoney
+				amountColumn, codeColumn := m.ScanColumnsIn(r)
+				if err := amountColumn.Scan(amount); err != nil {
+					return AnyMoney{}, err
+				}
+				err := codeColumn.Scan(code)
+				return m, err
+			},
+		},
+	}
+	tests := []struct {
+		name     string
+		code     string
+		registry *currency.Registry
+		want     string
+		wantErr  error
+	}{
+		{name: "custom code", code: "pts", registry: reg, want: "PTS 1.500"},
+		{name: "code only in default", code: "USD", registry: reg, wantErr: ErrUnknownCurrency},
+		{name: "default registry", code: "USD", registry: currency.Default(), want: "USD 1.50"},
+		{name: "nil registry", code: "USD", wantErr: ErrUnknownCurrency},
+	}
+	for _, d := range decoders {
+		for _, tt := range tests {
+			t.Run(d.name+"/"+tt.name, func(t *testing.T) {
+				t.Parallel()
+				got, err := d.decode("1.5", tt.code, tt.registry)
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("error = %v, want %v", err, tt.wantErr)
+				}
+				if err == nil && got.String() != tt.want {
+					t.Errorf("got %v, want %s", got, tt.want)
+				}
+			})
+		}
+	}
+}
+
+func TestAnyMoneyUnmarshalJSONInNull(t *testing.T) {
+	t.Parallel()
+
+	m := NewAnyMoney(5, currency.EUR{})
+	if err := m.UnmarshalJSONIn([]byte("null"), nil); err != nil || m.String() != "EUR 0.05" {
+		t.Errorf("UnmarshalJSONIn(null) = %v, %v; want EUR 0.05, nil", m, err)
+	}
+}
