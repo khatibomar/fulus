@@ -378,8 +378,15 @@ func TestAnyMoneyAccessors(t *testing.T) {
 	}
 
 	b, err := json.Marshal(AnyMoney{})
-	if err != nil || string(b) != `{"amount":"0","currency":""}` {
+	if err != nil || string(b) != `null` {
 		t.Errorf("Marshal() of the zero value = %s, %v", b, err)
+	}
+	var zero AnyMoney
+	if err := json.Unmarshal(b, &zero); err != nil || zero != (AnyMoney{}) {
+		t.Errorf("Unmarshal() of the zero value = %v, %v", zero, err)
+	}
+	if _, err := json.Marshal(NewAnyMoney(5, nil)); !errors.Is(err, ErrUnknownCurrency) {
+		t.Errorf("Marshal() of an amount without a currency error = %v", err)
 	}
 	if _, err := NewAnyMoneyFromDecimal("1", nil); !errors.Is(err, ErrUnknownCurrency) {
 		t.Errorf("NewAnyMoneyFromDecimal() with nil currency error = %v", err)

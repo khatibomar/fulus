@@ -239,9 +239,14 @@ func (m AnyMoney) String() string {
 }
 
 // MarshalJSON implements json.Marshaler with the same form as Money.
+// The zero value gives null, which UnmarshalJSON reads back as the zero value.
+// Returns ErrUnknownCurrency for an amount that is not zero and has no currency.
 func (m AnyMoney) MarshalJSON() ([]byte, error) {
 	if m.currency == nil {
-		return marshalMoneyJSON(m.amount, 0, "")
+		if !m.amount.isZero() {
+			return nil, fmt.Errorf("%w: amount %s has no currency", ErrUnknownCurrency, m.Decimal())
+		}
+		return []byte("null"), nil
 	}
 	return marshalMoneyJSON(m.amount, m.currency.MinorUnits(), m.currency.Code())
 }
