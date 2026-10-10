@@ -54,7 +54,8 @@ If ICU does not agree with the CLDR data for a good reason, add the case to `icu
 - Call `t.Parallel()` in each test that can run in parallel.
 - Do not test the standard library.
 - Add an `Example` function for a new exported function.
-- For arithmetic, add a fuzz test or extend one that compares the result with `math/big`.
+- For arithmetic, extend `checkMoneyOps` in `differential_test.go`. It compares each operation and each rounding mode
+  with an independent `math/big` reference. `FuzzDifferential` runs it with random values.
 
 ## Documentation and comments
 
