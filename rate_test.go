@@ -60,6 +60,7 @@ func TestParseRate(t *testing.T) {
 		{name: "zero", rate: "0", wantErr: ErrInvalidExchangeRate},
 		{name: "invalid", rate: "abc", wantErr: ErrInvalidExchangeRate},
 		{name: "too many digits", rate: "0.0000000000000000000001", wantErr: ErrOverflow},
+		{name: "exponent", rate: "1e999999999", wantErr: ErrInvalidExchangeRate},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

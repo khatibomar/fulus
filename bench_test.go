@@ -45,14 +45,15 @@ func BenchmarkArithmetic(b *testing.B) {
 			benchMoney, benchErr = m.Div(7, RoundHalfEven)
 		}
 	})
-	b.Run("MulFrac", func(b *testing.B) {
+	tax := MustParseFactor("0.0825")
+	b.Run("MulFactor", func(b *testing.B) {
 		for b.Loop() {
-			benchMoney, benchErr = m.MulFrac(15, 100, RoundHalfUp)
+			benchMoney, benchErr = m.MulFactor(tax, RoundHalfUp)
 		}
 	})
-	b.Run("MulDecimal", func(b *testing.B) {
+	b.Run("ParseFactor", func(b *testing.B) {
 		for b.Loop() {
-			benchMoney, benchErr = m.MulDecimal("0.0825", RoundHalfUp)
+			tax, benchErr = ParseFactor("0.0825")
 		}
 	})
 	b.Run("Convert", func(b *testing.B) {

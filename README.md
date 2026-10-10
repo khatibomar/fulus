@@ -182,9 +182,12 @@ usd20, err = usd10.Mul(2)
 // Division with explicit rounding
 usd5, err := usd10.Div(2, fulus.RoundHalfUp)
 
-// Multiplication by a fraction or a decimal, with explicit rounding
-tip, err := usd10.MulFrac(15, 100, fulus.RoundHalfEven)   // $1.50
-tax, err := usd10.MulDecimal("0.0825", fulus.RoundHalfUp) // $0.83
+// Multiplication by a Factor, with explicit rounding.
+// Parse a Factor one time, for example in a package-level variable.
+var salesTax = fulus.MustParseFactor("8.25%")
+tip, err := usd10.MulFactor(fulus.Percent(15), fulus.RoundHalfEven) // $1.50
+tax, err := usd10.MulFactor(salesTax, fulus.RoundHalfUp)            // $0.83
+fee, err := usd10.MulFactor(fulus.Bps(25), fulus.RoundHalfUp)       // $0.03
 
 // Sum, Min and Max
 total, err := fulus.Sum(usd10, usd20, usd5)
@@ -363,8 +366,7 @@ Results of `go test -bench . -benchmem` on an AMD Ryzen AI 9 HX PRO 370:
 | Operation | Time | Allocations |
 |-----------|------|-------------|
 | `Add`, `Sub`, `Mul` | 1–2 ns | 0 |
-| `Div`, `MulFrac` | 5 ns | 0 |
-| `MulDecimal("0.0825")` | 8 ns | 0 |
+| `Div`, `MulFactor` | 5 ns | 0 |
 | `Convert` | 34 ns | 0 |
 | `Allocate` (3 parts) | 29 ns | 1 |
 | `Format` | 120 ns | 1 |

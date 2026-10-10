@@ -65,7 +65,7 @@ var (
 	// ErrInvalidExchangeRate indicates an exchange rate that is not positive, cannot be parsed, or is the zero Rate
 	ErrInvalidExchangeRate = errors.New("invalid exchange rate")
 
-	// ErrInvalidFactor indicates a multiplication factor that cannot be parsed
+	// ErrInvalidFactor indicates a factor that cannot be parsed, or the zero Factor
 	ErrInvalidFactor = errors.New("invalid factor")
 
 	// ErrCurrencyMismatch indicates a value in a different currency than expected
@@ -235,43 +235,14 @@ func (m Money[T]) Div(divisor int64, mode RoundingMode) (Money[T], error) {
 	return m.scale(1, divisor, mode)
 }
 
-// MulFrac multiplies the Money value by numerator/denominator and rounds the result with mode.
-// For example, MulFrac(15, 100, RoundHalfEven) gives 15 percent of the value.
-// Returns ErrDivisionByZero if denominator is 0.
-// Returns ErrOverflow if the result does not fit in int64.
-func (m Money[T]) MulFrac(numerator, denominator int64, mode RoundingMode) (Money[T], error) {
-	if denominator == 0 {
-		return Money[T]{}, ErrDivisionByZero
+// MulFactor multiplies the Money value by f and rounds the result with mode.
+// For example, m.MulFactor(fulus.Percent(15), fulus.RoundHalfEven) gives 15 percent of m.
+// Returns ErrInvalidFactor for the zero Factor and ErrOverflow if the result does not fit.
+func (m Money[T]) MulFactor(f Factor, mode RoundingMode) (Money[T], error) {
+	if f.den == 0 {
+		return Money[T]{}, ErrInvalidFactor
 	}
-	return m.scale(numerator, denominator, mode)
-}
-
-// MulDecimal multiplies the Money value by a decimal factor such as "0.0825" and rounds the result with mode.
-// The factor can also be a fraction such as "1/3".
-// Returns ErrInvalidFactor if the factor cannot be parsed.
-// Returns ErrOverflow if the result does not fit in int64.
-func (m Money[T]) MulDecimal(factor string, mode RoundingMode) (Money[T], error) {
-	if numerator, denominator, ok := parseFactor(factor); ok {
-		return m.scale(numerator, denominator, mode)
-	}
-
-	r, ok := new(big.Rat).SetString(factor)
-	if !ok {
-		return Money[T]{}, fmt.Errorf("%w: %q", ErrInvalidFactor, factor)
-	}
-	if r.Num().IsInt64() && r.Denom().IsInt64() {
-		return m.scale(r.Num().Int64(), r.Denom().Int64(), mode)
-	}
-
-	product := new(big.Int).Mul(big.NewInt(m.amount), r.Num())
-	result, err := divideWithRounding(product, r.Denom(), mode)
-	if err != nil {
-		return Money[T]{}, err
-	}
-	if !result.IsInt64() {
-		return Money[T]{}, ErrOverflow
-	}
-	return Money[T]{amount: result.Int64()}, nil
+	return m.scale(f.num, f.den, mode)
 }
 
 // scale returns m*numerator/denominator rounded with mode. The denominator must not be zero.
@@ -284,43 +255,6 @@ func (m Money[T]) scale(numerator, denominator int64, mode RoundingMode) (Money[
 		return Money[T]{}, err
 	}
 	return Money[T]{amount: result}, nil
-}
-
-// parseFactor parses a short decimal factor such as "-0.0825" into numerator/denominator without allocation.
-// It reports false for other forms, which MulDecimal parses with math/big.
-func parseFactor(s string) (numerator, denominator int64, ok bool) {
-	negative := false
-	if s != "" && (s[0] == '-' || s[0] == '+') {
-		negative = s[0] == '-'
-		s = s[1:]
-	}
-	if s == "" || len(s) > 18 {
-		return 0, 0, false
-	}
-
-	denominator = 1
-	seenDigit, seenPoint := false, false
-	for i := range len(s) {
-		switch c := s[i]; {
-		case c >= '0' && c <= '9':
-			numerator = numerator*10 + int64(c-'0')
-			if seenPoint {
-				denominator *= 10
-			}
-			seenDigit = true
-		case c == '.' && !seenPoint:
-			seenPoint = true
-		default:
-			return 0, 0, false
-		}
-	}
-	if !seenDigit {
-		return 0, 0, false
-	}
-	if negative {
-		numerator = -numerator
-	}
-	return numerator, denominator, true
 }
 
 // RoundCash rounds the Money value to the smallest cash amount of the currency, with mode.

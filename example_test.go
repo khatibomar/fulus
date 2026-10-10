@@ -9,9 +9,9 @@ import (
 	"github.com/khatibomar/fulus/locale"
 )
 
-func ExampleMoney_MulDecimal() {
+func ExampleMoney_MulFactor() {
 	price := fulus.NewMoney[currency.USD](1000)
-	tax, err := price.MulDecimal("0.0825", fulus.RoundHalfUp)
+	tax, err := price.MulFactor(fulus.MustParseFactor("8.25%"), fulus.RoundHalfUp)
 	if err != nil {
 		panic(err)
 	}
