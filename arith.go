@@ -25,19 +25,32 @@ func mul64(a, b int64) (int64, bool) {
 
 // mulDivRound returns a*n/d rounded with mode. The product a*n uses 128 bits, so it cannot overflow.
 // The caller must check that d is not zero and that mode is valid.
-// It reports false if the result does not fit in int64.
-func mulDivRound(a, n, d int64, mode RoundingMode) (int64, bool) {
+// It returns ErrOverflow if the result does not fit in int64,
+// and ErrInexact if mode is RoundUnnecessary and the result is not exact.
+func mulDivRound(a, n, d int64, mode RoundingMode) (int64, error) {
 	q, r, negative, ok := mulDiv(a, n, d)
 	if !ok {
-		return 0, false
+		return 0, ErrOverflow
 	}
-	if r != 0 && roundAwayFromZero(mode, q, r, abs64(d), negative) {
-		q++
-		if q == 0 {
-			return 0, false
+	if r != 0 {
+		if mode == RoundUnnecessary {
+			if _, ok := fromMagnitude(q, negative); !ok {
+				return 0, ErrOverflow
+			}
+			return 0, ErrInexact
+		}
+		if roundAwayFromZero(mode, q, r, abs64(d), negative) {
+			q++
+			if q == 0 {
+				return 0, ErrOverflow
+			}
 		}
 	}
-	return fromMagnitude(q, negative)
+	result, ok := fromMagnitude(q, negative)
+	if !ok {
+		return 0, ErrOverflow
+	}
+	return result, nil
 }
 
 // mulDiv returns the magnitudes of the truncated quotient and the remainder of a*n/d,

@@ -46,7 +46,7 @@ The product amount × n uses 128 bits, so it cannot overflow before the division
 `MulDecimal` reads the factor as an exact fraction. It does not use floating point.
 A factor whose numerator or denominator does not fit in `int64` uses `math/big`.
 
-An unknown mode gives `ErrInvalidRoundingMode`. A zero divisor gives `ErrDivisionByZero` or `ErrZeroDenominator`.
+An unknown mode or the zero mode gives `ErrInvalidRoundingMode`. A zero divisor gives `ErrDivisionByZero` or `ErrZeroDenominator`.
 
 ## Rounding modes
 
@@ -61,6 +61,10 @@ The table shows the result in minor units for three exact results.
 | `RoundUp` | 3 | -3 | 4 | Away from zero. |
 | `RoundCeiling` | 3 | -2 | 4 | Toward positive infinity. |
 | `RoundFloor` | 2 | -3 | 3 | Toward negative infinity. |
+| `RoundUnnecessary` | `ErrInexact` | `ErrInexact` | `ErrInexact` | No rounding. An exact result does not change. |
+
+The zero `RoundingMode` is not a valid mode. An operation with an unset mode returns `ErrInvalidRoundingMode`.
+Use `RoundUnnecessary` when the result must be exact, for example to check that a total divides into equal parts.
 
 A tie is an exact result that is half way between two minor units.
 `RoundHalfEven` is also known as banker's rounding. Use it when many rounded values are added, because it has no bias.
