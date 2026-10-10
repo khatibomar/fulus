@@ -154,7 +154,7 @@ func TestAnyMoneyJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	if string(b) != `{"amount":"1050","currency":"EUR"}` {
+	if string(b) != `{"amount":"10.50","currency":"EUR"}` {
 		t.Fatalf("Marshal() = %s", b)
 	}
 
@@ -170,9 +170,10 @@ func TestAnyMoneyJSON(t *testing.T) {
 		code    string
 		wantErr error
 	}{
-		{name: "valid", input: `{"amount":"-7","currency":"KWD"}`, want: -7, code: "KWD"},
+		{name: "valid", input: `{"amount":"-0.007","currency":"KWD"}`, want: -7, code: "KWD"},
 		{name: "unknown currency", input: `{"amount":"1","currency":"XYZ"}`, wantErr: ErrUnknownCurrency},
-		{name: "invalid amount", input: `{"amount":"1.5","currency":"USD"}`, wantErr: ErrInvalidAmountFormat},
+		{name: "invalid amount", input: `{"amount":"1.5x","currency":"USD"}`, wantErr: ErrInvalidAmountFormat},
+		{name: "too many fraction digits", input: `{"amount":"1.555","currency":"USD"}`, wantErr: ErrScaleMismatch},
 	}
 
 	for _, tt := range tests {

@@ -579,8 +579,8 @@ func TestMoneyValueAndScan(t *testing.T) {
 		{name: "negative int64", value: int64(-99), want: -99},
 		{name: "integer bytes", value: []byte("1050"), want: 1050},
 		{name: "integer string", value: "-7", want: -7},
-		{name: "legacy JSON string", value: `{"amount":"100","currency":"USD"}`, want: 100},
-		{name: "legacy JSON bytes", value: []byte(`{"amount":"100","currency":"USD"}`), want: 100},
+		{name: "JSON string", value: `{"amount":"1.00","currency":"USD"}`, want: 100},
+		{name: "JSON bytes", value: []byte(`{"amount":"1.00","currency":"USD"}`), want: 100},
 		{name: "nil", value: nil, wantErr: true},
 		{name: "currency mismatch", value: `{"amount":"100","currency":"EUR"}`, wantErr: true},
 		{name: "invalid text", value: "12.50", wantErr: true},
@@ -620,7 +620,7 @@ func TestZeroValueMoney(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshal() error = %v", err)
 	}
-	if string(b) != `{"amount":"0","currency":"USD"}` {
+	if string(b) != `{"amount":"0.00","currency":"USD"}` {
 		t.Errorf("Marshal() = %s", b)
 	}
 }
@@ -635,17 +635,17 @@ func TestJSON(t *testing.T) {
 		{
 			name:     "marshal simple",
 			money:    NewMoney[currency.USD](1050),
-			expected: `{"amount":"1050","currency":"USD"}`,
+			expected: `{"amount":"10.50","currency":"USD"}`,
 		},
 		{
 			name:     "marshal zero",
 			money:    NewMoney[currency.USD](0),
-			expected: `{"amount":"0","currency":"USD"}`,
+			expected: `{"amount":"0.00","currency":"USD"}`,
 		},
 		{
 			name:     "marshal negative",
 			money:    NewMoney[currency.USD](-1050),
-			expected: `{"amount":"-1050","currency":"USD"}`,
+			expected: `{"amount":"-10.50","currency":"USD"}`,
 		},
 	}
 
@@ -673,11 +673,41 @@ func TestJSON(t *testing.T) {
 	}
 }
 
-func TestJSONInvalidAmount(t *testing.T) {
-	var unmarshaledMoney Money[currency.USD]
-	err := json.Unmarshal([]byte(`{"amount":"10oops","currency":"USD"}`), &unmarshaledMoney)
-	if err == nil {
-		t.Fatal("expected error for invalid amount format")
+func TestUnmarshalJSON(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		input   string
+		want    int64
+		wantErr error
+	}{
+		{name: "fewer fraction digits", input: `{"amount":"10.5","currency":"USD"}`, want: 1050},
+		{name: "integer", input: `{"amount":"10","currency":"USD"}`, want: 1000},
+		{name: "invalid amount", input: `{"amount":"10oops","currency":"USD"}`, wantErr: ErrInvalidAmountFormat},
+		{name: "too many fraction digits", input: `{"amount":"10.505","currency":"USD"}`, wantErr: ErrScaleMismatch},
+		{name: "currency mismatch", input: `{"amount":"10.50","currency":"EUR"}`, wantErr: ErrCurrencyMismatch},
+		{name: "missing currency", input: `{"amount":"10.50"}`, wantErr: ErrCurrencyMismatch},
+		{name: "number amount", input: `{"amount":10.50,"currency":"USD"}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			var m Money[currency.USD]
+			err := json.Unmarshal([]byte(tt.input), &m)
+			if tt.name == "number amount" {
+				if err == nil {
+					t.Fatal("Unmarshal() of a JSON number amount succeeded")
+				}
+				return
+			}
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("Unmarshal() error = %v, want %v", err, tt.wantErr)
+			}
+			if err == nil && m.amount64() != tt.want {
+				t.Errorf("Unmarshal() = %d, want %d", m.amount64(), tt.want)
+			}
+		})
 	}
 }
 
@@ -1033,14 +1063,28 @@ func TestGeneratedFormatContracts(t *testing.T) {
 }
 
 func FuzzMoneyUnmarshalJSON(f *testing.F) {
-	f.Add("100", "USD")
-	f.Add("-50", "USD")
+	f.Add("1.00", "USD")
+	f.Add("-0.50", "USD")
 	f.Add("abc", "USD")
 
 	f.Fuzz(func(t *testing.T, amount, curr string) {
-		payload := fmt.Sprintf(`{"amount":%q,"currency":%q}`, amount, curr)
+		payload, err := json.Marshal(moneyJSON{Amount: amount, Currency: curr})
+		if err != nil {
+			t.Fatal(err)
+		}
 		var m Money[currency.USD]
-		_ = json.Unmarshal([]byte(payload), &m)
+		if err := json.Unmarshal(payload, &m); err != nil {
+			return
+		}
+		// A value that unmarshals must marshal to the canonical form and unmarshal to the same value.
+		out, err := json.Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var back Money[currency.USD]
+		if err := json.Unmarshal(out, &back); err != nil || back != m {
+			t.Fatalf("round trip of %s: %s, %v", payload, out, err)
+		}
 	})
 }
 

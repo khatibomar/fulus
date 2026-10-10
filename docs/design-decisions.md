@@ -88,12 +88,19 @@ Cost:
 - Fulus writes Latin digits only. It does not write Arabic-Indic or other digits.
 - `locale.Match` does not use the CLDR likely subtags. For example, `zh-TW` gives `zh`, not `zh-Hant`.
 
-## JSON writes the amount as a string
+## JSON writes the amount as a decimal string
 
-`MarshalJSON` writes `{"amount":"1050","currency":"USD"}`. The amount is a string of minor units.
+`MarshalJSON` writes `{"amount":"10.50","currency":"USD"}`. The amount is the canonical decimal in a string.
 
-Why: JavaScript and many JSON parsers read numbers as `float64`. A `float64` is exact only up to 2^53.
-A string keeps all the digits of a 128-bit amount. The currency code lets the reader check the currency.
+Why:
+
+- JavaScript and many JSON parsers read numbers as `float64`. A `float64` is exact only up to 2^53.
+  A string keeps all the digits of a 128-bit amount.
+- A decimal does not depend on the minor units of the reader. If ISO 4217 changes the minor units of a currency,
+  a payload in minor units changes its value without an error. A decimal payload keeps its value,
+  or gives `ErrScaleMismatch` if it has more fraction digits than the reader accepts.
+- Other languages and people can read the payload without a table of minor units.
+- The currency code lets the reader check the currency.
 
 ## SQL stores the minor units only
 
