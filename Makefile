@@ -10,8 +10,10 @@ check-gen:
 	git diff --exit-code -I '^// ISO 4217 Data Last Updated:' -- locale/gen_locale.go currency/gen_currencies.go
 
 fuzz:
-	for target in $$(go test -list '^Fuzz' . | grep '^Fuzz'); do \
-		go test -run '^$$' -fuzz "^$$target$$" -fuzztime $(FUZZ_TIME) . || exit 1; \
+	for pkg in $$(go list ./...); do \
+		for target in $$(go test -list '^Fuzz' $$pkg | grep '^Fuzz'); do \
+			go test -run '^$$' -fuzz "^$$target$$" -fuzztime $(FUZZ_TIME) $$pkg || exit 1; \
+		done; \
 	done
 
 clean:

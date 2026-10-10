@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/khatibomar/fulus/currency"
-	"github.com/khatibomar/fulus/locale"
 )
 
 func TestAnyMoneyConstructors(t *testing.T) {
@@ -133,17 +132,6 @@ func TestAnyMoneyArithmetic(t *testing.T) {
 	}
 	if _, err := usd(1).Cmp(eur); !errors.Is(err, ErrCurrencyMismatch) {
 		t.Errorf("Cmp() mismatch error = %v", err)
-	}
-}
-
-func TestAnyMoneyFormat(t *testing.T) {
-	t.Parallel()
-
-	if got := NewAnyMoney(-123456, currency.CHF{}).Format(locale.DE_CH); got != "CHF-1'234.56" {
-		t.Errorf("Format() = %q", got)
-	}
-	if got := (AnyMoney{amount: int128FromInt64(42)}).String(); got != "42" {
-		t.Errorf("zero currency String() = %q, want %q", got, "42")
 	}
 }
 

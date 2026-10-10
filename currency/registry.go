@@ -30,7 +30,7 @@ var registry = sync.OnceValue(func() *currencyRegistry {
 	}
 	for _, c := range builtin {
 		r.byCode[c.Code()] = c
-		r.byNumber[c.Number()] = c
+		r.byNumber[Number(c)] = c
 	}
 	return r
 })
@@ -61,7 +61,7 @@ func ByNumber(number string) (Currency, bool) {
 }
 
 // Register adds a custom currency, so that ByCode and ByNumber can find it.
-// The code must be upper case. An empty number is permitted, and ByNumber does not find such a currency.
+// The code must be upper case. If c does not implement Numbered or its number is empty, ByNumber does not find it.
 // Register returns ErrDuplicateCurrency if the code or the number is already registered.
 func Register(c Currency) error {
 	code := c.Code()
@@ -76,7 +76,7 @@ func Register(c Currency) error {
 	if _, ok := r.byCode[code]; ok {
 		return fmt.Errorf("%w: code %s", ErrDuplicateCurrency, code)
 	}
-	number := c.Number()
+	number := Number(c)
 	if _, ok := r.byNumber[number]; ok && number != "" {
 		return fmt.Errorf("%w: number %s", ErrDuplicateCurrency, number)
 	}

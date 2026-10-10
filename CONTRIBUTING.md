@@ -32,11 +32,11 @@ When you change the generator or the formatting code, update the ICU golden data
 You need Node.js, because it includes ICU:
 
 ```sh
-node testdata/icu/generate.mjs > testdata/icu/golden.tsv
-go test -run TestFormatMatchesICU .
+node format/testdata/icu/generate.mjs > format/testdata/icu/golden.tsv
+go test -run TestFormatMatchesICU ./format
 ```
 
-If ICU does not agree with the CLDR data for a good reason, add the case to `icuDifferences` in `icu_test.go` with the reason.
+If ICU does not agree with the CLDR data for a good reason, add the case to `icuDifferences` in `format/icu_test.go` with the reason.
 
 ### Minor units
 

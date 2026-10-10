@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	"github.com/khatibomar/fulus/currency"
-	"github.com/khatibomar/fulus/locale"
 )
 
 // AnyMoney is a monetary value with a currency that is known only at run time,
@@ -39,6 +38,15 @@ func ParseAnyMoney(amount, code string) (AnyMoney, error) {
 	c, ok := currency.ByCode(code)
 	if !ok {
 		return AnyMoney{}, fmt.Errorf("%w: %q", ErrUnknownCurrency, code)
+	}
+	return NewAnyMoneyFromDecimal(amount, c)
+}
+
+// NewAnyMoneyFromDecimal parses a canonical decimal amount such as "12.50" in the currency c.
+// The amount format is the same as for ParseMoney.
+func NewAnyMoneyFromDecimal(amount string, c currency.Currency) (AnyMoney, error) {
+	if c == nil {
+		return AnyMoney{}, fmt.Errorf("%w: nil currency", ErrUnknownCurrency)
 	}
 	minor, err := parseDecimal(amount, c.MinorUnits())
 	if err != nil {
@@ -114,12 +122,13 @@ func (m AnyMoney) Cmp(other AnyMoney) (int, error) {
 	return m.amount.cmp(other.amount), nil
 }
 
-// Format returns the value formatted for the locale. The zero value formats as a plain integer.
-func (m AnyMoney) Format(loc locale.Locale) string {
+// Decimal returns the amount as a canonical decimal string such as "-1234.50", like Money.Decimal.
+// The zero value gives the amount in minor units.
+func (m AnyMoney) Decimal() string {
 	if m.currency == nil {
 		return string(appendInt128(nil, m.amount))
 	}
-	return formatAmount(m.amount, m.currency.MinorUnits(), m.currency.FormatInfo(loc))
+	return string(appendDecimal(nil, m.amount, m.currency.MinorUnits()))
 }
 
 // String returns the currency code and the canonical decimal, for example "EUR 12.50".

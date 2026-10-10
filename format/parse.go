@@ -1,32 +1,48 @@
-package fulus
+package format
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/khatibomar/fulus"
 	"github.com/khatibomar/fulus/currency"
 	"github.com/khatibomar/fulus/locale"
 )
 
-// ParseFormatted parses a value in the form that Format writes for the locale, for example "-₹1,23,45,678.90".
+// Parse parses an amount in the form that Money writes for loc, for example "-₹1,23,45,678.90".
 // It ignores spaces and bidirectional marks, and it accepts "-" in place of the minus sign of the locale.
 // Group separators are optional. If they are present, the group sizes must agree with the pattern.
 // A space group separator is ignored and not checked.
 // The fraction can have fewer digits than the minor units, but not more.
-func ParseFormatted[T currency.Unit](s string, loc locale.Locale) (Money[T], error) {
+// Returns fulus.ErrInvalidAmountFormat if s does not agree with the pattern,
+// and fulus.ErrScaleMismatch if the fraction has more digits than the minor units.
+func Parse[T currency.Unit](s string, loc locale.Locale) (fulus.Money[T], error) {
 	var c T
-	minor, err := parseFormatted(s, c.MinorUnits(), c.FormatInfo(loc))
+	decimal, err := parseFormatted(s, InfoFor(c, loc))
 	if err != nil {
-		return Money[T]{}, err
+		return fulus.Money[T]{}, err
 	}
-	return Money[T]{amount: minor}, nil
+	return fulus.ParseMoney[T](decimal)
 }
 
-func parseFormatted(s string, minorUnits int, info currency.FormatInfo) (int128, error) {
-	p := parsePattern(info.Format)
+// ParseAny parses an amount of the currency c in the form that AnyMoney writes for loc, like Parse.
+func ParseAny(s string, c currency.Currency, loc locale.Locale) (fulus.AnyMoney, error) {
+	decimal, err := parseFormatted(s, InfoFor(c, loc))
+	if err != nil {
+		return fulus.AnyMoney{}, err
+	}
+	return fulus.NewAnyMoneyFromDecimal(decimal, c)
+}
+
+// parseFormatted returns the canonical decimal of a formatted amount. It does not check the scale.
+func parseFormatted(s string, info Info) (string, error) {
+	p := parsePattern(info.Pattern)
+	// The affixes use "-" as the minus sign, and the input has the minus sign of the locale replaced with "-".
+	dash := info
+	dash.MinusSign = "-"
 	affix := func(a string, prefix bool) string {
 		var b strings.Builder
-		writeAffix(&b, a, info, prefix)
+		writeAffix(&b, a, dash, prefix)
 		return normalizeFormatted(b.String())
 	}
 	posPrefix, posSuffix := affix(p.posPrefix, true), affix(p.posSuffix, false)
@@ -36,19 +52,22 @@ func parseFormatted(s string, minorUnits int, info currency.FormatInfo) (int128,
 	}
 
 	input := normalizeFormatted(s)
+	if minus := normalizeFormatted(info.MinusSign); minus != "" && minus != "-" {
+		input = strings.ReplaceAll(input, minus, "-")
+	}
 	negative := false
 	body, ok := cutAffixes(input, negPrefix, negSuffix)
 	if ok && (negPrefix != posPrefix || negSuffix != posSuffix) {
 		negative = true
 	} else if body, ok = cutAffixes(input, posPrefix, posSuffix); !ok {
-		return int128{}, fmt.Errorf("%w: %q does not match pattern %q", ErrInvalidAmountFormat, s, info.Format)
+		return "", fmt.Errorf("%w: %q does not match pattern %q", fulus.ErrInvalidAmountFormat, s, info.Pattern)
 	}
 
 	integer, fraction, hasFraction := strings.Cut(body, normalizeFormatted(info.DecimalSeparator))
 	if group := normalizeFormatted(info.GroupSeparator); group != "" && strings.Contains(integer, group) {
 		groups := strings.Split(integer, group)
 		if !validGroups(groups, p.primaryGroup, p.secondaryGroup) {
-			return int128{}, fmt.Errorf("%w: %q has wrong digit grouping", ErrInvalidAmountFormat, s)
+			return "", fmt.Errorf("%w: %q has wrong digit grouping", fulus.ErrInvalidAmountFormat, s)
 		}
 		integer = strings.Join(groups, "")
 	}
@@ -60,7 +79,7 @@ func parseFormatted(s string, minorUnits int, info currency.FormatInfo) (int128,
 	if negative {
 		canonical = "-" + canonical
 	}
-	return parseDecimal(canonical, minorUnits)
+	return canonical, nil
 }
 
 // validGroups reports whether the integer digit groups agree with the group sizes of the pattern.
