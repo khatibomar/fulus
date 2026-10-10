@@ -6,8 +6,6 @@
 
 package currency
 
-import "github.com/khatibomar/fulus/locale"
-
 // builtin holds all generated ISO 4217 currencies, sorted by code.
 var builtin = []Currency{
 	AED{},
@@ -188,7 +186,11 @@ var builtin = []Currency{
 	ZWG{},
 }
 
-var _ Currency = AED{}
+var (
+	_ Currency = AED{}
+	_ Numbered = AED{}
+	_ Named    = AED{}
+)
 
 // AED is the UAE Dirham currency.
 type AED struct{}
@@ -201,9 +203,11 @@ func (AED) Name() string { return "UAE Dirham" }
 
 func (AED) MinorUnits() int { return 2 }
 
-func (AED) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "AED") }
-
-var _ Currency = AFN{}
+var (
+	_ Currency = AFN{}
+	_ Numbered = AFN{}
+	_ Named    = AFN{}
+)
 
 // AFN is the Afghani currency.
 type AFN struct{}
@@ -216,9 +220,11 @@ func (AFN) Name() string { return "Afghani" }
 
 func (AFN) MinorUnits() int { return 2 }
 
-func (AFN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "AFN") }
-
-var _ Currency = ALL{}
+var (
+	_ Currency = ALL{}
+	_ Numbered = ALL{}
+	_ Named    = ALL{}
+)
 
 // ALL is the Lek currency.
 type ALL struct{}
@@ -231,9 +237,11 @@ func (ALL) Name() string { return "Lek" }
 
 func (ALL) MinorUnits() int { return 2 }
 
-func (ALL) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "ALL") }
-
-var _ Currency = AMD{}
+var (
+	_ Currency = AMD{}
+	_ Numbered = AMD{}
+	_ Named    = AMD{}
+)
 
 // AMD is the Armenian Dram currency.
 type AMD struct{}
@@ -246,12 +254,14 @@ func (AMD) Name() string { return "Armenian Dram" }
 
 func (AMD) MinorUnits() int { return 2 }
 
-func (AMD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "AMD") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (AMD) CashIncrement() int64 { return 100 }
 
-var _ Currency = AOA{}
+var (
+	_ Currency = AOA{}
+	_ Numbered = AOA{}
+	_ Named    = AOA{}
+)
 
 // AOA is the Kwanza currency.
 type AOA struct{}
@@ -264,9 +274,11 @@ func (AOA) Name() string { return "Kwanza" }
 
 func (AOA) MinorUnits() int { return 2 }
 
-func (AOA) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "AOA") }
-
-var _ Currency = ARS{}
+var (
+	_ Currency = ARS{}
+	_ Numbered = ARS{}
+	_ Named    = ARS{}
+)
 
 // ARS is the Argentine Peso currency.
 type ARS struct{}
@@ -279,9 +291,11 @@ func (ARS) Name() string { return "Argentine Peso" }
 
 func (ARS) MinorUnits() int { return 2 }
 
-func (ARS) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "ARS") }
-
-var _ Currency = AUD{}
+var (
+	_ Currency = AUD{}
+	_ Numbered = AUD{}
+	_ Named    = AUD{}
+)
 
 // AUD is the Australian Dollar currency.
 type AUD struct{}
@@ -294,9 +308,11 @@ func (AUD) Name() string { return "Australian Dollar" }
 
 func (AUD) MinorUnits() int { return 2 }
 
-func (AUD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "AUD") }
-
-var _ Currency = AWG{}
+var (
+	_ Currency = AWG{}
+	_ Numbered = AWG{}
+	_ Named    = AWG{}
+)
 
 // AWG is the Aruban Florin currency.
 type AWG struct{}
@@ -309,9 +325,11 @@ func (AWG) Name() string { return "Aruban Florin" }
 
 func (AWG) MinorUnits() int { return 2 }
 
-func (AWG) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "AWG") }
-
-var _ Currency = AZN{}
+var (
+	_ Currency = AZN{}
+	_ Numbered = AZN{}
+	_ Named    = AZN{}
+)
 
 // AZN is the Azerbaijan Manat currency.
 type AZN struct{}
@@ -324,9 +342,11 @@ func (AZN) Name() string { return "Azerbaijan Manat" }
 
 func (AZN) MinorUnits() int { return 2 }
 
-func (AZN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "AZN") }
-
-var _ Currency = BAM{}
+var (
+	_ Currency = BAM{}
+	_ Numbered = BAM{}
+	_ Named    = BAM{}
+)
 
 // BAM is the Convertible Mark currency.
 type BAM struct{}
@@ -339,9 +359,11 @@ func (BAM) Name() string { return "Convertible Mark" }
 
 func (BAM) MinorUnits() int { return 2 }
 
-func (BAM) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BAM") }
-
-var _ Currency = BBD{}
+var (
+	_ Currency = BBD{}
+	_ Numbered = BBD{}
+	_ Named    = BBD{}
+)
 
 // BBD is the Barbados Dollar currency.
 type BBD struct{}
@@ -354,9 +376,11 @@ func (BBD) Name() string { return "Barbados Dollar" }
 
 func (BBD) MinorUnits() int { return 2 }
 
-func (BBD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BBD") }
-
-var _ Currency = BDT{}
+var (
+	_ Currency = BDT{}
+	_ Numbered = BDT{}
+	_ Named    = BDT{}
+)
 
 // BDT is the Taka currency.
 type BDT struct{}
@@ -369,9 +393,11 @@ func (BDT) Name() string { return "Taka" }
 
 func (BDT) MinorUnits() int { return 2 }
 
-func (BDT) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BDT") }
-
-var _ Currency = BHD{}
+var (
+	_ Currency = BHD{}
+	_ Numbered = BHD{}
+	_ Named    = BHD{}
+)
 
 // BHD is the Bahraini Dinar currency.
 type BHD struct{}
@@ -384,9 +410,11 @@ func (BHD) Name() string { return "Bahraini Dinar" }
 
 func (BHD) MinorUnits() int { return 3 }
 
-func (BHD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BHD") }
-
-var _ Currency = BIF{}
+var (
+	_ Currency = BIF{}
+	_ Numbered = BIF{}
+	_ Named    = BIF{}
+)
 
 // BIF is the Burundi Franc currency.
 type BIF struct{}
@@ -399,9 +427,11 @@ func (BIF) Name() string { return "Burundi Franc" }
 
 func (BIF) MinorUnits() int { return 0 }
 
-func (BIF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BIF") }
-
-var _ Currency = BMD{}
+var (
+	_ Currency = BMD{}
+	_ Numbered = BMD{}
+	_ Named    = BMD{}
+)
 
 // BMD is the Bermudian Dollar currency.
 type BMD struct{}
@@ -414,9 +444,11 @@ func (BMD) Name() string { return "Bermudian Dollar" }
 
 func (BMD) MinorUnits() int { return 2 }
 
-func (BMD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BMD") }
-
-var _ Currency = BND{}
+var (
+	_ Currency = BND{}
+	_ Numbered = BND{}
+	_ Named    = BND{}
+)
 
 // BND is the Brunei Dollar currency.
 type BND struct{}
@@ -429,9 +461,11 @@ func (BND) Name() string { return "Brunei Dollar" }
 
 func (BND) MinorUnits() int { return 2 }
 
-func (BND) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BND") }
-
-var _ Currency = BOB{}
+var (
+	_ Currency = BOB{}
+	_ Numbered = BOB{}
+	_ Named    = BOB{}
+)
 
 // BOB is the Boliviano currency.
 type BOB struct{}
@@ -444,9 +478,11 @@ func (BOB) Name() string { return "Boliviano" }
 
 func (BOB) MinorUnits() int { return 2 }
 
-func (BOB) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BOB") }
-
-var _ Currency = BOV{}
+var (
+	_ Currency = BOV{}
+	_ Numbered = BOV{}
+	_ Named    = BOV{}
+)
 
 // BOV is the Mvdol currency.
 type BOV struct{}
@@ -459,9 +495,11 @@ func (BOV) Name() string { return "Mvdol" }
 
 func (BOV) MinorUnits() int { return 2 }
 
-func (BOV) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BOV") }
-
-var _ Currency = BRL{}
+var (
+	_ Currency = BRL{}
+	_ Numbered = BRL{}
+	_ Named    = BRL{}
+)
 
 // BRL is the Brazilian Real currency.
 type BRL struct{}
@@ -474,9 +512,11 @@ func (BRL) Name() string { return "Brazilian Real" }
 
 func (BRL) MinorUnits() int { return 2 }
 
-func (BRL) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BRL") }
-
-var _ Currency = BSD{}
+var (
+	_ Currency = BSD{}
+	_ Numbered = BSD{}
+	_ Named    = BSD{}
+)
 
 // BSD is the Bahamian Dollar currency.
 type BSD struct{}
@@ -489,9 +529,11 @@ func (BSD) Name() string { return "Bahamian Dollar" }
 
 func (BSD) MinorUnits() int { return 2 }
 
-func (BSD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BSD") }
-
-var _ Currency = BTN{}
+var (
+	_ Currency = BTN{}
+	_ Numbered = BTN{}
+	_ Named    = BTN{}
+)
 
 // BTN is the Ngultrum currency.
 type BTN struct{}
@@ -504,9 +546,11 @@ func (BTN) Name() string { return "Ngultrum" }
 
 func (BTN) MinorUnits() int { return 2 }
 
-func (BTN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BTN") }
-
-var _ Currency = BWP{}
+var (
+	_ Currency = BWP{}
+	_ Numbered = BWP{}
+	_ Named    = BWP{}
+)
 
 // BWP is the Pula currency.
 type BWP struct{}
@@ -519,9 +563,11 @@ func (BWP) Name() string { return "Pula" }
 
 func (BWP) MinorUnits() int { return 2 }
 
-func (BWP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BWP") }
-
-var _ Currency = BYN{}
+var (
+	_ Currency = BYN{}
+	_ Numbered = BYN{}
+	_ Named    = BYN{}
+)
 
 // BYN is the Belarusian Ruble currency.
 type BYN struct{}
@@ -534,9 +580,11 @@ func (BYN) Name() string { return "Belarusian Ruble" }
 
 func (BYN) MinorUnits() int { return 2 }
 
-func (BYN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BYN") }
-
-var _ Currency = BZD{}
+var (
+	_ Currency = BZD{}
+	_ Numbered = BZD{}
+	_ Named    = BZD{}
+)
 
 // BZD is the Belize Dollar currency.
 type BZD struct{}
@@ -549,9 +597,11 @@ func (BZD) Name() string { return "Belize Dollar" }
 
 func (BZD) MinorUnits() int { return 2 }
 
-func (BZD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "BZD") }
-
-var _ Currency = CAD{}
+var (
+	_ Currency = CAD{}
+	_ Numbered = CAD{}
+	_ Named    = CAD{}
+)
 
 // CAD is the Canadian Dollar currency.
 type CAD struct{}
@@ -564,12 +614,14 @@ func (CAD) Name() string { return "Canadian Dollar" }
 
 func (CAD) MinorUnits() int { return 2 }
 
-func (CAD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CAD") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (CAD) CashIncrement() int64 { return 5 }
 
-var _ Currency = CDF{}
+var (
+	_ Currency = CDF{}
+	_ Numbered = CDF{}
+	_ Named    = CDF{}
+)
 
 // CDF is the Congolese Franc currency.
 type CDF struct{}
@@ -582,9 +634,11 @@ func (CDF) Name() string { return "Congolese Franc" }
 
 func (CDF) MinorUnits() int { return 2 }
 
-func (CDF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CDF") }
-
-var _ Currency = CHE{}
+var (
+	_ Currency = CHE{}
+	_ Numbered = CHE{}
+	_ Named    = CHE{}
+)
 
 // CHE is the WIR Euro currency.
 type CHE struct{}
@@ -597,9 +651,11 @@ func (CHE) Name() string { return "WIR Euro" }
 
 func (CHE) MinorUnits() int { return 2 }
 
-func (CHE) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CHE") }
-
-var _ Currency = CHF{}
+var (
+	_ Currency = CHF{}
+	_ Numbered = CHF{}
+	_ Named    = CHF{}
+)
 
 // CHF is the Swiss Franc currency.
 type CHF struct{}
@@ -612,12 +668,14 @@ func (CHF) Name() string { return "Swiss Franc" }
 
 func (CHF) MinorUnits() int { return 2 }
 
-func (CHF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CHF") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (CHF) CashIncrement() int64 { return 5 }
 
-var _ Currency = CHW{}
+var (
+	_ Currency = CHW{}
+	_ Numbered = CHW{}
+	_ Named    = CHW{}
+)
 
 // CHW is the WIR Franc currency.
 type CHW struct{}
@@ -630,9 +688,11 @@ func (CHW) Name() string { return "WIR Franc" }
 
 func (CHW) MinorUnits() int { return 2 }
 
-func (CHW) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CHW") }
-
-var _ Currency = CLF{}
+var (
+	_ Currency = CLF{}
+	_ Numbered = CLF{}
+	_ Named    = CLF{}
+)
 
 // CLF is the Unidad de Fomento currency.
 type CLF struct{}
@@ -645,9 +705,11 @@ func (CLF) Name() string { return "Unidad de Fomento" }
 
 func (CLF) MinorUnits() int { return 4 }
 
-func (CLF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CLF") }
-
-var _ Currency = CLP{}
+var (
+	_ Currency = CLP{}
+	_ Numbered = CLP{}
+	_ Named    = CLP{}
+)
 
 // CLP is the Chilean Peso currency.
 type CLP struct{}
@@ -660,9 +722,11 @@ func (CLP) Name() string { return "Chilean Peso" }
 
 func (CLP) MinorUnits() int { return 0 }
 
-func (CLP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CLP") }
-
-var _ Currency = CNY{}
+var (
+	_ Currency = CNY{}
+	_ Numbered = CNY{}
+	_ Named    = CNY{}
+)
 
 // CNY is the Yuan Renminbi currency.
 type CNY struct{}
@@ -675,9 +739,11 @@ func (CNY) Name() string { return "Yuan Renminbi" }
 
 func (CNY) MinorUnits() int { return 2 }
 
-func (CNY) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CNY") }
-
-var _ Currency = COP{}
+var (
+	_ Currency = COP{}
+	_ Numbered = COP{}
+	_ Named    = COP{}
+)
 
 // COP is the Colombian Peso currency.
 type COP struct{}
@@ -690,9 +756,11 @@ func (COP) Name() string { return "Colombian Peso" }
 
 func (COP) MinorUnits() int { return 2 }
 
-func (COP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "COP") }
-
-var _ Currency = COU{}
+var (
+	_ Currency = COU{}
+	_ Numbered = COU{}
+	_ Named    = COU{}
+)
 
 // COU is the Unidad de Valor Real currency.
 type COU struct{}
@@ -705,9 +773,11 @@ func (COU) Name() string { return "Unidad de Valor Real" }
 
 func (COU) MinorUnits() int { return 2 }
 
-func (COU) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "COU") }
-
-var _ Currency = CRC{}
+var (
+	_ Currency = CRC{}
+	_ Numbered = CRC{}
+	_ Named    = CRC{}
+)
 
 // CRC is the Costa Rican Colon currency.
 type CRC struct{}
@@ -720,12 +790,14 @@ func (CRC) Name() string { return "Costa Rican Colon" }
 
 func (CRC) MinorUnits() int { return 2 }
 
-func (CRC) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CRC") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (CRC) CashIncrement() int64 { return 100 }
 
-var _ Currency = CUP{}
+var (
+	_ Currency = CUP{}
+	_ Numbered = CUP{}
+	_ Named    = CUP{}
+)
 
 // CUP is the Cuban Peso currency.
 type CUP struct{}
@@ -738,9 +810,11 @@ func (CUP) Name() string { return "Cuban Peso" }
 
 func (CUP) MinorUnits() int { return 2 }
 
-func (CUP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CUP") }
-
-var _ Currency = CVE{}
+var (
+	_ Currency = CVE{}
+	_ Numbered = CVE{}
+	_ Named    = CVE{}
+)
 
 // CVE is the Cabo Verde Escudo currency.
 type CVE struct{}
@@ -753,9 +827,11 @@ func (CVE) Name() string { return "Cabo Verde Escudo" }
 
 func (CVE) MinorUnits() int { return 2 }
 
-func (CVE) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CVE") }
-
-var _ Currency = CZK{}
+var (
+	_ Currency = CZK{}
+	_ Numbered = CZK{}
+	_ Named    = CZK{}
+)
 
 // CZK is the Czech Koruna currency.
 type CZK struct{}
@@ -768,12 +844,14 @@ func (CZK) Name() string { return "Czech Koruna" }
 
 func (CZK) MinorUnits() int { return 2 }
 
-func (CZK) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "CZK") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (CZK) CashIncrement() int64 { return 100 }
 
-var _ Currency = DJF{}
+var (
+	_ Currency = DJF{}
+	_ Numbered = DJF{}
+	_ Named    = DJF{}
+)
 
 // DJF is the Djibouti Franc currency.
 type DJF struct{}
@@ -786,9 +864,11 @@ func (DJF) Name() string { return "Djibouti Franc" }
 
 func (DJF) MinorUnits() int { return 0 }
 
-func (DJF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "DJF") }
-
-var _ Currency = DKK{}
+var (
+	_ Currency = DKK{}
+	_ Numbered = DKK{}
+	_ Named    = DKK{}
+)
 
 // DKK is the Danish Krone currency.
 type DKK struct{}
@@ -801,12 +881,14 @@ func (DKK) Name() string { return "Danish Krone" }
 
 func (DKK) MinorUnits() int { return 2 }
 
-func (DKK) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "DKK") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (DKK) CashIncrement() int64 { return 50 }
 
-var _ Currency = DOP{}
+var (
+	_ Currency = DOP{}
+	_ Numbered = DOP{}
+	_ Named    = DOP{}
+)
 
 // DOP is the Dominican Peso currency.
 type DOP struct{}
@@ -819,9 +901,11 @@ func (DOP) Name() string { return "Dominican Peso" }
 
 func (DOP) MinorUnits() int { return 2 }
 
-func (DOP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "DOP") }
-
-var _ Currency = DZD{}
+var (
+	_ Currency = DZD{}
+	_ Numbered = DZD{}
+	_ Named    = DZD{}
+)
 
 // DZD is the Algerian Dinar currency.
 type DZD struct{}
@@ -834,9 +918,11 @@ func (DZD) Name() string { return "Algerian Dinar" }
 
 func (DZD) MinorUnits() int { return 2 }
 
-func (DZD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "DZD") }
-
-var _ Currency = EGP{}
+var (
+	_ Currency = EGP{}
+	_ Numbered = EGP{}
+	_ Named    = EGP{}
+)
 
 // EGP is the Egyptian Pound currency.
 type EGP struct{}
@@ -849,9 +935,11 @@ func (EGP) Name() string { return "Egyptian Pound" }
 
 func (EGP) MinorUnits() int { return 2 }
 
-func (EGP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "EGP") }
-
-var _ Currency = ERN{}
+var (
+	_ Currency = ERN{}
+	_ Numbered = ERN{}
+	_ Named    = ERN{}
+)
 
 // ERN is the Nakfa currency.
 type ERN struct{}
@@ -864,9 +952,11 @@ func (ERN) Name() string { return "Nakfa" }
 
 func (ERN) MinorUnits() int { return 2 }
 
-func (ERN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "ERN") }
-
-var _ Currency = ETB{}
+var (
+	_ Currency = ETB{}
+	_ Numbered = ETB{}
+	_ Named    = ETB{}
+)
 
 // ETB is the Ethiopian Birr currency.
 type ETB struct{}
@@ -879,9 +969,11 @@ func (ETB) Name() string { return "Ethiopian Birr" }
 
 func (ETB) MinorUnits() int { return 2 }
 
-func (ETB) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "ETB") }
-
-var _ Currency = EUR{}
+var (
+	_ Currency = EUR{}
+	_ Numbered = EUR{}
+	_ Named    = EUR{}
+)
 
 // EUR is the Euro currency.
 type EUR struct{}
@@ -894,9 +986,11 @@ func (EUR) Name() string { return "Euro" }
 
 func (EUR) MinorUnits() int { return 2 }
 
-func (EUR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "EUR") }
-
-var _ Currency = FJD{}
+var (
+	_ Currency = FJD{}
+	_ Numbered = FJD{}
+	_ Named    = FJD{}
+)
 
 // FJD is the Fiji Dollar currency.
 type FJD struct{}
@@ -909,9 +1003,11 @@ func (FJD) Name() string { return "Fiji Dollar" }
 
 func (FJD) MinorUnits() int { return 2 }
 
-func (FJD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "FJD") }
-
-var _ Currency = FKP{}
+var (
+	_ Currency = FKP{}
+	_ Numbered = FKP{}
+	_ Named    = FKP{}
+)
 
 // FKP is the Falkland Islands Pound currency.
 type FKP struct{}
@@ -924,9 +1020,11 @@ func (FKP) Name() string { return "Falkland Islands Pound" }
 
 func (FKP) MinorUnits() int { return 2 }
 
-func (FKP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "FKP") }
-
-var _ Currency = GBP{}
+var (
+	_ Currency = GBP{}
+	_ Numbered = GBP{}
+	_ Named    = GBP{}
+)
 
 // GBP is the Pound Sterling currency.
 type GBP struct{}
@@ -939,9 +1037,11 @@ func (GBP) Name() string { return "Pound Sterling" }
 
 func (GBP) MinorUnits() int { return 2 }
 
-func (GBP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "GBP") }
-
-var _ Currency = GEL{}
+var (
+	_ Currency = GEL{}
+	_ Numbered = GEL{}
+	_ Named    = GEL{}
+)
 
 // GEL is the Lari currency.
 type GEL struct{}
@@ -954,9 +1054,11 @@ func (GEL) Name() string { return "Lari" }
 
 func (GEL) MinorUnits() int { return 2 }
 
-func (GEL) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "GEL") }
-
-var _ Currency = GHS{}
+var (
+	_ Currency = GHS{}
+	_ Numbered = GHS{}
+	_ Named    = GHS{}
+)
 
 // GHS is the Ghana Cedi currency.
 type GHS struct{}
@@ -969,9 +1071,11 @@ func (GHS) Name() string { return "Ghana Cedi" }
 
 func (GHS) MinorUnits() int { return 2 }
 
-func (GHS) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "GHS") }
-
-var _ Currency = GIP{}
+var (
+	_ Currency = GIP{}
+	_ Numbered = GIP{}
+	_ Named    = GIP{}
+)
 
 // GIP is the Gibraltar Pound currency.
 type GIP struct{}
@@ -984,9 +1088,11 @@ func (GIP) Name() string { return "Gibraltar Pound" }
 
 func (GIP) MinorUnits() int { return 2 }
 
-func (GIP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "GIP") }
-
-var _ Currency = GMD{}
+var (
+	_ Currency = GMD{}
+	_ Numbered = GMD{}
+	_ Named    = GMD{}
+)
 
 // GMD is the Dalasi currency.
 type GMD struct{}
@@ -999,9 +1105,11 @@ func (GMD) Name() string { return "Dalasi" }
 
 func (GMD) MinorUnits() int { return 2 }
 
-func (GMD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "GMD") }
-
-var _ Currency = GNF{}
+var (
+	_ Currency = GNF{}
+	_ Numbered = GNF{}
+	_ Named    = GNF{}
+)
 
 // GNF is the Guinean Franc currency.
 type GNF struct{}
@@ -1014,9 +1122,11 @@ func (GNF) Name() string { return "Guinean Franc" }
 
 func (GNF) MinorUnits() int { return 0 }
 
-func (GNF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "GNF") }
-
-var _ Currency = GTQ{}
+var (
+	_ Currency = GTQ{}
+	_ Numbered = GTQ{}
+	_ Named    = GTQ{}
+)
 
 // GTQ is the Quetzal currency.
 type GTQ struct{}
@@ -1029,9 +1139,11 @@ func (GTQ) Name() string { return "Quetzal" }
 
 func (GTQ) MinorUnits() int { return 2 }
 
-func (GTQ) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "GTQ") }
-
-var _ Currency = GYD{}
+var (
+	_ Currency = GYD{}
+	_ Numbered = GYD{}
+	_ Named    = GYD{}
+)
 
 // GYD is the Guyana Dollar currency.
 type GYD struct{}
@@ -1044,12 +1156,14 @@ func (GYD) Name() string { return "Guyana Dollar" }
 
 func (GYD) MinorUnits() int { return 2 }
 
-func (GYD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "GYD") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (GYD) CashIncrement() int64 { return 100 }
 
-var _ Currency = HKD{}
+var (
+	_ Currency = HKD{}
+	_ Numbered = HKD{}
+	_ Named    = HKD{}
+)
 
 // HKD is the Hong Kong Dollar currency.
 type HKD struct{}
@@ -1062,9 +1176,11 @@ func (HKD) Name() string { return "Hong Kong Dollar" }
 
 func (HKD) MinorUnits() int { return 2 }
 
-func (HKD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "HKD") }
-
-var _ Currency = HNL{}
+var (
+	_ Currency = HNL{}
+	_ Numbered = HNL{}
+	_ Named    = HNL{}
+)
 
 // HNL is the Lempira currency.
 type HNL struct{}
@@ -1077,9 +1193,11 @@ func (HNL) Name() string { return "Lempira" }
 
 func (HNL) MinorUnits() int { return 2 }
 
-func (HNL) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "HNL") }
-
-var _ Currency = HTG{}
+var (
+	_ Currency = HTG{}
+	_ Numbered = HTG{}
+	_ Named    = HTG{}
+)
 
 // HTG is the Gourde currency.
 type HTG struct{}
@@ -1092,9 +1210,11 @@ func (HTG) Name() string { return "Gourde" }
 
 func (HTG) MinorUnits() int { return 2 }
 
-func (HTG) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "HTG") }
-
-var _ Currency = HUF{}
+var (
+	_ Currency = HUF{}
+	_ Numbered = HUF{}
+	_ Named    = HUF{}
+)
 
 // HUF is the Forint currency.
 type HUF struct{}
@@ -1107,12 +1227,14 @@ func (HUF) Name() string { return "Forint" }
 
 func (HUF) MinorUnits() int { return 2 }
 
-func (HUF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "HUF") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (HUF) CashIncrement() int64 { return 500 }
 
-var _ Currency = IDR{}
+var (
+	_ Currency = IDR{}
+	_ Numbered = IDR{}
+	_ Named    = IDR{}
+)
 
 // IDR is the Rupiah currency.
 type IDR struct{}
@@ -1125,9 +1247,11 @@ func (IDR) Name() string { return "Rupiah" }
 
 func (IDR) MinorUnits() int { return 2 }
 
-func (IDR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "IDR") }
-
-var _ Currency = ILS{}
+var (
+	_ Currency = ILS{}
+	_ Numbered = ILS{}
+	_ Named    = ILS{}
+)
 
 // ILS is the New Israeli Sheqel currency.
 type ILS struct{}
@@ -1140,9 +1264,11 @@ func (ILS) Name() string { return "New Israeli Sheqel" }
 
 func (ILS) MinorUnits() int { return 2 }
 
-func (ILS) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "ILS") }
-
-var _ Currency = INR{}
+var (
+	_ Currency = INR{}
+	_ Numbered = INR{}
+	_ Named    = INR{}
+)
 
 // INR is the Indian Rupee currency.
 type INR struct{}
@@ -1155,9 +1281,11 @@ func (INR) Name() string { return "Indian Rupee" }
 
 func (INR) MinorUnits() int { return 2 }
 
-func (INR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "INR") }
-
-var _ Currency = IQD{}
+var (
+	_ Currency = IQD{}
+	_ Numbered = IQD{}
+	_ Named    = IQD{}
+)
 
 // IQD is the Iraqi Dinar currency.
 type IQD struct{}
@@ -1170,9 +1298,11 @@ func (IQD) Name() string { return "Iraqi Dinar" }
 
 func (IQD) MinorUnits() int { return 3 }
 
-func (IQD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "IQD") }
-
-var _ Currency = IRR{}
+var (
+	_ Currency = IRR{}
+	_ Numbered = IRR{}
+	_ Named    = IRR{}
+)
 
 // IRR is the Iranian Rial currency.
 type IRR struct{}
@@ -1185,9 +1315,11 @@ func (IRR) Name() string { return "Iranian Rial" }
 
 func (IRR) MinorUnits() int { return 2 }
 
-func (IRR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "IRR") }
-
-var _ Currency = ISK{}
+var (
+	_ Currency = ISK{}
+	_ Numbered = ISK{}
+	_ Named    = ISK{}
+)
 
 // ISK is the Iceland Krona currency.
 type ISK struct{}
@@ -1200,9 +1332,11 @@ func (ISK) Name() string { return "Iceland Krona" }
 
 func (ISK) MinorUnits() int { return 0 }
 
-func (ISK) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "ISK") }
-
-var _ Currency = JMD{}
+var (
+	_ Currency = JMD{}
+	_ Numbered = JMD{}
+	_ Named    = JMD{}
+)
 
 // JMD is the Jamaican Dollar currency.
 type JMD struct{}
@@ -1215,9 +1349,11 @@ func (JMD) Name() string { return "Jamaican Dollar" }
 
 func (JMD) MinorUnits() int { return 2 }
 
-func (JMD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "JMD") }
-
-var _ Currency = JOD{}
+var (
+	_ Currency = JOD{}
+	_ Numbered = JOD{}
+	_ Named    = JOD{}
+)
 
 // JOD is the Jordanian Dinar currency.
 type JOD struct{}
@@ -1230,9 +1366,11 @@ func (JOD) Name() string { return "Jordanian Dinar" }
 
 func (JOD) MinorUnits() int { return 3 }
 
-func (JOD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "JOD") }
-
-var _ Currency = JPY{}
+var (
+	_ Currency = JPY{}
+	_ Numbered = JPY{}
+	_ Named    = JPY{}
+)
 
 // JPY is the Yen currency.
 type JPY struct{}
@@ -1245,9 +1383,11 @@ func (JPY) Name() string { return "Yen" }
 
 func (JPY) MinorUnits() int { return 0 }
 
-func (JPY) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "JPY") }
-
-var _ Currency = KES{}
+var (
+	_ Currency = KES{}
+	_ Numbered = KES{}
+	_ Named    = KES{}
+)
 
 // KES is the Kenyan Shilling currency.
 type KES struct{}
@@ -1260,9 +1400,11 @@ func (KES) Name() string { return "Kenyan Shilling" }
 
 func (KES) MinorUnits() int { return 2 }
 
-func (KES) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "KES") }
-
-var _ Currency = KGS{}
+var (
+	_ Currency = KGS{}
+	_ Numbered = KGS{}
+	_ Named    = KGS{}
+)
 
 // KGS is the Som currency.
 type KGS struct{}
@@ -1275,9 +1417,11 @@ func (KGS) Name() string { return "Som" }
 
 func (KGS) MinorUnits() int { return 2 }
 
-func (KGS) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "KGS") }
-
-var _ Currency = KHR{}
+var (
+	_ Currency = KHR{}
+	_ Numbered = KHR{}
+	_ Named    = KHR{}
+)
 
 // KHR is the Riel currency.
 type KHR struct{}
@@ -1290,9 +1434,11 @@ func (KHR) Name() string { return "Riel" }
 
 func (KHR) MinorUnits() int { return 2 }
 
-func (KHR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "KHR") }
-
-var _ Currency = KMF{}
+var (
+	_ Currency = KMF{}
+	_ Numbered = KMF{}
+	_ Named    = KMF{}
+)
 
 // KMF is the Comorian Franc  currency.
 type KMF struct{}
@@ -1305,9 +1451,11 @@ func (KMF) Name() string { return "Comorian Franc " }
 
 func (KMF) MinorUnits() int { return 0 }
 
-func (KMF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "KMF") }
-
-var _ Currency = KPW{}
+var (
+	_ Currency = KPW{}
+	_ Numbered = KPW{}
+	_ Named    = KPW{}
+)
 
 // KPW is the North Korean Won currency.
 type KPW struct{}
@@ -1320,9 +1468,11 @@ func (KPW) Name() string { return "North Korean Won" }
 
 func (KPW) MinorUnits() int { return 2 }
 
-func (KPW) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "KPW") }
-
-var _ Currency = KRW{}
+var (
+	_ Currency = KRW{}
+	_ Numbered = KRW{}
+	_ Named    = KRW{}
+)
 
 // KRW is the Won currency.
 type KRW struct{}
@@ -1335,9 +1485,11 @@ func (KRW) Name() string { return "Won" }
 
 func (KRW) MinorUnits() int { return 0 }
 
-func (KRW) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "KRW") }
-
-var _ Currency = KWD{}
+var (
+	_ Currency = KWD{}
+	_ Numbered = KWD{}
+	_ Named    = KWD{}
+)
 
 // KWD is the Kuwaiti Dinar currency.
 type KWD struct{}
@@ -1350,9 +1502,11 @@ func (KWD) Name() string { return "Kuwaiti Dinar" }
 
 func (KWD) MinorUnits() int { return 3 }
 
-func (KWD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "KWD") }
-
-var _ Currency = KYD{}
+var (
+	_ Currency = KYD{}
+	_ Numbered = KYD{}
+	_ Named    = KYD{}
+)
 
 // KYD is the Cayman Islands Dollar currency.
 type KYD struct{}
@@ -1365,9 +1519,11 @@ func (KYD) Name() string { return "Cayman Islands Dollar" }
 
 func (KYD) MinorUnits() int { return 2 }
 
-func (KYD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "KYD") }
-
-var _ Currency = KZT{}
+var (
+	_ Currency = KZT{}
+	_ Numbered = KZT{}
+	_ Named    = KZT{}
+)
 
 // KZT is the Tenge currency.
 type KZT struct{}
@@ -1380,9 +1536,11 @@ func (KZT) Name() string { return "Tenge" }
 
 func (KZT) MinorUnits() int { return 2 }
 
-func (KZT) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "KZT") }
-
-var _ Currency = LAK{}
+var (
+	_ Currency = LAK{}
+	_ Numbered = LAK{}
+	_ Named    = LAK{}
+)
 
 // LAK is the Lao Kip currency.
 type LAK struct{}
@@ -1395,9 +1553,11 @@ func (LAK) Name() string { return "Lao Kip" }
 
 func (LAK) MinorUnits() int { return 2 }
 
-func (LAK) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "LAK") }
-
-var _ Currency = LBP{}
+var (
+	_ Currency = LBP{}
+	_ Numbered = LBP{}
+	_ Named    = LBP{}
+)
 
 // LBP is the Lebanese Pound currency.
 type LBP struct{}
@@ -1410,9 +1570,11 @@ func (LBP) Name() string { return "Lebanese Pound" }
 
 func (LBP) MinorUnits() int { return 2 }
 
-func (LBP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "LBP") }
-
-var _ Currency = LKR{}
+var (
+	_ Currency = LKR{}
+	_ Numbered = LKR{}
+	_ Named    = LKR{}
+)
 
 // LKR is the Sri Lanka Rupee currency.
 type LKR struct{}
@@ -1425,9 +1587,11 @@ func (LKR) Name() string { return "Sri Lanka Rupee" }
 
 func (LKR) MinorUnits() int { return 2 }
 
-func (LKR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "LKR") }
-
-var _ Currency = LRD{}
+var (
+	_ Currency = LRD{}
+	_ Numbered = LRD{}
+	_ Named    = LRD{}
+)
 
 // LRD is the Liberian Dollar currency.
 type LRD struct{}
@@ -1440,9 +1604,11 @@ func (LRD) Name() string { return "Liberian Dollar" }
 
 func (LRD) MinorUnits() int { return 2 }
 
-func (LRD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "LRD") }
-
-var _ Currency = LSL{}
+var (
+	_ Currency = LSL{}
+	_ Numbered = LSL{}
+	_ Named    = LSL{}
+)
 
 // LSL is the Loti currency.
 type LSL struct{}
@@ -1455,9 +1621,11 @@ func (LSL) Name() string { return "Loti" }
 
 func (LSL) MinorUnits() int { return 2 }
 
-func (LSL) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "LSL") }
-
-var _ Currency = LYD{}
+var (
+	_ Currency = LYD{}
+	_ Numbered = LYD{}
+	_ Named    = LYD{}
+)
 
 // LYD is the Libyan Dinar currency.
 type LYD struct{}
@@ -1470,9 +1638,11 @@ func (LYD) Name() string { return "Libyan Dinar" }
 
 func (LYD) MinorUnits() int { return 3 }
 
-func (LYD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "LYD") }
-
-var _ Currency = MAD{}
+var (
+	_ Currency = MAD{}
+	_ Numbered = MAD{}
+	_ Named    = MAD{}
+)
 
 // MAD is the Moroccan Dirham currency.
 type MAD struct{}
@@ -1485,9 +1655,11 @@ func (MAD) Name() string { return "Moroccan Dirham" }
 
 func (MAD) MinorUnits() int { return 2 }
 
-func (MAD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MAD") }
-
-var _ Currency = MDL{}
+var (
+	_ Currency = MDL{}
+	_ Numbered = MDL{}
+	_ Named    = MDL{}
+)
 
 // MDL is the Moldovan Leu currency.
 type MDL struct{}
@@ -1500,9 +1672,11 @@ func (MDL) Name() string { return "Moldovan Leu" }
 
 func (MDL) MinorUnits() int { return 2 }
 
-func (MDL) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MDL") }
-
-var _ Currency = MGA{}
+var (
+	_ Currency = MGA{}
+	_ Numbered = MGA{}
+	_ Named    = MGA{}
+)
 
 // MGA is the Malagasy Ariary currency.
 type MGA struct{}
@@ -1515,9 +1689,11 @@ func (MGA) Name() string { return "Malagasy Ariary" }
 
 func (MGA) MinorUnits() int { return 2 }
 
-func (MGA) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MGA") }
-
-var _ Currency = MKD{}
+var (
+	_ Currency = MKD{}
+	_ Numbered = MKD{}
+	_ Named    = MKD{}
+)
 
 // MKD is the Denar currency.
 type MKD struct{}
@@ -1530,9 +1706,11 @@ func (MKD) Name() string { return "Denar" }
 
 func (MKD) MinorUnits() int { return 2 }
 
-func (MKD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MKD") }
-
-var _ Currency = MMK{}
+var (
+	_ Currency = MMK{}
+	_ Numbered = MMK{}
+	_ Named    = MMK{}
+)
 
 // MMK is the Kyat currency.
 type MMK struct{}
@@ -1545,9 +1723,11 @@ func (MMK) Name() string { return "Kyat" }
 
 func (MMK) MinorUnits() int { return 2 }
 
-func (MMK) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MMK") }
-
-var _ Currency = MNT{}
+var (
+	_ Currency = MNT{}
+	_ Numbered = MNT{}
+	_ Named    = MNT{}
+)
 
 // MNT is the Tugrik currency.
 type MNT struct{}
@@ -1560,12 +1740,14 @@ func (MNT) Name() string { return "Tugrik" }
 
 func (MNT) MinorUnits() int { return 2 }
 
-func (MNT) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MNT") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (MNT) CashIncrement() int64 { return 100 }
 
-var _ Currency = MOP{}
+var (
+	_ Currency = MOP{}
+	_ Numbered = MOP{}
+	_ Named    = MOP{}
+)
 
 // MOP is the Pataca currency.
 type MOP struct{}
@@ -1578,9 +1760,11 @@ func (MOP) Name() string { return "Pataca" }
 
 func (MOP) MinorUnits() int { return 2 }
 
-func (MOP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MOP") }
-
-var _ Currency = MRU{}
+var (
+	_ Currency = MRU{}
+	_ Numbered = MRU{}
+	_ Named    = MRU{}
+)
 
 // MRU is the Ouguiya currency.
 type MRU struct{}
@@ -1593,9 +1777,11 @@ func (MRU) Name() string { return "Ouguiya" }
 
 func (MRU) MinorUnits() int { return 2 }
 
-func (MRU) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MRU") }
-
-var _ Currency = MUR{}
+var (
+	_ Currency = MUR{}
+	_ Numbered = MUR{}
+	_ Named    = MUR{}
+)
 
 // MUR is the Mauritius Rupee currency.
 type MUR struct{}
@@ -1608,12 +1794,14 @@ func (MUR) Name() string { return "Mauritius Rupee" }
 
 func (MUR) MinorUnits() int { return 2 }
 
-func (MUR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MUR") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (MUR) CashIncrement() int64 { return 100 }
 
-var _ Currency = MVR{}
+var (
+	_ Currency = MVR{}
+	_ Numbered = MVR{}
+	_ Named    = MVR{}
+)
 
 // MVR is the Rufiyaa currency.
 type MVR struct{}
@@ -1626,9 +1814,11 @@ func (MVR) Name() string { return "Rufiyaa" }
 
 func (MVR) MinorUnits() int { return 2 }
 
-func (MVR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MVR") }
-
-var _ Currency = MWK{}
+var (
+	_ Currency = MWK{}
+	_ Numbered = MWK{}
+	_ Named    = MWK{}
+)
 
 // MWK is the Malawi Kwacha currency.
 type MWK struct{}
@@ -1641,9 +1831,11 @@ func (MWK) Name() string { return "Malawi Kwacha" }
 
 func (MWK) MinorUnits() int { return 2 }
 
-func (MWK) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MWK") }
-
-var _ Currency = MXN{}
+var (
+	_ Currency = MXN{}
+	_ Numbered = MXN{}
+	_ Named    = MXN{}
+)
 
 // MXN is the Mexican Peso currency.
 type MXN struct{}
@@ -1656,9 +1848,11 @@ func (MXN) Name() string { return "Mexican Peso" }
 
 func (MXN) MinorUnits() int { return 2 }
 
-func (MXN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MXN") }
-
-var _ Currency = MXV{}
+var (
+	_ Currency = MXV{}
+	_ Numbered = MXV{}
+	_ Named    = MXV{}
+)
 
 // MXV is the Mexican Unidad de Inversion (UDI) currency.
 type MXV struct{}
@@ -1671,9 +1865,11 @@ func (MXV) Name() string { return "Mexican Unidad de Inversion (UDI)" }
 
 func (MXV) MinorUnits() int { return 2 }
 
-func (MXV) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MXV") }
-
-var _ Currency = MYR{}
+var (
+	_ Currency = MYR{}
+	_ Numbered = MYR{}
+	_ Named    = MYR{}
+)
 
 // MYR is the Malaysian Ringgit currency.
 type MYR struct{}
@@ -1686,9 +1882,11 @@ func (MYR) Name() string { return "Malaysian Ringgit" }
 
 func (MYR) MinorUnits() int { return 2 }
 
-func (MYR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MYR") }
-
-var _ Currency = MZN{}
+var (
+	_ Currency = MZN{}
+	_ Numbered = MZN{}
+	_ Named    = MZN{}
+)
 
 // MZN is the Mozambique Metical currency.
 type MZN struct{}
@@ -1701,9 +1899,11 @@ func (MZN) Name() string { return "Mozambique Metical" }
 
 func (MZN) MinorUnits() int { return 2 }
 
-func (MZN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "MZN") }
-
-var _ Currency = NAD{}
+var (
+	_ Currency = NAD{}
+	_ Numbered = NAD{}
+	_ Named    = NAD{}
+)
 
 // NAD is the Namibia Dollar currency.
 type NAD struct{}
@@ -1716,9 +1916,11 @@ func (NAD) Name() string { return "Namibia Dollar" }
 
 func (NAD) MinorUnits() int { return 2 }
 
-func (NAD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "NAD") }
-
-var _ Currency = NGN{}
+var (
+	_ Currency = NGN{}
+	_ Numbered = NGN{}
+	_ Named    = NGN{}
+)
 
 // NGN is the Naira currency.
 type NGN struct{}
@@ -1731,9 +1933,11 @@ func (NGN) Name() string { return "Naira" }
 
 func (NGN) MinorUnits() int { return 2 }
 
-func (NGN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "NGN") }
-
-var _ Currency = NIO{}
+var (
+	_ Currency = NIO{}
+	_ Numbered = NIO{}
+	_ Named    = NIO{}
+)
 
 // NIO is the Cordoba Oro currency.
 type NIO struct{}
@@ -1746,9 +1950,11 @@ func (NIO) Name() string { return "Cordoba Oro" }
 
 func (NIO) MinorUnits() int { return 2 }
 
-func (NIO) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "NIO") }
-
-var _ Currency = NOK{}
+var (
+	_ Currency = NOK{}
+	_ Numbered = NOK{}
+	_ Named    = NOK{}
+)
 
 // NOK is the Norwegian Krone currency.
 type NOK struct{}
@@ -1761,12 +1967,14 @@ func (NOK) Name() string { return "Norwegian Krone" }
 
 func (NOK) MinorUnits() int { return 2 }
 
-func (NOK) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "NOK") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (NOK) CashIncrement() int64 { return 100 }
 
-var _ Currency = NPR{}
+var (
+	_ Currency = NPR{}
+	_ Numbered = NPR{}
+	_ Named    = NPR{}
+)
 
 // NPR is the Nepalese Rupee currency.
 type NPR struct{}
@@ -1779,9 +1987,11 @@ func (NPR) Name() string { return "Nepalese Rupee" }
 
 func (NPR) MinorUnits() int { return 2 }
 
-func (NPR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "NPR") }
-
-var _ Currency = NZD{}
+var (
+	_ Currency = NZD{}
+	_ Numbered = NZD{}
+	_ Named    = NZD{}
+)
 
 // NZD is the New Zealand Dollar currency.
 type NZD struct{}
@@ -1794,9 +2004,11 @@ func (NZD) Name() string { return "New Zealand Dollar" }
 
 func (NZD) MinorUnits() int { return 2 }
 
-func (NZD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "NZD") }
-
-var _ Currency = OMR{}
+var (
+	_ Currency = OMR{}
+	_ Numbered = OMR{}
+	_ Named    = OMR{}
+)
 
 // OMR is the Rial Omani currency.
 type OMR struct{}
@@ -1809,9 +2021,11 @@ func (OMR) Name() string { return "Rial Omani" }
 
 func (OMR) MinorUnits() int { return 3 }
 
-func (OMR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "OMR") }
-
-var _ Currency = PAB{}
+var (
+	_ Currency = PAB{}
+	_ Numbered = PAB{}
+	_ Named    = PAB{}
+)
 
 // PAB is the Balboa currency.
 type PAB struct{}
@@ -1824,9 +2038,11 @@ func (PAB) Name() string { return "Balboa" }
 
 func (PAB) MinorUnits() int { return 2 }
 
-func (PAB) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "PAB") }
-
-var _ Currency = PEN{}
+var (
+	_ Currency = PEN{}
+	_ Numbered = PEN{}
+	_ Named    = PEN{}
+)
 
 // PEN is the Sol currency.
 type PEN struct{}
@@ -1839,9 +2055,11 @@ func (PEN) Name() string { return "Sol" }
 
 func (PEN) MinorUnits() int { return 2 }
 
-func (PEN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "PEN") }
-
-var _ Currency = PGK{}
+var (
+	_ Currency = PGK{}
+	_ Numbered = PGK{}
+	_ Named    = PGK{}
+)
 
 // PGK is the Kina currency.
 type PGK struct{}
@@ -1854,9 +2072,11 @@ func (PGK) Name() string { return "Kina" }
 
 func (PGK) MinorUnits() int { return 2 }
 
-func (PGK) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "PGK") }
-
-var _ Currency = PHP{}
+var (
+	_ Currency = PHP{}
+	_ Numbered = PHP{}
+	_ Named    = PHP{}
+)
 
 // PHP is the Philippine Peso currency.
 type PHP struct{}
@@ -1869,9 +2089,11 @@ func (PHP) Name() string { return "Philippine Peso" }
 
 func (PHP) MinorUnits() int { return 2 }
 
-func (PHP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "PHP") }
-
-var _ Currency = PKR{}
+var (
+	_ Currency = PKR{}
+	_ Numbered = PKR{}
+	_ Named    = PKR{}
+)
 
 // PKR is the Pakistan Rupee currency.
 type PKR struct{}
@@ -1884,9 +2106,11 @@ func (PKR) Name() string { return "Pakistan Rupee" }
 
 func (PKR) MinorUnits() int { return 2 }
 
-func (PKR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "PKR") }
-
-var _ Currency = PLN{}
+var (
+	_ Currency = PLN{}
+	_ Numbered = PLN{}
+	_ Named    = PLN{}
+)
 
 // PLN is the Zloty currency.
 type PLN struct{}
@@ -1899,9 +2123,11 @@ func (PLN) Name() string { return "Zloty" }
 
 func (PLN) MinorUnits() int { return 2 }
 
-func (PLN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "PLN") }
-
-var _ Currency = PYG{}
+var (
+	_ Currency = PYG{}
+	_ Numbered = PYG{}
+	_ Named    = PYG{}
+)
 
 // PYG is the Guarani currency.
 type PYG struct{}
@@ -1914,9 +2140,11 @@ func (PYG) Name() string { return "Guarani" }
 
 func (PYG) MinorUnits() int { return 0 }
 
-func (PYG) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "PYG") }
-
-var _ Currency = QAR{}
+var (
+	_ Currency = QAR{}
+	_ Numbered = QAR{}
+	_ Named    = QAR{}
+)
 
 // QAR is the Qatari Rial currency.
 type QAR struct{}
@@ -1929,9 +2157,11 @@ func (QAR) Name() string { return "Qatari Rial" }
 
 func (QAR) MinorUnits() int { return 2 }
 
-func (QAR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "QAR") }
-
-var _ Currency = RON{}
+var (
+	_ Currency = RON{}
+	_ Numbered = RON{}
+	_ Named    = RON{}
+)
 
 // RON is the Romanian Leu currency.
 type RON struct{}
@@ -1944,9 +2174,11 @@ func (RON) Name() string { return "Romanian Leu" }
 
 func (RON) MinorUnits() int { return 2 }
 
-func (RON) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "RON") }
-
-var _ Currency = RSD{}
+var (
+	_ Currency = RSD{}
+	_ Numbered = RSD{}
+	_ Named    = RSD{}
+)
 
 // RSD is the Serbian Dinar currency.
 type RSD struct{}
@@ -1959,12 +2191,14 @@ func (RSD) Name() string { return "Serbian Dinar" }
 
 func (RSD) MinorUnits() int { return 2 }
 
-func (RSD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "RSD") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (RSD) CashIncrement() int64 { return 100 }
 
-var _ Currency = RUB{}
+var (
+	_ Currency = RUB{}
+	_ Numbered = RUB{}
+	_ Named    = RUB{}
+)
 
 // RUB is the Russian Ruble currency.
 type RUB struct{}
@@ -1977,9 +2211,11 @@ func (RUB) Name() string { return "Russian Ruble" }
 
 func (RUB) MinorUnits() int { return 2 }
 
-func (RUB) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "RUB") }
-
-var _ Currency = RWF{}
+var (
+	_ Currency = RWF{}
+	_ Numbered = RWF{}
+	_ Named    = RWF{}
+)
 
 // RWF is the Rwanda Franc currency.
 type RWF struct{}
@@ -1992,9 +2228,11 @@ func (RWF) Name() string { return "Rwanda Franc" }
 
 func (RWF) MinorUnits() int { return 0 }
 
-func (RWF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "RWF") }
-
-var _ Currency = SAR{}
+var (
+	_ Currency = SAR{}
+	_ Numbered = SAR{}
+	_ Named    = SAR{}
+)
 
 // SAR is the Saudi Riyal currency.
 type SAR struct{}
@@ -2007,9 +2245,11 @@ func (SAR) Name() string { return "Saudi Riyal" }
 
 func (SAR) MinorUnits() int { return 2 }
 
-func (SAR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SAR") }
-
-var _ Currency = SBD{}
+var (
+	_ Currency = SBD{}
+	_ Numbered = SBD{}
+	_ Named    = SBD{}
+)
 
 // SBD is the Solomon Islands Dollar currency.
 type SBD struct{}
@@ -2022,9 +2262,11 @@ func (SBD) Name() string { return "Solomon Islands Dollar" }
 
 func (SBD) MinorUnits() int { return 2 }
 
-func (SBD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SBD") }
-
-var _ Currency = SCR{}
+var (
+	_ Currency = SCR{}
+	_ Numbered = SCR{}
+	_ Named    = SCR{}
+)
 
 // SCR is the Seychelles Rupee currency.
 type SCR struct{}
@@ -2037,9 +2279,11 @@ func (SCR) Name() string { return "Seychelles Rupee" }
 
 func (SCR) MinorUnits() int { return 2 }
 
-func (SCR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SCR") }
-
-var _ Currency = SDG{}
+var (
+	_ Currency = SDG{}
+	_ Numbered = SDG{}
+	_ Named    = SDG{}
+)
 
 // SDG is the Sudanese Pound currency.
 type SDG struct{}
@@ -2052,9 +2296,11 @@ func (SDG) Name() string { return "Sudanese Pound" }
 
 func (SDG) MinorUnits() int { return 2 }
 
-func (SDG) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SDG") }
-
-var _ Currency = SEK{}
+var (
+	_ Currency = SEK{}
+	_ Numbered = SEK{}
+	_ Named    = SEK{}
+)
 
 // SEK is the Swedish Krona currency.
 type SEK struct{}
@@ -2067,12 +2313,14 @@ func (SEK) Name() string { return "Swedish Krona" }
 
 func (SEK) MinorUnits() int { return 2 }
 
-func (SEK) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SEK") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (SEK) CashIncrement() int64 { return 100 }
 
-var _ Currency = SGD{}
+var (
+	_ Currency = SGD{}
+	_ Numbered = SGD{}
+	_ Named    = SGD{}
+)
 
 // SGD is the Singapore Dollar currency.
 type SGD struct{}
@@ -2085,9 +2333,11 @@ func (SGD) Name() string { return "Singapore Dollar" }
 
 func (SGD) MinorUnits() int { return 2 }
 
-func (SGD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SGD") }
-
-var _ Currency = SHP{}
+var (
+	_ Currency = SHP{}
+	_ Numbered = SHP{}
+	_ Named    = SHP{}
+)
 
 // SHP is the Saint Helena Pound currency.
 type SHP struct{}
@@ -2100,9 +2350,11 @@ func (SHP) Name() string { return "Saint Helena Pound" }
 
 func (SHP) MinorUnits() int { return 2 }
 
-func (SHP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SHP") }
-
-var _ Currency = SLE{}
+var (
+	_ Currency = SLE{}
+	_ Numbered = SLE{}
+	_ Named    = SLE{}
+)
 
 // SLE is the Leone currency.
 type SLE struct{}
@@ -2115,9 +2367,11 @@ func (SLE) Name() string { return "Leone" }
 
 func (SLE) MinorUnits() int { return 2 }
 
-func (SLE) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SLE") }
-
-var _ Currency = SOS{}
+var (
+	_ Currency = SOS{}
+	_ Numbered = SOS{}
+	_ Named    = SOS{}
+)
 
 // SOS is the Somali Shilling currency.
 type SOS struct{}
@@ -2130,9 +2384,11 @@ func (SOS) Name() string { return "Somali Shilling" }
 
 func (SOS) MinorUnits() int { return 2 }
 
-func (SOS) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SOS") }
-
-var _ Currency = SRD{}
+var (
+	_ Currency = SRD{}
+	_ Numbered = SRD{}
+	_ Named    = SRD{}
+)
 
 // SRD is the Surinam Dollar currency.
 type SRD struct{}
@@ -2145,9 +2401,11 @@ func (SRD) Name() string { return "Surinam Dollar" }
 
 func (SRD) MinorUnits() int { return 2 }
 
-func (SRD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SRD") }
-
-var _ Currency = SSP{}
+var (
+	_ Currency = SSP{}
+	_ Numbered = SSP{}
+	_ Named    = SSP{}
+)
 
 // SSP is the South Sudanese Pound currency.
 type SSP struct{}
@@ -2160,9 +2418,11 @@ func (SSP) Name() string { return "South Sudanese Pound" }
 
 func (SSP) MinorUnits() int { return 2 }
 
-func (SSP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SSP") }
-
-var _ Currency = STN{}
+var (
+	_ Currency = STN{}
+	_ Numbered = STN{}
+	_ Named    = STN{}
+)
 
 // STN is the Dobra currency.
 type STN struct{}
@@ -2175,9 +2435,11 @@ func (STN) Name() string { return "Dobra" }
 
 func (STN) MinorUnits() int { return 2 }
 
-func (STN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "STN") }
-
-var _ Currency = SVC{}
+var (
+	_ Currency = SVC{}
+	_ Numbered = SVC{}
+	_ Named    = SVC{}
+)
 
 // SVC is the El Salvador Colon currency.
 type SVC struct{}
@@ -2190,9 +2452,11 @@ func (SVC) Name() string { return "El Salvador Colon" }
 
 func (SVC) MinorUnits() int { return 2 }
 
-func (SVC) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SVC") }
-
-var _ Currency = SYP{}
+var (
+	_ Currency = SYP{}
+	_ Numbered = SYP{}
+	_ Named    = SYP{}
+)
 
 // SYP is the Syrian Pound currency.
 type SYP struct{}
@@ -2205,9 +2469,11 @@ func (SYP) Name() string { return "Syrian Pound" }
 
 func (SYP) MinorUnits() int { return 2 }
 
-func (SYP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SYP") }
-
-var _ Currency = SZL{}
+var (
+	_ Currency = SZL{}
+	_ Numbered = SZL{}
+	_ Named    = SZL{}
+)
 
 // SZL is the Lilangeni currency.
 type SZL struct{}
@@ -2220,9 +2486,11 @@ func (SZL) Name() string { return "Lilangeni" }
 
 func (SZL) MinorUnits() int { return 2 }
 
-func (SZL) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "SZL") }
-
-var _ Currency = THB{}
+var (
+	_ Currency = THB{}
+	_ Numbered = THB{}
+	_ Named    = THB{}
+)
 
 // THB is the Baht currency.
 type THB struct{}
@@ -2235,9 +2503,11 @@ func (THB) Name() string { return "Baht" }
 
 func (THB) MinorUnits() int { return 2 }
 
-func (THB) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "THB") }
-
-var _ Currency = TJS{}
+var (
+	_ Currency = TJS{}
+	_ Numbered = TJS{}
+	_ Named    = TJS{}
+)
 
 // TJS is the Somoni currency.
 type TJS struct{}
@@ -2250,9 +2520,11 @@ func (TJS) Name() string { return "Somoni" }
 
 func (TJS) MinorUnits() int { return 2 }
 
-func (TJS) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "TJS") }
-
-var _ Currency = TMT{}
+var (
+	_ Currency = TMT{}
+	_ Numbered = TMT{}
+	_ Named    = TMT{}
+)
 
 // TMT is the Turkmenistan New Manat currency.
 type TMT struct{}
@@ -2265,9 +2537,11 @@ func (TMT) Name() string { return "Turkmenistan New Manat" }
 
 func (TMT) MinorUnits() int { return 2 }
 
-func (TMT) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "TMT") }
-
-var _ Currency = TND{}
+var (
+	_ Currency = TND{}
+	_ Numbered = TND{}
+	_ Named    = TND{}
+)
 
 // TND is the Tunisian Dinar currency.
 type TND struct{}
@@ -2280,9 +2554,11 @@ func (TND) Name() string { return "Tunisian Dinar" }
 
 func (TND) MinorUnits() int { return 3 }
 
-func (TND) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "TND") }
-
-var _ Currency = TOP{}
+var (
+	_ Currency = TOP{}
+	_ Numbered = TOP{}
+	_ Named    = TOP{}
+)
 
 // TOP is the Pa’anga currency.
 type TOP struct{}
@@ -2295,9 +2571,11 @@ func (TOP) Name() string { return "Pa’anga" }
 
 func (TOP) MinorUnits() int { return 2 }
 
-func (TOP) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "TOP") }
-
-var _ Currency = TRY{}
+var (
+	_ Currency = TRY{}
+	_ Numbered = TRY{}
+	_ Named    = TRY{}
+)
 
 // TRY is the Turkish Lira currency.
 type TRY struct{}
@@ -2310,9 +2588,11 @@ func (TRY) Name() string { return "Turkish Lira" }
 
 func (TRY) MinorUnits() int { return 2 }
 
-func (TRY) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "TRY") }
-
-var _ Currency = TTD{}
+var (
+	_ Currency = TTD{}
+	_ Numbered = TTD{}
+	_ Named    = TTD{}
+)
 
 // TTD is the Trinidad and Tobago Dollar currency.
 type TTD struct{}
@@ -2325,9 +2605,11 @@ func (TTD) Name() string { return "Trinidad and Tobago Dollar" }
 
 func (TTD) MinorUnits() int { return 2 }
 
-func (TTD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "TTD") }
-
-var _ Currency = TWD{}
+var (
+	_ Currency = TWD{}
+	_ Numbered = TWD{}
+	_ Named    = TWD{}
+)
 
 // TWD is the New Taiwan Dollar currency.
 type TWD struct{}
@@ -2340,12 +2622,14 @@ func (TWD) Name() string { return "New Taiwan Dollar" }
 
 func (TWD) MinorUnits() int { return 2 }
 
-func (TWD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "TWD") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (TWD) CashIncrement() int64 { return 100 }
 
-var _ Currency = TZS{}
+var (
+	_ Currency = TZS{}
+	_ Numbered = TZS{}
+	_ Named    = TZS{}
+)
 
 // TZS is the Tanzanian Shilling currency.
 type TZS struct{}
@@ -2358,12 +2642,14 @@ func (TZS) Name() string { return "Tanzanian Shilling" }
 
 func (TZS) MinorUnits() int { return 2 }
 
-func (TZS) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "TZS") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (TZS) CashIncrement() int64 { return 100 }
 
-var _ Currency = UAH{}
+var (
+	_ Currency = UAH{}
+	_ Numbered = UAH{}
+	_ Named    = UAH{}
+)
 
 // UAH is the Hryvnia currency.
 type UAH struct{}
@@ -2376,9 +2662,11 @@ func (UAH) Name() string { return "Hryvnia" }
 
 func (UAH) MinorUnits() int { return 2 }
 
-func (UAH) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "UAH") }
-
-var _ Currency = UGX{}
+var (
+	_ Currency = UGX{}
+	_ Numbered = UGX{}
+	_ Named    = UGX{}
+)
 
 // UGX is the Uganda Shilling currency.
 type UGX struct{}
@@ -2391,9 +2679,11 @@ func (UGX) Name() string { return "Uganda Shilling" }
 
 func (UGX) MinorUnits() int { return 0 }
 
-func (UGX) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "UGX") }
-
-var _ Currency = USD{}
+var (
+	_ Currency = USD{}
+	_ Numbered = USD{}
+	_ Named    = USD{}
+)
 
 // USD is the US Dollar currency.
 type USD struct{}
@@ -2406,9 +2696,11 @@ func (USD) Name() string { return "US Dollar" }
 
 func (USD) MinorUnits() int { return 2 }
 
-func (USD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "USD") }
-
-var _ Currency = USN{}
+var (
+	_ Currency = USN{}
+	_ Numbered = USN{}
+	_ Named    = USN{}
+)
 
 // USN is the US Dollar (Next day) currency.
 type USN struct{}
@@ -2421,9 +2713,11 @@ func (USN) Name() string { return "US Dollar (Next day)" }
 
 func (USN) MinorUnits() int { return 2 }
 
-func (USN) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "USN") }
-
-var _ Currency = UYI{}
+var (
+	_ Currency = UYI{}
+	_ Numbered = UYI{}
+	_ Named    = UYI{}
+)
 
 // UYI is the Uruguay Peso en Unidades Indexadas (UI) currency.
 type UYI struct{}
@@ -2436,9 +2730,11 @@ func (UYI) Name() string { return "Uruguay Peso en Unidades Indexadas (UI)" }
 
 func (UYI) MinorUnits() int { return 0 }
 
-func (UYI) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "UYI") }
-
-var _ Currency = UYU{}
+var (
+	_ Currency = UYU{}
+	_ Numbered = UYU{}
+	_ Named    = UYU{}
+)
 
 // UYU is the Peso Uruguayo currency.
 type UYU struct{}
@@ -2451,9 +2747,11 @@ func (UYU) Name() string { return "Peso Uruguayo" }
 
 func (UYU) MinorUnits() int { return 2 }
 
-func (UYU) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "UYU") }
-
-var _ Currency = UYW{}
+var (
+	_ Currency = UYW{}
+	_ Numbered = UYW{}
+	_ Named    = UYW{}
+)
 
 // UYW is the Unidad Previsional currency.
 type UYW struct{}
@@ -2466,9 +2764,11 @@ func (UYW) Name() string { return "Unidad Previsional" }
 
 func (UYW) MinorUnits() int { return 4 }
 
-func (UYW) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "UYW") }
-
-var _ Currency = UZS{}
+var (
+	_ Currency = UZS{}
+	_ Numbered = UZS{}
+	_ Named    = UZS{}
+)
 
 // UZS is the Uzbekistan Sum currency.
 type UZS struct{}
@@ -2481,12 +2781,14 @@ func (UZS) Name() string { return "Uzbekistan Sum" }
 
 func (UZS) MinorUnits() int { return 2 }
 
-func (UZS) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "UZS") }
-
 // CashIncrement returns the smallest cash amount in minor units.
 func (UZS) CashIncrement() int64 { return 100 }
 
-var _ Currency = VED{}
+var (
+	_ Currency = VED{}
+	_ Numbered = VED{}
+	_ Named    = VED{}
+)
 
 // VED is the Bolívar Soberano currency.
 type VED struct{}
@@ -2499,9 +2801,11 @@ func (VED) Name() string { return "Bolívar Soberano" }
 
 func (VED) MinorUnits() int { return 2 }
 
-func (VED) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "VED") }
-
-var _ Currency = VES{}
+var (
+	_ Currency = VES{}
+	_ Numbered = VES{}
+	_ Named    = VES{}
+)
 
 // VES is the Bolívar Soberano currency.
 type VES struct{}
@@ -2514,9 +2818,11 @@ func (VES) Name() string { return "Bolívar Soberano" }
 
 func (VES) MinorUnits() int { return 2 }
 
-func (VES) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "VES") }
-
-var _ Currency = VND{}
+var (
+	_ Currency = VND{}
+	_ Numbered = VND{}
+	_ Named    = VND{}
+)
 
 // VND is the Dong currency.
 type VND struct{}
@@ -2529,9 +2835,11 @@ func (VND) Name() string { return "Dong" }
 
 func (VND) MinorUnits() int { return 0 }
 
-func (VND) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "VND") }
-
-var _ Currency = VUV{}
+var (
+	_ Currency = VUV{}
+	_ Numbered = VUV{}
+	_ Named    = VUV{}
+)
 
 // VUV is the Vatu currency.
 type VUV struct{}
@@ -2544,9 +2852,11 @@ func (VUV) Name() string { return "Vatu" }
 
 func (VUV) MinorUnits() int { return 0 }
 
-func (VUV) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "VUV") }
-
-var _ Currency = WST{}
+var (
+	_ Currency = WST{}
+	_ Numbered = WST{}
+	_ Named    = WST{}
+)
 
 // WST is the Tala currency.
 type WST struct{}
@@ -2559,9 +2869,11 @@ func (WST) Name() string { return "Tala" }
 
 func (WST) MinorUnits() int { return 2 }
 
-func (WST) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "WST") }
-
-var _ Currency = XAD{}
+var (
+	_ Currency = XAD{}
+	_ Numbered = XAD{}
+	_ Named    = XAD{}
+)
 
 // XAD is the Arab Accounting Dinar currency.
 type XAD struct{}
@@ -2574,9 +2886,11 @@ func (XAD) Name() string { return "Arab Accounting Dinar" }
 
 func (XAD) MinorUnits() int { return 2 }
 
-func (XAD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XAD") }
-
-var _ Currency = XAF{}
+var (
+	_ Currency = XAF{}
+	_ Numbered = XAF{}
+	_ Named    = XAF{}
+)
 
 // XAF is the CFA Franc BEAC currency.
 type XAF struct{}
@@ -2589,9 +2903,11 @@ func (XAF) Name() string { return "CFA Franc BEAC" }
 
 func (XAF) MinorUnits() int { return 0 }
 
-func (XAF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XAF") }
-
-var _ Currency = XAG{}
+var (
+	_ Currency = XAG{}
+	_ Numbered = XAG{}
+	_ Named    = XAG{}
+)
 
 // XAG is the Silver currency.
 // ISO 4217 defines no minor units for XAG. The minor units come from CLDR.
@@ -2605,9 +2921,11 @@ func (XAG) Name() string { return "Silver" }
 
 func (XAG) MinorUnits() int { return 2 }
 
-func (XAG) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XAG") }
-
-var _ Currency = XAU{}
+var (
+	_ Currency = XAU{}
+	_ Numbered = XAU{}
+	_ Named    = XAU{}
+)
 
 // XAU is the Gold currency.
 // ISO 4217 defines no minor units for XAU. The minor units come from CLDR.
@@ -2621,9 +2939,11 @@ func (XAU) Name() string { return "Gold" }
 
 func (XAU) MinorUnits() int { return 2 }
 
-func (XAU) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XAU") }
-
-var _ Currency = XBA{}
+var (
+	_ Currency = XBA{}
+	_ Numbered = XBA{}
+	_ Named    = XBA{}
+)
 
 // XBA is the Bond Markets Unit European Composite Unit (EURCO) currency.
 // ISO 4217 defines no minor units for XBA. The minor units come from CLDR.
@@ -2637,9 +2957,11 @@ func (XBA) Name() string { return "Bond Markets Unit European Composite Unit (EU
 
 func (XBA) MinorUnits() int { return 2 }
 
-func (XBA) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XBA") }
-
-var _ Currency = XBB{}
+var (
+	_ Currency = XBB{}
+	_ Numbered = XBB{}
+	_ Named    = XBB{}
+)
 
 // XBB is the Bond Markets Unit European Monetary Unit (E.M.U.-6) currency.
 // ISO 4217 defines no minor units for XBB. The minor units come from CLDR.
@@ -2653,9 +2975,11 @@ func (XBB) Name() string { return "Bond Markets Unit European Monetary Unit (E.M
 
 func (XBB) MinorUnits() int { return 2 }
 
-func (XBB) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XBB") }
-
-var _ Currency = XBC{}
+var (
+	_ Currency = XBC{}
+	_ Numbered = XBC{}
+	_ Named    = XBC{}
+)
 
 // XBC is the Bond Markets Unit European Unit of Account 9 (E.U.A.-9) currency.
 // ISO 4217 defines no minor units for XBC. The minor units come from CLDR.
@@ -2669,9 +2993,11 @@ func (XBC) Name() string { return "Bond Markets Unit European Unit of Account 9 
 
 func (XBC) MinorUnits() int { return 2 }
 
-func (XBC) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XBC") }
-
-var _ Currency = XBD{}
+var (
+	_ Currency = XBD{}
+	_ Numbered = XBD{}
+	_ Named    = XBD{}
+)
 
 // XBD is the Bond Markets Unit European Unit of Account 17 (E.U.A.-17) currency.
 // ISO 4217 defines no minor units for XBD. The minor units come from CLDR.
@@ -2685,9 +3011,11 @@ func (XBD) Name() string { return "Bond Markets Unit European Unit of Account 17
 
 func (XBD) MinorUnits() int { return 2 }
 
-func (XBD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XBD") }
-
-var _ Currency = XCD{}
+var (
+	_ Currency = XCD{}
+	_ Numbered = XCD{}
+	_ Named    = XCD{}
+)
 
 // XCD is the East Caribbean Dollar currency.
 type XCD struct{}
@@ -2700,9 +3028,11 @@ func (XCD) Name() string { return "East Caribbean Dollar" }
 
 func (XCD) MinorUnits() int { return 2 }
 
-func (XCD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XCD") }
-
-var _ Currency = XCG{}
+var (
+	_ Currency = XCG{}
+	_ Numbered = XCG{}
+	_ Named    = XCG{}
+)
 
 // XCG is the Caribbean Guilder currency.
 type XCG struct{}
@@ -2715,9 +3045,11 @@ func (XCG) Name() string { return "Caribbean Guilder" }
 
 func (XCG) MinorUnits() int { return 2 }
 
-func (XCG) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XCG") }
-
-var _ Currency = XDR{}
+var (
+	_ Currency = XDR{}
+	_ Numbered = XDR{}
+	_ Named    = XDR{}
+)
 
 // XDR is the SDR (Special Drawing Right) currency.
 // ISO 4217 defines no minor units for XDR. The minor units come from CLDR.
@@ -2731,9 +3063,11 @@ func (XDR) Name() string { return "SDR (Special Drawing Right)" }
 
 func (XDR) MinorUnits() int { return 2 }
 
-func (XDR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XDR") }
-
-var _ Currency = XOF{}
+var (
+	_ Currency = XOF{}
+	_ Numbered = XOF{}
+	_ Named    = XOF{}
+)
 
 // XOF is the CFA Franc BCEAO currency.
 type XOF struct{}
@@ -2746,9 +3080,11 @@ func (XOF) Name() string { return "CFA Franc BCEAO" }
 
 func (XOF) MinorUnits() int { return 0 }
 
-func (XOF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XOF") }
-
-var _ Currency = XPD{}
+var (
+	_ Currency = XPD{}
+	_ Numbered = XPD{}
+	_ Named    = XPD{}
+)
 
 // XPD is the Palladium currency.
 // ISO 4217 defines no minor units for XPD. The minor units come from CLDR.
@@ -2762,9 +3098,11 @@ func (XPD) Name() string { return "Palladium" }
 
 func (XPD) MinorUnits() int { return 2 }
 
-func (XPD) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XPD") }
-
-var _ Currency = XPF{}
+var (
+	_ Currency = XPF{}
+	_ Numbered = XPF{}
+	_ Named    = XPF{}
+)
 
 // XPF is the CFP Franc currency.
 type XPF struct{}
@@ -2777,9 +3115,11 @@ func (XPF) Name() string { return "CFP Franc" }
 
 func (XPF) MinorUnits() int { return 0 }
 
-func (XPF) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XPF") }
-
-var _ Currency = XPT{}
+var (
+	_ Currency = XPT{}
+	_ Numbered = XPT{}
+	_ Named    = XPT{}
+)
 
 // XPT is the Platinum currency.
 // ISO 4217 defines no minor units for XPT. The minor units come from CLDR.
@@ -2793,9 +3133,11 @@ func (XPT) Name() string { return "Platinum" }
 
 func (XPT) MinorUnits() int { return 2 }
 
-func (XPT) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XPT") }
-
-var _ Currency = XSU{}
+var (
+	_ Currency = XSU{}
+	_ Numbered = XSU{}
+	_ Named    = XSU{}
+)
 
 // XSU is the Sucre currency.
 // ISO 4217 defines no minor units for XSU. The minor units come from CLDR.
@@ -2809,9 +3151,11 @@ func (XSU) Name() string { return "Sucre" }
 
 func (XSU) MinorUnits() int { return 2 }
 
-func (XSU) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XSU") }
-
-var _ Currency = XUA{}
+var (
+	_ Currency = XUA{}
+	_ Numbered = XUA{}
+	_ Named    = XUA{}
+)
 
 // XUA is the ADB Unit of Account currency.
 // ISO 4217 defines no minor units for XUA. The minor units come from CLDR.
@@ -2825,9 +3169,11 @@ func (XUA) Name() string { return "ADB Unit of Account" }
 
 func (XUA) MinorUnits() int { return 2 }
 
-func (XUA) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "XUA") }
-
-var _ Currency = YER{}
+var (
+	_ Currency = YER{}
+	_ Numbered = YER{}
+	_ Named    = YER{}
+)
 
 // YER is the Yemeni Rial currency.
 type YER struct{}
@@ -2840,9 +3186,11 @@ func (YER) Name() string { return "Yemeni Rial" }
 
 func (YER) MinorUnits() int { return 2 }
 
-func (YER) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "YER") }
-
-var _ Currency = ZAR{}
+var (
+	_ Currency = ZAR{}
+	_ Numbered = ZAR{}
+	_ Named    = ZAR{}
+)
 
 // ZAR is the Rand currency.
 type ZAR struct{}
@@ -2855,9 +3203,11 @@ func (ZAR) Name() string { return "Rand" }
 
 func (ZAR) MinorUnits() int { return 2 }
 
-func (ZAR) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "ZAR") }
-
-var _ Currency = ZMW{}
+var (
+	_ Currency = ZMW{}
+	_ Numbered = ZMW{}
+	_ Named    = ZMW{}
+)
 
 // ZMW is the Zambian Kwacha currency.
 type ZMW struct{}
@@ -2870,9 +3220,11 @@ func (ZMW) Name() string { return "Zambian Kwacha" }
 
 func (ZMW) MinorUnits() int { return 2 }
 
-func (ZMW) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "ZMW") }
-
-var _ Currency = ZWG{}
+var (
+	_ Currency = ZWG{}
+	_ Numbered = ZWG{}
+	_ Named    = ZWG{}
+)
 
 // ZWG is the Zimbabwe Gold currency.
 type ZWG struct{}
@@ -2884,5 +3236,3 @@ func (ZWG) Number() string { return "924" }
 func (ZWG) Name() string { return "Zimbabwe Gold" }
 
 func (ZWG) MinorUnits() int { return 2 }
-
-func (ZWG) FormatInfo(loc locale.Locale) FormatInfo { return formatInfo(loc, "ZWG") }

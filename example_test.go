@@ -6,7 +6,6 @@ import (
 
 	"github.com/khatibomar/fulus"
 	"github.com/khatibomar/fulus/currency"
-	"github.com/khatibomar/fulus/locale"
 )
 
 func ExampleMoney_MulFactor() {
@@ -45,16 +44,6 @@ func ExampleAs() {
 	// currency mismatch: expected USD, got EUR
 }
 
-func ExampleParseFormatted() {
-	loc, _ := locale.Match("en_IN.UTF-8")
-	inr := fulus.NewMoney[currency.INR](-1234567890)
-	formatted := inr.Format(loc)
-
-	parsed, err := fulus.ParseFormatted[currency.INR](formatted, loc)
-	fmt.Println(formatted, parsed.Decimal(), err)
-	// Output: -₹1,23,45,678.90 -12345678.90 <nil>
-}
-
 func ExampleSum() {
 	total, err := fulus.Sum(
 		fulus.NewMoney[currency.USD](1000),
@@ -63,19 +52,6 @@ func ExampleSum() {
 	)
 	fmt.Println(total, err)
 	// Output: USD 12.00 <nil>
-}
-
-func ExampleMoney_Format() {
-	price := fulus.NewMoney[currency.EUR](-123456789)
-	fmt.Println(price.Format(locale.EN))
-	fmt.Println(price.Format(locale.DE_CH))
-
-	// Some locales use a no-break space U+00A0 or a narrow no-break space U+202F.
-	fmt.Printf("%+q\n", price.Format(locale.FR))
-	// Output:
-	// -€1,234,567.89
-	// EUR-1'234'567.89
-	// "-1\u202f234\u202f567,89\u00a0\u20ac"
 }
 
 func ExampleParseMoney() {

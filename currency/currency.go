@@ -1,23 +1,14 @@
 package currency
 
-import "github.com/khatibomar/fulus/locale"
-
-// Currency represents an ISO 4217 currency with locale support
+// Currency is a currency, such as an ISO 4217 currency or a custom token.
+// A built-in currency also implements Numbered, Named and, if it has a cash rule, CashRounder.
+// The format package gives CLDR format data by the code. A custom currency can implement format.Formatter.
 type Currency interface {
-	// Code returns the three-letter ISO 4217 currency code
+	// Code returns the currency code, for example "USD". For an ISO 4217 currency it has three letters.
 	Code() string
 
-	// Number returns the three-digit ISO 4217 numeric code
-	Number() string
-
-	// Name returns the official ISO 4217 currency name
-	Name() string
-
-	// MinorUnits returns the number of digits after the decimal separator
+	// MinorUnits returns the number of digits after the decimal separator, for example 2 for USD.
 	MinorUnits() int
-
-	// FormatInfo returns the currency formatting information for a given locale
-	FormatInfo(locale locale.Locale) FormatInfo
 }
 
 // Unit is the constraint for the currency type parameter of fulus.Money.
@@ -28,26 +19,22 @@ type Unit interface {
 	Currency
 }
 
-// FormatInfo contains locale-specific currency formatting information
-type FormatInfo struct {
-	Symbol           string // Currency symbol for the locale
-	Format           string // Format pattern
-	GroupSeparator   string // Thousands separator
-	DecimalSeparator string // Decimal separator
-	MinusSign        string // Negative number prefix
-	// MinimumGroupingDigits is the smallest number of digits before the first group separator. Zero means 1.
-	MinimumGroupingDigits int
+// Numbered is a Currency with an ISO 4217 numeric code.
+type Numbered interface {
+	// Number returns the three-digit ISO 4217 numeric code, for example "840" for USD.
+	Number() string
 }
 
-// formatInfo returns the CLDR format information of a currency code in a locale.
-func formatInfo(loc locale.Locale, code string) FormatInfo {
-	n := loc.CurrencyNumbers(code)
-	return FormatInfo{
-		Symbol:                loc.CurrencySymbol(code),
-		Format:                n.CurrencyFormat,
-		GroupSeparator:        n.GroupSeparator,
-		DecimalSeparator:      n.DecimalSeparator,
-		MinusSign:             n.MinusSign,
-		MinimumGroupingDigits: n.MinimumGroupingDigits,
+// Named is a Currency with a name.
+type Named interface {
+	// Name returns the ISO 4217 currency name, for example "US Dollar".
+	Name() string
+}
+
+// Number returns the ISO 4217 numeric code of c, or "" if c does not implement Numbered.
+func Number(c Currency) string {
+	if n, ok := c.(Numbered); ok {
+		return n.Number()
 	}
+	return ""
 }

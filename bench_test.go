@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/khatibomar/fulus/currency"
-	"github.com/khatibomar/fulus/locale"
 )
 
 var (
@@ -81,18 +80,7 @@ func BenchmarkArithmetic(b *testing.B) {
 
 func BenchmarkFormatting(b *testing.B) {
 	m := NewMoney[currency.USD](-123456789)
-	inr := NewMoney[currency.INR](-123456789)
 
-	b.Run("Format/en", func(b *testing.B) {
-		for b.Loop() {
-			benchString = m.Format(locale.EN)
-		}
-	})
-	b.Run("Format/en-IN", func(b *testing.B) {
-		for b.Loop() {
-			benchString = inr.Format(locale.EN_IN)
-		}
-	})
 	b.Run("String", func(b *testing.B) {
 		for b.Loop() {
 			benchString = m.String()
@@ -111,17 +99,11 @@ func BenchmarkFormatting(b *testing.B) {
 }
 
 func BenchmarkParsing(b *testing.B) {
-	formatted := NewMoney[currency.INR](-123456789).Format(locale.EN_IN)
-	payload := []byte(`{"amount":"-123456789","currency":"USD"}`)
+	payload := []byte(`{"amount":"-1234567.89","currency":"USD"}`)
 
 	b.Run("ParseMoney", func(b *testing.B) {
 		for b.Loop() {
 			benchMoney, benchErr = ParseMoney[currency.USD]("-1234567.89")
-		}
-	})
-	b.Run("ParseFormatted", func(b *testing.B) {
-		for b.Loop() {
-			_, benchErr = ParseFormatted[currency.INR](formatted, locale.EN_IN)
 		}
 	})
 	b.Run("UnmarshalJSON", func(b *testing.B) {

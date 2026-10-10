@@ -5,19 +5,16 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/khatibomar/fulus/locale"
 )
 
 type testCurrency struct {
 	code, number string
 }
 
-func (c testCurrency) Code() string                        { return c.code }
-func (c testCurrency) Number() string                      { return c.number }
-func (c testCurrency) Name() string                        { return "Test " + c.code }
-func (c testCurrency) MinorUnits() int                     { return 2 }
-func (c testCurrency) FormatInfo(locale.Locale) FormatInfo { return FormatInfo{} }
+func (c testCurrency) Code() string    { return c.code }
+func (c testCurrency) Number() string  { return c.number }
+func (c testCurrency) Name() string    { return "Test " + c.code }
+func (c testCurrency) MinorUnits() int { return 2 }
 
 func TestByCodeAndNumber(t *testing.T) {
 	t.Parallel()
@@ -107,11 +104,11 @@ func TestBuiltinIsUnique(t *testing.T) {
 	codes := make(map[string]bool)
 	numbers := make(map[string]bool)
 	for _, c := range builtin {
-		if codes[c.Code()] || numbers[c.Number()] {
-			t.Errorf("duplicate builtin currency %s %s", c.Code(), c.Number())
+		if codes[c.Code()] || numbers[Number(c)] {
+			t.Errorf("duplicate builtin currency %s %s", c.Code(), Number(c))
 		}
 		codes[c.Code()] = true
-		numbers[c.Number()] = true
+		numbers[Number(c)] = true
 	}
 }
 
@@ -123,5 +120,24 @@ func TestMinorUnitsWithoutISOValue(t *testing.T) {
 		if got := c.MinorUnits(); got != 2 {
 			t.Errorf("%s.MinorUnits() = %d, want 2", c.Code(), got)
 		}
+	}
+}
+
+type codeOnly struct{}
+
+func (codeOnly) Code() string    { return "CODEONLY" }
+func (codeOnly) MinorUnits() int { return 8 }
+
+func TestRegisterWithoutNumber(t *testing.T) {
+	t.Parallel()
+
+	if err := Register(codeOnly{}); err != nil {
+		t.Fatal(err)
+	}
+	if c, ok := ByCode("CODEONLY"); !ok || c.MinorUnits() != 8 {
+		t.Errorf("ByCode() = %v, %v", c, ok)
+	}
+	if got := Number(codeOnly{}); got != "" {
+		t.Errorf("Number() = %q, want empty", got)
 	}
 }

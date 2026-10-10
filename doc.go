@@ -9,7 +9,7 @@
 //   - type-safe arithmetic across currency types (Add, Sub, Mul, Div, MulFactor, Abs, Neg)
 //   - seven explicit rounding modes and CLDR cash rounding
 //   - runtime currencies with AnyMoney and the currency registry
-//   - CLDR formatting and parsing of localized strings
+//   - CLDR formatting and parsing of localized strings in the format package
 //   - JSON, text, log/slog and database/sql interoperability
 //
 // The amount is a signed 128-bit integer in minor units. For a currency with 2 minor units,

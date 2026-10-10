@@ -73,11 +73,14 @@ The generator does not include XTS (the testing code) and XXX (no currency).
 A change of the minor units is a breaking change, because an amount in minor units that is stored somewhere
 changes its value. `TestMinorUnitsDoNotChange` compares the generated data with `currency/testdata/minor_units.golden`,
 and CI compares that file with the latest release.
-`Format` always writes all the minor units, so it does not lose data.
+`format.Money` always writes all the minor units, so it does not lose data.
 
-## Formatting uses CLDR data in generated tables
+## Formatting is in a separate package with CLDR data in generated tables
 
-`Format` uses the CLDR currency patterns, symbols and separators.
+`format.Money` uses the CLDR currency patterns, symbols and separators.
+The `fulus` and `currency` packages do not import `format` or `locale`.
+A service that only calculates and stores amounts does not include the CLDR tables,
+and a custom currency needs only `Code` and `MinorUnits`.
 `generator.go` reads the CLDR JSON data and writes Go tables in `locale/gen_locale.go` and `currency/gen_currencies.go`.
 
 Why:
@@ -88,7 +91,7 @@ Why:
 
 Cost:
 
-- The tables add about 0.6 MB to each binary that imports Fulus.
+- The tables add about 0.3 MB to each binary that imports `format`.
 - Fulus writes Latin digits only. It does not write Arabic-Indic or other digits.
 - `locale.Match` does not use the CLDR likely subtags. For example, `zh-TW` gives `zh`, not `zh-Hant`.
 

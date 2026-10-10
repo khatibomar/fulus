@@ -1,8 +1,8 @@
 // generate.mjs writes golden.tsv with currency amounts formatted by ICU through the Intl API of Node.js.
-// Run it from the repository root: node testdata/icu/generate.mjs > testdata/icu/golden.tsv
+// Run it from the repository root: node format/testdata/icu/generate.mjs > format/testdata/icu/golden.tsv
 import fs from 'node:fs';
 
-const root = new URL('../../', import.meta.url);
+const root = new URL('../../../', import.meta.url);
 const locales = [...fs.readFileSync(new URL('locale/gen_locale.go', root), 'utf8')
   .matchAll(/^\t\{code: "([^"]+)"/gm)].map(m => m[1]);
 const minorUnits = new Map([...fs.readFileSync(new URL('currency/gen_currencies.go', root), 'utf8')

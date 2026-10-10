@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"github.com/khatibomar/fulus/currency"
-	"github.com/khatibomar/fulus/locale"
 )
 
 var (
@@ -360,14 +359,6 @@ func (m Money[T]) String() string {
 	b = append(b, code...)
 	b = append(b, ' ')
 	return string(appendDecimal(b, m.amount, m.Currency().MinorUnits()))
-}
-
-// Format returns a formatted string representation of the Money value for the specified locale.
-// It applies the CLDR pattern of the locale, including the negative subpattern and the group sizes.
-// The number of fraction digits is always the minor units of the currency.
-func (m Money[T]) Format(loc locale.Locale) string {
-	c := m.Currency()
-	return formatAmount(m.amount, c.MinorUnits(), c.FormatInfo(loc))
 }
 
 // Distribute splits m into the given number of chunks with sizes that differ by at most 1 minor unit.

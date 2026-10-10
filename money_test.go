@@ -6,11 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"strings"
 	"testing"
 
 	"github.com/khatibomar/fulus/currency"
-	"github.com/khatibomar/fulus/locale"
 )
 
 func TestAdd(t *testing.T) {
@@ -316,81 +314,6 @@ func TestNeg(t *testing.T) {
 
 			if tt.expectedErr == nil && m.amount64() != tt.expected {
 				t.Errorf("Neg() = %v, expected %v", m.amount64(), tt.expected)
-			}
-		})
-	}
-}
-
-func TestFormat(t *testing.T) {
-	tests := []struct {
-		name     string
-		money    Money[currency.USD]
-		locale   locale.Locale
-		expected string
-	}{
-		{
-			name:     "positive whole number",
-			money:    NewMoney[currency.USD](1000),
-			locale:   locale.EN,
-			expected: "$10.00",
-		},
-		{
-			name:     "negative whole number",
-			money:    NewMoney[currency.USD](-1000),
-			locale:   locale.EN,
-			expected: "-$10.00",
-		},
-		{
-			name:     "minimum int64",
-			money:    NewMoney[currency.USD](math.MinInt64),
-			locale:   locale.EN,
-			expected: "-$92,233,720,368,547,758.08",
-		},
-		{
-			name:     "zero",
-			money:    NewMoney[currency.USD](0),
-			locale:   locale.EN,
-			expected: "$0.00",
-		},
-		{
-			name:     "with cents",
-			money:    NewMoney[currency.USD](1234),
-			locale:   locale.EN,
-			expected: "$12.34",
-		},
-		{
-			name:     "large number with grouping",
-			money:    NewMoney[currency.USD](1234567),
-			locale:   locale.EN,
-			expected: "$12,345.67",
-		},
-		{
-			name:     "different locale format (fr)",
-			money:    NewMoney[currency.USD](1234567),
-			locale:   locale.FR,
-			expected: "12\u202f345,67\u00a0$US",
-		},
-		{
-			name:     "different locale format (de)",
-			money:    NewMoney[currency.USD](1234567),
-			locale:   locale.DE,
-			expected: "12.345,67\u00a0$",
-		},
-		{
-			name:     "Arabic locale format",
-			money:    NewMoney[currency.USD](1234567),
-			locale:   locale.AR,
-			expected: "\u200f12,345.67\u00a0US$",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.money.Format(tt.locale)
-			if result != tt.expected {
-				t.Errorf("Format() mismatch\nGot:  %+q (len: %d)\nWant: %+q (len: %d)",
-					result, len(result),
-					tt.expected, len(tt.expected))
 			}
 		})
 	}
@@ -1063,57 +986,6 @@ func ExampleMoney_Distribute() {
 	// Output:
 	// Smaller chunks: 2 x USD 33.33
 	// Larger chunks: 1 x USD 33.34
-}
-
-func TestGeneratedFormatContracts(t *testing.T) {
-	tests := []struct {
-		name     string
-		money    Money[currency.USD]
-		loc      locale.Locale
-		expected currency.FormatInfo
-	}{
-		{
-			name:     "en positive contract",
-			money:    NewMoney[currency.USD](1234567),
-			loc:      locale.EN,
-			expected: currency.USD{}.FormatInfo(locale.EN),
-		},
-		{
-			name:     "de negative contract",
-			money:    NewMoney[currency.USD](-1234567),
-			loc:      locale.DE,
-			expected: currency.USD{}.FormatInfo(locale.DE),
-		},
-		{
-			name:     "fr zero contract",
-			money:    NewMoney[currency.USD](0),
-			loc:      locale.FR,
-			expected: currency.USD{}.FormatInfo(locale.FR),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			formatted := tt.money.Format(tt.loc)
-			if !strings.Contains(formatted, tt.expected.Symbol) {
-				t.Fatalf("formatted value %q does not include symbol %q", formatted, tt.expected.Symbol)
-			}
-
-			if tt.money.amount64() != 0 && tt.money.Currency().MinorUnits() > 0 &&
-				!strings.Contains(formatted, tt.expected.DecimalSeparator) {
-				t.Fatalf("formatted value %q does not include decimal separator %q", formatted, tt.expected.DecimalSeparator)
-			}
-
-			if tt.money.amount64() < 0 && !strings.Contains(formatted, tt.expected.MinusSign) {
-				t.Fatalf("formatted value %q does not include minus sign %q", formatted, tt.expected.MinusSign)
-			}
-
-			if absInt64(tt.money.amount64()) >= 1000 && tt.expected.GroupSeparator != "" &&
-				!strings.Contains(formatted, tt.expected.GroupSeparator) {
-				t.Fatalf("formatted value %q does not include group separator %q", formatted, tt.expected.GroupSeparator)
-			}
-		})
-	}
 }
 
 func FuzzMoneyUnmarshalJSON(f *testing.F) {

@@ -1,4 +1,4 @@
-package fulus
+package format
 
 import (
 	"os"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/khatibomar/fulus"
 	"github.com/khatibomar/fulus/currency"
 	"github.com/khatibomar/fulus/locale"
 )
@@ -93,7 +94,7 @@ func (c icuCase) skipReason() string {
 	return ""
 }
 
-// TestFormatMatchesICU compares Format with ICU, an independent CLDR implementation. See testdata/icu/README.md.
+// TestFormatMatchesICU compares AnyMoney and ParseAny with ICU, an independent CLDR implementation. See testdata/icu/README.md.
 func TestFormatMatchesICU(t *testing.T) {
 	t.Parallel()
 
@@ -117,13 +118,13 @@ func TestFormatMatchesICU(t *testing.T) {
 		}
 		checked++
 
-		info := cur.FormatInfo(loc)
-		if got := formatAmount(int128FromInt64(c.amount), cur.MinorUnits(), info); got != c.expected {
-			t.Errorf("line %d: Format(%s, %s, %d) = %q, ICU gives %q", c.line, c.locale, c.code, c.amount, got, c.expected)
+		m := fulus.NewAnyMoney(c.amount, cur)
+		if got := AnyMoney(m, loc); got != c.expected {
+			t.Errorf("line %d: AnyMoney(%s, %s, %d) = %q, ICU gives %q", c.line, c.locale, c.code, c.amount, got, c.expected)
 			failures++
 		}
-		if got, err := parseFormatted(c.expected, cur.MinorUnits(), info); err != nil || got != int128FromInt64(c.amount) {
-			t.Errorf("line %d: ParseFormatted(%q, %s) = %s, %v, want %d", c.line, c.expected, c.locale, got.big(), err, c.amount)
+		if got, err := ParseAny(c.expected, cur, loc); err != nil || got.Decimal() != m.Decimal() {
+			t.Errorf("line %d: ParseAny(%q, %s) = %s, %v, want %s", c.line, c.expected, c.locale, got.Decimal(), err, m.Decimal())
 			failures++
 		}
 		if failures >= 20 {

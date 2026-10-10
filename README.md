@@ -25,6 +25,7 @@ import (
 
 	"github.com/khatibomar/fulus"
 	"github.com/khatibomar/fulus/currency"
+	"github.com/khatibomar/fulus/format"
 	"github.com/khatibomar/fulus/locale"
 )
 
@@ -286,17 +287,20 @@ The amount is a decimal string, so it does not lose digits in JavaScript and doe
 
 ## Locales
 
-`Format` uses the CLDR pattern of the locale, including the negative pattern and Indian digit grouping.
+The `format` package formats and parses amounts with CLDR data. The `fulus` and `currency` packages do not import it,
+so a program that does not format amounts does not include the CLDR tables (about 0.3 MB).
+
+`format.Money` uses the CLDR pattern of the locale, including the negative pattern and Indian digit grouping.
 `String` does not use a locale. It gives the code and the canonical decimal, for example `USD -1234.50`, so logs and tests do not change with the environment.
 `locale.Match` finds the best supported locale for a tag such as `en_US.UTF-8` or `fr-CA-u-nu-latn`.
-`TestFormatMatchesICU` compares `Format` with ICU, an independent CLDR implementation, for more than 25,000 cases.
+`TestFormatMatchesICU` compares `format` with ICU, an independent CLDR implementation, for more than 25,000 cases.
 
 ```go
 loc, ok := locale.Match("en_IN.UTF-8")
 inr := fulus.NewMoney[currency.INR](-1234567890)
-fmt.Println(inr.Format(loc)) // -₹1,23,45,678.90
+fmt.Println(format.Money(inr, loc)) // -₹1,23,45,678.90
 
-parsed, err := fulus.ParseFormatted[currency.INR]("-₹1,23,45,678.90", loc)
+parsed, err := format.Parse[currency.INR]("-₹1,23,45,678.90", loc)
 ```
 
 ## Parse Decimal Strings
@@ -374,7 +378,7 @@ Results of `go test -bench . -benchmem` on an AMD Ryzen AI 9 HX PRO 370:
 | `Mul` | 4 ns | 0 |
 | `Div`, `MulFactor`, `Convert` | 9–10 ns | 0 |
 | `Allocate` (3 parts) | 34 ns | 1 |
-| `Format` | 130 ns | 1 |
+| `format.Money` | 130 ns | 1 |
 | `ParseMoney` | 21 ns | 0 |
 | `MarshalJSON` (with `json.Marshal`) | 170 ns | 4 |
 
@@ -386,9 +390,9 @@ Fulus uses [semantic versioning](https://semver.org/).
 - From v1.0.0, a minor or patch release does not remove or change an exported name.
 - To remove a name, we first mark it with `Deprecated:` in its doc comment and in the release notes.
   We remove it only in the next major version.
-- An update of the CLDR data is not a breaking change. It can change the output of `Format` in a minor release.
+- An update of the CLDR data is not a breaking change. It can change the output of `format.Money` in a minor release.
 - A change of the minor units of a currency is a breaking change. CI checks the minor units against the latest release.
-  Do not store the output of `Format`. Store the amount with `Value`, `MarshalJSON` or `Decimal`.
+  Do not store the output of `format.Money`. Store the amount with `Value`, `MarshalJSON` or `Decimal`.
 - CI compares the API of each pull request with the latest release.
 
 ## License

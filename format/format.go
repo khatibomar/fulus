@@ -1,12 +1,76 @@
-package fulus
+// Package format formats and parses money amounts with the CLDR data of a locale.
+//
+// The fulus and currency packages do not import this package or the locale tables,
+// so a program that does not format amounts does not include the CLDR data.
+package format
 
 import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/khatibomar/fulus"
 	"github.com/khatibomar/fulus/currency"
+	"github.com/khatibomar/fulus/locale"
 )
+
+// Info holds the data that formats an amount of one currency in one locale.
+type Info struct {
+	// Symbol is the currency symbol, for example "$" or "US$".
+	Symbol string
+	// Pattern is the CLDR currency pattern, for example "¤#,##0.00" or "#,##0.00 ¤;-#,##0.00 ¤".
+	Pattern string
+	// GroupSeparator separates digit groups, for example ",".
+	GroupSeparator string
+	// DecimalSeparator separates the fraction, for example ".".
+	DecimalSeparator string
+	// MinusSign replaces "-" in the pattern.
+	MinusSign string
+	// MinimumGroupingDigits is the smallest number of digits before the first group separator. Zero means 1.
+	MinimumGroupingDigits int
+}
+
+// Formatter is a currency with its own format data. A custom currency can implement it.
+// For other currencies, the format data comes from CLDR by the currency code.
+type Formatter interface {
+	FormatInfo(loc locale.Locale) Info
+}
+
+// InfoFor returns the format data of c in loc.
+// If c implements Formatter, InfoFor returns its data. If not, InfoFor returns the CLDR data for the currency code.
+func InfoFor(c currency.Currency, loc locale.Locale) Info {
+	if f, ok := c.(Formatter); ok {
+		return f.FormatInfo(loc)
+	}
+	code := c.Code()
+	n := loc.CurrencyNumbers(code)
+	return Info{
+		Symbol:                loc.CurrencySymbol(code),
+		Pattern:               n.CurrencyFormat,
+		GroupSeparator:        n.GroupSeparator,
+		DecimalSeparator:      n.DecimalSeparator,
+		MinusSign:             n.MinusSign,
+		MinimumGroupingDigits: n.MinimumGroupingDigits,
+	}
+}
+
+// Money returns m formatted for loc, for example "-$1,234.50" in en or "-1.234,50 $" in de.
+// It applies the CLDR pattern of the locale, including the negative subpattern and the group sizes.
+// The number of fraction digits is always the minor units of the currency.
+// Do not store the result. CLDR updates can change it.
+func Money[T currency.Unit](m fulus.Money[T], loc locale.Locale) string {
+	c := m.Currency()
+	return formatDecimal(m.Decimal(), InfoFor(c, loc))
+}
+
+// AnyMoney returns m formatted for loc, like Money. The zero AnyMoney gives the amount only.
+func AnyMoney(m fulus.AnyMoney, loc locale.Locale) string {
+	c := m.Currency()
+	if c == nil {
+		return m.String()
+	}
+	return formatDecimal(m.Decimal(), InfoFor(c, loc))
+}
 
 // numberPattern is a parsed CLDR currency pattern such as "¤#,##0.00;¤-#,##0.00".
 type numberPattern struct {
@@ -68,7 +132,7 @@ func groupingSizes(number string) (primary, secondary int) {
 }
 
 // writeAffix writes a pattern affix with the symbol, the minus sign and the CLDR currency spacing.
-func writeAffix(b *strings.Builder, affix string, info currency.FormatInfo, prefix bool) {
+func writeAffix(b *strings.Builder, affix string, info Info, prefix bool) {
 	for i, r := range affix {
 		switch r {
 		case '¤':
@@ -98,9 +162,9 @@ func needsCurrencySpace(symbol string, decode func(string) (rune, int)) bool {
 }
 
 // writeGrouped writes integer digits with group separators, if the first group has at least minimum digits.
-func writeGrouped(b *strings.Builder, digits []byte, primary, secondary, minimum int, separator string) {
+func writeGrouped(b *strings.Builder, digits string, primary, secondary, minimum int, separator string) {
 	if primary <= 0 || len(digits) < primary+max(minimum, 1) {
-		b.Write(digits)
+		b.WriteString(digits)
 		return
 	}
 
@@ -109,27 +173,21 @@ func writeGrouped(b *strings.Builder, digits []byte, primary, secondary, minimum
 	if first == 0 {
 		first = secondary
 	}
-	b.Write(digits[:first])
+	b.WriteString(digits[:first])
 	for i := first; i < head; i += secondary {
 		b.WriteString(separator)
-		b.Write(digits[i : i+secondary])
+		b.WriteString(digits[i : i+secondary])
 	}
 	b.WriteString(separator)
-	b.Write(digits[head:])
+	b.WriteString(digits[head:])
 }
 
-// formatAmount formats an amount in minor units with the given format information.
-func formatAmount(amount int128, minorUnits int, info currency.FormatInfo) string {
-	p := parsePattern(info.Format)
-	minorUnits = max(minorUnits, 0)
-	negative := amount.isNeg()
-
-	var buf [40]byte
-	digits := amount.abs().appendDecimal(buf[:0])
-	integer, fraction, fractionPad := []byte{'0'}, digits, minorUnits-len(digits)
-	if len(digits) > minorUnits {
-		integer, fraction, fractionPad = digits[:len(digits)-minorUnits], digits[len(digits)-minorUnits:], 0
-	}
+// formatDecimal formats a canonical decimal such as "-1234.50" with the given format data.
+// The decimal has all the minor units of the currency.
+func formatDecimal(decimal string, info Info) string {
+	p := parsePattern(info.Pattern)
+	digits, negative := strings.CutPrefix(decimal, "-")
+	integer, fraction, _ := strings.Cut(digits, ".")
 
 	prefix, suffix := p.posPrefix, p.posSuffix
 	if negative {
@@ -137,19 +195,16 @@ func formatAmount(amount int128, minorUnits int, info currency.FormatInfo) strin
 	}
 
 	var b strings.Builder
-	b.Grow(len(info.Format) + 2*len(info.Symbol) + len(currencySpace) + len(info.MinusSign) + len(info.DecimalSeparator) +
-		len(digits)*(1+len(info.GroupSeparator)) + minorUnits)
+	b.Grow(len(info.Pattern) + 2*len(info.Symbol) + len(currencySpace) + len(info.MinusSign) + len(info.DecimalSeparator) +
+		len(digits)*(1+len(info.GroupSeparator)))
 	if negative && p.implicitMinus {
 		b.WriteString(info.MinusSign)
 	}
 	writeAffix(&b, prefix, info, true)
 	writeGrouped(&b, integer, p.primaryGroup, p.secondaryGroup, info.MinimumGroupingDigits, info.GroupSeparator)
-	if minorUnits > 0 {
+	if fraction != "" {
 		b.WriteString(info.DecimalSeparator)
-		for range fractionPad {
-			b.WriteByte('0')
-		}
-		b.Write(fraction)
+		b.WriteString(fraction)
 	}
 	writeAffix(&b, suffix, info, false)
 	return b.String()

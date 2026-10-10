@@ -8,7 +8,7 @@ import (
 
 func ExampleByCode() {
 	c, ok := currency.ByCode("jpy")
-	fmt.Println(c.Code(), c.Number(), c.MinorUnits(), ok)
+	fmt.Println(c.Code(), currency.Number(c), c.MinorUnits(), ok)
 
 	_, ok = currency.ByCode("XYZ")
 	fmt.Println(ok)
@@ -19,6 +19,6 @@ func ExampleByCode() {
 
 func ExampleByNumber() {
 	c, ok := currency.ByNumber("978")
-	fmt.Println(c.Code(), c.Name(), ok)
+	fmt.Println(c.Code(), c.(currency.Named).Name(), ok)
 	// Output: EUR Euro true
 }
