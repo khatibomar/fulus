@@ -38,6 +38,16 @@ go test -run TestFormatMatchesICU .
 
 If ICU does not agree with the CLDR data for a good reason, add the case to `icuDifferences` in `icu_test.go` with the reason.
 
+### Minor units
+
+`currency/testdata/minor_units.golden` holds the minor units of each generated currency.
+`TestMinorUnitsDoNotChange` fails when the generated data does not agree with it.
+
+- For a new currency, run `go test ./currency -run TestMinorUnitsDoNotChange -update`.
+- A changed or removed line is a breaking change: an amount in minor units that is stored in a database or a queue
+  changes its value. Tell this in the pull request, so that the release notes list it.
+  CI fails for such a change after a stable release.
+
 ## Tests
 
 - Use table tests.

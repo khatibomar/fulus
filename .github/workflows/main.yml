@@ -112,3 +112,18 @@ jobs:
           echo "::error::incompatible API changes since $base"
           exit 1
         fi
+    - name: Compare the minor units with the latest release
+      shell: bash
+      run: |
+        base=$(git describe --tags --abbrev=0 --match 'v*')
+        golden=currency/testdata/minor_units.golden
+        # A removed or changed line changes the value of stored amounts in minor units.
+        changed=$(git diff "$base" -- "$golden" | grep -E '^-[A-Z]{3} ' || true)
+        if [[ -n "$changed" ]]; then
+          echo "Minor units changed since $base:" >> "$GITHUB_STEP_SUMMARY"
+          echo "$changed" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$base" != *-* ]]; then
+            echo "::error::minor units changed since $base"
+            exit 1
+          fi
+        fi
