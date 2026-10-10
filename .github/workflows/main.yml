@@ -43,6 +43,9 @@ jobs:
     - name: Test the examples module
       working-directory: examples
       run: go test ./...
+    - name: Test the fulusproto module
+      working-directory: fulusproto
+      run: go vet ./... && go test -race ./...
 
   lint:
     runs-on: ubuntu-latest

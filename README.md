@@ -373,6 +373,21 @@ err := row.Scan(int64(1050)) // row.Money is $10.50
 Use `NullMoney[T]` for a decimal column that can be NULL. It also writes and reads JSON `null`.
 Use `sql.Null[fulus.BigintMoney[T]]` for an integer column that can be NULL.
 
+## Protocol Buffers
+
+The `fulusproto` module converts values to and from `google.type.Money`. It is a separate module,
+so the `fulus` module has no dependencies.
+
+```go
+import "github.com/khatibomar/fulus/fulusproto"
+
+p, err := fulusproto.ToMoney(fulus.NewMoney[currency.USD](1050)) // units 10, nanos 500000000
+m, err := fulusproto.FromMoney[currency.USD](p)                 // USD 10.50
+```
+
+A conversion does not round. `ToMoney` returns `ErrInexact` for a value with more than 9 fraction digits that are not zero,
+and `FromMoney` returns `ErrScaleMismatch` for a value with more fraction digits than the minor units.
+
 ## Performance
 
 Arithmetic uses 128-bit and 192-bit integer math from `math/bits` and does not allocate.
