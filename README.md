@@ -112,7 +112,7 @@ func main() {
 - Support for distribution and allocation of money (largest remainder method)
 - Runtime currencies with `AnyMoney` and a currency registry
 - Seven explicit rounding modes plus `RoundUnnecessary`, a `Factor` type for rates, percentages and basis points, and CLDR cash rounding
-- Exact exchange rates with `Rate[Base, Quote]`, and cross rates that the compiler checks
+- Exact exchange rates with `Rate[Base, Quote]`, cross rates that the compiler checks, and `AnyRate` for runtime currencies
 - CLDR formatting and parsing of localized strings in the `format` package, with locale matching from BCP 47 and POSIX tags
 - JSON with decimal strings, text, `log/slog`, and database/sql for `NUMERIC` and `BIGINT` columns, with `NullMoney` for NULL values
 - `google.type.Money` conversion in the separate `fulusproto` module

@@ -103,6 +103,21 @@ func ExampleAnyMoney_MulFactor() {
 	// Output: EUR 2.38 <nil>
 }
 
+func ExampleAnyMoney_Convert() {
+	price, err := fulus.ParseAnyMoney("12.50", "EUR")
+	if err != nil {
+		panic(err)
+	}
+	// The codes and the rate can come from a rate feed.
+	rate, err := fulus.ParseAnyRate("160.25", currency.EUR{}, currency.JPY{})
+	if err != nil {
+		panic(err)
+	}
+	yen, err := price.Convert(rate, fulus.RoundHalfEven)
+	fmt.Println(yen, err)
+	// Output: JPY 2003 <nil>
+}
+
 func ExampleAnyMoney_ScanColumns() {
 	var price fulus.AnyMoney
 	amount, code := price.ScanColumns()

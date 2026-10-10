@@ -20,28 +20,47 @@ type Rate[Base, Quote currency.Unit] struct {
 // NewRate returns the rate numerator/denominator.
 // Returns ErrInvalidExchangeRate if a term is not positive.
 func NewRate[Base, Quote currency.Unit](numerator, denominator int64) (Rate[Base, Quote], error) {
-	if numerator <= 0 || denominator <= 0 {
-		return Rate[Base, Quote]{}, fmt.Errorf("%w: %d/%d must be positive", ErrInvalidExchangeRate, numerator, denominator)
+	num, den, err := reduceRate(numerator, denominator)
+	if err != nil {
+		return Rate[Base, Quote]{}, err
 	}
-	g := gcd(uint64(numerator), uint64(denominator))
-	return Rate[Base, Quote]{num: numerator / int64(g), den: denominator / int64(g)}, nil
+	return Rate[Base, Quote]{num: num, den: den}, nil
+}
+
+// reduceRate returns numerator/denominator in lowest terms.
+// Returns ErrInvalidExchangeRate if a term is not positive.
+func reduceRate(numerator, denominator int64) (num, den int64, err error) {
+	if numerator <= 0 || denominator <= 0 {
+		return 0, 0, fmt.Errorf("%w: %d/%d must be positive", ErrInvalidExchangeRate, numerator, denominator)
+	}
+	g := int64(gcd(uint64(numerator), uint64(denominator)))
+	return numerator / g, denominator / g, nil
 }
 
 // ParseRate parses a decimal rate such as "1.07203" or a fraction such as "1/3" in base 10. It does not round.
 // Returns ErrInvalidExchangeRate if the rate cannot be parsed or is not positive,
 // and ErrOverflow if a term of the fraction in lowest terms does not fit in int64.
 func ParseRate[Base, Quote currency.Unit](s string) (Rate[Base, Quote], error) {
+	num, den, err := parseRate(s)
+	if err != nil {
+		return Rate[Base, Quote]{}, err
+	}
+	return Rate[Base, Quote]{num: num, den: den}, nil
+}
+
+// parseRate parses a rate as in ParseRate and returns its terms in lowest terms.
+func parseRate(s string) (num, den int64, err error) {
 	r, ok := parseRat(s)
 	if !ok {
-		return Rate[Base, Quote]{}, fmt.Errorf("%w: %q", ErrInvalidExchangeRate, s)
+		return 0, 0, fmt.Errorf("%w: %q", ErrInvalidExchangeRate, s)
 	}
 	if r.Sign() <= 0 {
-		return Rate[Base, Quote]{}, fmt.Errorf("%w: %q must be positive", ErrInvalidExchangeRate, s)
+		return 0, 0, fmt.Errorf("%w: %q must be positive", ErrInvalidExchangeRate, s)
 	}
 	if !r.Num().IsInt64() || !r.Denom().IsInt64() {
-		return Rate[Base, Quote]{}, fmt.Errorf("%w: rate %q", ErrOverflow, s)
+		return 0, 0, fmt.Errorf("%w: rate %q", ErrOverflow, s)
 	}
-	return Rate[Base, Quote]{num: r.Num().Int64(), den: r.Denom().Int64()}, nil
+	return r.Num().Int64(), r.Denom().Int64(), nil
 }
 
 // MustParseRate is like ParseRate but panics if the rate is not valid.
@@ -101,10 +120,15 @@ func Cross[A, B, C currency.Unit](ab Rate[A, B], bc Rate[B, C]) (Rate[A, C], err
 // String returns the rate as a decimal such as "1.07203" if it has at most 18 decimal places,
 // and as a fraction such as "1/3" if not.
 func (r Rate[Base, Quote]) String() string {
-	if !r.IsValid() {
+	return rateString(r.num, r.den)
+}
+
+// rateString returns the rate num/den in the form of Rate.String. It returns "0" if den is not positive.
+func rateString(num, den int64) string {
+	if den <= 0 {
 		return "0"
 	}
-	d := r.den
+	d := den
 	places := 0
 	for d%10 == 0 {
 		d /= 10
@@ -117,9 +141,9 @@ func (r Rate[Base, Quote]) String() string {
 		}
 	}
 	if d != 1 || places > 18 {
-		return strconv.FormatInt(r.num, 10) + "/" + strconv.FormatInt(r.den, 10)
+		return strconv.FormatInt(num, 10) + "/" + strconv.FormatInt(den, 10)
 	}
-	return new(big.Rat).SetFrac64(r.num, r.den).FloatString(places)
+	return new(big.Rat).SetFrac64(num, den).FloatString(places)
 }
 
 // MarshalText implements encoding.TextMarshaler with the form from String.
@@ -154,13 +178,17 @@ func Convert[Base, Quote currency.Unit](m Money[Base], r Rate[Base, Quote], mode
 
 	var from Base
 	var to Quote
-	shift := to.MinorUnits() - from.MinorUnits()
-
-	amount, err := mulDivRoundShift(m.amount, r.num, r.den, shift, mode)
+	amount, err := convertAmount(m.amount, r.num, r.den, from, to, mode)
 	if err != nil {
 		return Money[Quote]{}, err
 	}
 	return Money[Quote]{amount: amount}, nil
+}
+
+// convertAmount changes an amount in minor units of from to minor units of to at the rate num/den,
+// and rounds the result with mode.
+func convertAmount(a int128, num, den int64, from, to currency.Currency, mode RoundingMode) (int128, error) {
+	return mulDivRoundShift(a, num, den, to.MinorUnits()-from.MinorUnits(), mode)
 }
 
 // mulDivRoundShift returns a*n*10^shift/d rounded with mode.

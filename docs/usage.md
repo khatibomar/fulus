@@ -190,6 +190,21 @@ yen, err := fulus.Convert(fulus.NewMoney[currency.EUR](100), eurJPY, fulus.Round
 
 `Convert` adjusts for the minor units of each currency.
 
+Use `AnyRate` when the currencies of a rate are known only at run time, for example from a rate feed.
+`ParseAnyRate` and `NewAnyRate` use the same rules as `ParseRate` and `NewRate`.
+`AnyMoney.Convert` returns `ErrCurrencyMismatch` if the currency of the value is not the base currency of the rate.
+
+```go
+base, _ := currency.ByCode("EUR")
+quote, _ := currency.ByCode("JPY")
+rate, err := fulus.ParseAnyRate("160.25", base, quote)
+
+price, err := fulus.ParseAnyMoney("12.50", "EUR")
+yen, err := price.Convert(rate, fulus.RoundHalfEven) // JPY 2003
+```
+
+`Rate.Any` changes a `Rate[Base, Quote]` into an `AnyRate`, and `AsRate[Base, Quote]` changes it back.
+
 ## SQL Integration
 
 `Money[T]` implements `driver.Valuer` and `sql.Scanner` for a decimal column such as `NUMERIC(38, 2)`.
