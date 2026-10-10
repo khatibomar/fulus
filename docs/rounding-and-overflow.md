@@ -114,6 +114,9 @@ parts, _ := fulus.NewMoney[currency.USD](100).Allocate(1, 1, 1)
 
 A negative value gives negative parts with the same rule, for example -$0.34, -$0.33 and -$0.33.
 
+A ratio can be zero. Its part is zero, and it never gets a leftover unit. At least one ratio must be positive.
+`Allocate` returns `ErrInvalidRatios` for a negative ratio, or when all ratios are zero.
+
 `Distribute` divides a value into equal chunks. It returns the size and the count of the smaller and larger chunks.
 The two sizes are different by 1 minor unit.
 
@@ -141,7 +144,7 @@ It never returns a wrong result.
 - `RoundCash` returns `ErrOverflow` if the rounded value does not fit.
 - `ParseMoney` and `format.Parse` return `ErrOverflow` for an amount that does not fit.
 - `ParseRate` and `Cross` return `ErrOverflow` if the numerator or the denominator does not fit in `int64`.
-- `AnyMoney.Add` and `AnyMoney.Sub` have the same checks as `Money[T]`.
+- The operations of `AnyMoney` have the same checks as the operations of `Money[T]`.
 
 ### Sum
 

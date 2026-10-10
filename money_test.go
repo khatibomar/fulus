@@ -507,7 +507,15 @@ func TestMoneyValueAndScan(t *testing.T) {
 		{name: "too many fraction digits", value: "12.505", wantErr: ErrScaleMismatch},
 		{name: "JSON is not accepted", value: `{"amount":"1.00","currency":"USD"}`, wantErr: ErrInvalidAmountFormat},
 		{name: "nil", value: nil, wantErr: ErrInvalidAmountFormat},
-		{name: "float64", value: 1.5, wantErr: ErrInvalidAmountFormat},
+		{name: "float64", value: 1.5, want: 150},
+		{name: "negative float64", value: -0.05, want: -5},
+		{name: "float64 with 15 digits", value: 1234567890123.45, want: 123456789012345},
+		{name: "float64 with too many digits", value: 12345678901234.56, wantErr: ErrInvalidAmountFormat},
+		{name: "large float64", value: 1e20, wantErr: ErrInvalidAmountFormat},
+		{name: "float64 sum", value: 0.30000000000000004, wantErr: ErrInvalidAmountFormat},
+		{name: "float64 with more fraction digits", value: 1.005, wantErr: ErrScaleMismatch},
+		{name: "NaN", value: math.NaN(), wantErr: ErrInvalidAmountFormat},
+		{name: "infinity", value: math.Inf(-1), wantErr: ErrInvalidAmountFormat},
 	}
 
 	for _, tt := range tests {
@@ -665,12 +673,14 @@ func TestUnmarshalJSON(t *testing.T) {
 		{name: "too many fraction digits", input: `{"amount":"10.505","currency":"USD"}`, wantErr: ErrScaleMismatch},
 		{name: "currency mismatch", input: `{"amount":"10.50","currency":"EUR"}`, wantErr: ErrCurrencyMismatch},
 		{name: "missing currency", input: `{"amount":"10.50"}`, wantErr: ErrCurrencyMismatch},
+		{name: "lower case currency", input: `{"amount":"10.50","currency":"usd"}`, want: 1050},
+		{name: "null does not change the value", input: ` null `, want: 7},
 		{name: "number amount", input: `{"amount":10.50,"currency":"USD"}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			var m Money[currency.USD]
+			m := NewMoney[currency.USD](7)
 			err := json.Unmarshal([]byte(tt.input), &m)
 			if tt.name == "number amount" {
 				if err == nil {
@@ -688,63 +698,28 @@ func TestUnmarshalJSON(t *testing.T) {
 	}
 }
 
-func TestValidate(t *testing.T) {
+func TestInRange(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
-		name        string
-		amount      int64
-		min         int64
-		max         int64
-		expectedErr error
+		name   string
+		amount int64
+		want   bool
 	}{
-		{
-			name:   "valid amount",
-			amount: 500,
-			min:    0,
-			max:    1000,
-		},
-		{
-			name:   "at minimum",
-			amount: 0,
-			min:    0,
-			max:    1000,
-		},
-		{
-			name:   "at maximum",
-			amount: 1000,
-			min:    0,
-			max:    1000,
-		},
-		{
-			name:        "below minimum",
-			amount:      -1,
-			min:         0,
-			max:         1000,
-			expectedErr: ErrValidation,
-		},
-		{
-			name:        "above maximum",
-			amount:      1001,
-			min:         0,
-			max:         1000,
-			expectedErr: ErrValidation,
-		},
+		{name: "inside", amount: 500, want: true},
+		{name: "at minimum", amount: 0, want: true},
+		{name: "at maximum", amount: 1000, want: true},
+		{name: "below minimum", amount: -1, want: false},
+		{name: "above maximum", amount: 1001, want: false},
 	}
 
+	low, high := NewMoney[currency.USD](0), NewMoney[currency.USD](1000)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := NewMoney[currency.USD](tt.amount)
-			err := m.Validate(NewMoney[currency.USD](tt.min), NewMoney[currency.USD](tt.max))
+			t.Parallel()
 
-			if tt.expectedErr == nil && err == nil {
-				return
-			}
-
-			if tt.expectedErr == nil && err != nil {
-				t.Errorf("Validate() unexpected error: %v", err)
-			}
-
-			if errors.Unwrap(err) != ErrValidation {
-				t.Errorf("unwrapped error = %v, want %v", errors.Unwrap(err), ErrValidation)
+			if got := NewMoney[currency.USD](tt.amount).InRange(low, high); got != tt.want {
+				t.Errorf("InRange() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -783,16 +758,28 @@ func TestAllocate(t *testing.T) {
 			expected: []int64{300, 700},
 		},
 		{
-			name:        "zero ratio",
+			name:     "zero ratio",
+			amount:   100,
+			ratios:   []int64{0, 1},
+			expected: []int64{0, 100},
+		},
+		{
+			name:     "zero ratio with leftover units",
+			amount:   -100,
+			ratios:   []int64{1, 0, 1, 1},
+			expected: []int64{-34, 0, -33, -33},
+		},
+		{
+			name:        "all ratios zero",
 			amount:      100,
-			ratios:      []int64{0, 1},
-			expectedErr: ErrNegativeOrZeroRatios,
+			ratios:      []int64{0, 0},
+			expectedErr: ErrInvalidRatios,
 		},
 		{
 			name:        "negative ratio",
 			amount:      100,
 			ratios:      []int64{-1, 1},
-			expectedErr: ErrNegativeOrZeroRatios,
+			expectedErr: ErrInvalidRatios,
 		},
 		{
 			name:        "empty ratios",
@@ -910,13 +897,13 @@ func TestAllocateRealMoney(t *testing.T) {
 			name:        "negative ratio",
 			amount:      10000,
 			ratios:      []int64{1, -1},
-			expectedErr: ErrNegativeOrZeroRatios,
+			expectedErr: ErrInvalidRatios,
 		},
 		{
-			name:        "zero ratio",
-			amount:      10000,
-			ratios:      []int64{0, 1},
-			expectedErr: ErrNegativeOrZeroRatios,
+			name:     "zero ratio",
+			amount:   10000,
+			ratios:   []int64{0, 1},
+			expected: []string{"USD 0.00", "USD 100.00"},
 		},
 	}
 

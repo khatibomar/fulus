@@ -23,6 +23,7 @@ func main() {
 		panic(err)
 	}
 
+	low, high := money.New(config.Money.Min), money.New(config.Money.Max)
 	m1 := money.New(500)
 	m2 := money.New(500)
 
@@ -38,16 +39,20 @@ func main() {
 	m1, err = m1.Mul(10)
 	printErr(err)
 
-	err = m1.Validate(money.New(config.Money.Min), money.New(config.Money.Max))
-	printErr(err)
-	fmt.Printf("%s is valid\n", m1.String())
+	printRange(m1, low, high)
 
 	m1, err = m1.Mul(50)
 	printErr(err)
 
-	err = m1.Validate(money.New(config.Money.Min), money.New(config.Money.Max))
-	printErr(err)
-	fmt.Println(m1)
+	printRange(m1, low, high)
+}
+
+func printRange(m, low, high money.Money) {
+	if m.InRange(low, high) {
+		fmt.Printf("%s is in range\n", m)
+		return
+	}
+	fmt.Printf("%s is not in [%s, %s]\n", m, low, high)
 }
 
 func printErr(err error) {

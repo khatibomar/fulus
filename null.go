@@ -1,7 +1,6 @@
 package fulus
 
 import (
-	"bytes"
 	"database/sql/driver"
 	"encoding/json"
 
@@ -48,7 +47,7 @@ func (n NullMoney[T]) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements json.Unmarshaler. A JSON null sets Valid to false.
 func (n *NullMoney[T]) UnmarshalJSON(data []byte) error {
-	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+	if isJSONNull(data) {
 		*n = NullMoney[T]{}
 		return nil
 	}

@@ -219,6 +219,7 @@ func TestDifferentialEdges(t *testing.T) {
 		}
 		checkAllocate(t, a, []int64{1, 1, 1})
 		checkAllocate(t, a, []int64{1, 2, math.MaxInt64 / 4})
+		checkAllocate(t, a, []int64{0, 3, 0, 7})
 	}
 }
 
@@ -230,6 +231,6 @@ func FuzzDifferential(f *testing.F) {
 	f.Fuzz(func(t *testing.T, hi int64, lo uint64, n, d int64, r1, r2, r3 uint32) {
 		a := mkInt128(hi, lo)
 		checkMoneyOps(t, a, n, d)
-		checkAllocate(t, a, []int64{int64(r1) + 1, int64(r2) + 1, int64(r3) + 1})
+		checkAllocate(t, a, []int64{int64(r1), int64(r2) + 1, int64(r3)})
 	})
 }
