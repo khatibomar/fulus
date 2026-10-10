@@ -27,21 +27,39 @@ func NewAnyMoney(amount int64, c currency.Currency) AnyMoney {
 // NewAnyMoneyFromCode creates an AnyMoney from an amount in minor units and a registered currency code.
 // Returns ErrUnknownCurrency if currency.Default() does not have the code.
 func NewAnyMoneyFromCode(amount int64, code string) (AnyMoney, error) {
-	c, ok := currency.ByCode(code)
-	if !ok {
-		return AnyMoney{}, fmt.Errorf("%w: %q", ErrUnknownCurrency, code)
+	c, err := lookupCurrency(code, currency.Default())
+	if err != nil {
+		return AnyMoney{}, err
 	}
 	return AnyMoney{amount: int128FromInt64(amount), currency: c}, nil
 }
 
 // ParseAnyMoney parses a canonical decimal amount such as "12.50" in the currency with the given code.
-// The amount format is the same as for ParseMoney.
+// The amount format is the same as for ParseMoney. The code must be in currency.Default().
 func ParseAnyMoney(amount, code string) (AnyMoney, error) {
-	c, ok := currency.ByCode(code)
-	if !ok {
-		return AnyMoney{}, fmt.Errorf("%w: %q", ErrUnknownCurrency, code)
+	return ParseAnyMoneyIn(amount, code, currency.Default())
+}
+
+// ParseAnyMoneyIn is like ParseAnyMoney, but it finds the code in the registry r.
+// Returns ErrUnknownCurrency if r is nil or does not have the code.
+func ParseAnyMoneyIn(amount, code string, r *currency.Registry) (AnyMoney, error) {
+	c, err := lookupCurrency(code, r)
+	if err != nil {
+		return AnyMoney{}, err
 	}
 	return NewAnyMoneyFromDecimal(amount, c)
+}
+
+// lookupCurrency returns the currency with the given code in r.
+func lookupCurrency(code string, r *currency.Registry) (currency.Currency, error) {
+	if r == nil {
+		return nil, fmt.Errorf("%w: nil registry", ErrUnknownCurrency)
+	}
+	c, ok := r.ByCode(code)
+	if !ok {
+		return nil, fmt.Errorf("%w: %q", ErrUnknownCurrency, code)
+	}
+	return c, nil
 }
 
 // NewAnyMoneyFromDecimal parses a canonical decimal amount such as "12.50" in the currency c.
@@ -252,9 +270,15 @@ func (m AnyMoney) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements json.Unmarshaler with the same form as Money. A JSON null does not change m.
-// The currency code must be in currency.Default(). For another registry, decode the code and the amount,
-// and use NewAnyMoneyFromDecimal.
+// The currency code must be in currency.Default(). For another registry, use UnmarshalJSONIn.
 func (m *AnyMoney) UnmarshalJSON(data []byte) error {
+	return m.UnmarshalJSONIn(data, currency.Default())
+}
+
+// UnmarshalJSONIn is like UnmarshalJSON, but it finds the currency code in the registry r.
+// To decode a field of a struct, decode the field into a json.RawMessage first.
+// Returns ErrUnknownCurrency if r is nil or does not have the code.
+func (m *AnyMoney) UnmarshalJSONIn(data []byte, r *currency.Registry) error {
 	if isJSONNull(data) {
 		return nil
 	}
@@ -262,7 +286,7 @@ func (m *AnyMoney) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &temp); err != nil {
 		return fmt.Errorf("failed to unmarshal money: %w", err)
 	}
-	parsed, err := ParseAnyMoney(temp.Amount, temp.Currency)
+	parsed, err := ParseAnyMoneyIn(temp.Amount, temp.Currency, r)
 	if err != nil {
 		return err
 	}
@@ -299,13 +323,20 @@ func describe(c, other currency.Currency) string {
 // m changes only after both columns are scanned without an error. You can use the destinations again for the next row.
 // To write m, use Decimal for the amount column and the Code of Currency for the code column.
 func (m *AnyMoney) ScanColumns() (amount, code sql.Scanner) {
-	s := &anyMoneyScan{m: m}
+	return m.ScanColumnsIn(currency.Default())
+}
+
+// ScanColumnsIn is like ScanColumns, but it finds the currency code in the registry r.
+// Scan returns ErrUnknownCurrency if r is nil or does not have the code.
+func (m *AnyMoney) ScanColumnsIn(r *currency.Registry) (amount, code sql.Scanner) {
+	s := &anyMoneyScan{m: m, registry: r}
 	return anyAmountColumn{s}, anyCodeColumn{s}
 }
 
 // anyMoneyScan holds the values of the two columns until both are scanned.
 type anyMoneyScan struct {
 	m                  *AnyMoney
+	registry           *currency.Registry
 	amount             any
 	code               string
 	hasAmount, hasCode bool
@@ -350,9 +381,9 @@ func (s *anyMoneyScan) finish() error {
 	if s.amount == nil {
 		return fmt.Errorf("%w: cannot scan NULL into AnyMoney", ErrInvalidAmountFormat)
 	}
-	c, ok := currency.ByCode(s.code)
-	if !ok {
-		return fmt.Errorf("%w: %q", ErrUnknownCurrency, s.code)
+	c, err := lookupCurrency(s.code, s.registry)
+	if err != nil {
+		return err
 	}
 	amount, err := scanDecimal(s.amount, c.MinorUnits())
 	if err != nil {
