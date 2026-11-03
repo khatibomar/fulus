@@ -29,13 +29,14 @@ make check-gen  # generate again with the current CLDR version and show changes
 ```
 
 When you change the generator or the formatting code, update the ICU golden data and run the tests.
-You need Node.js, because it includes ICU:
+You need Java 21 or newer, because the script uses ICU4J:
 
 ```sh
-node format/testdata/icu/generate.mjs > format/testdata/icu/golden.tsv
+./format/testdata/icu/generate.sh > format/testdata/icu/golden.tsv
 go test -run TestFormatMatchesICU ./format
 ```
 
+Use the ICU release that has the same CLDR version as `locale/gen_locale.go`. Set `ICU_VERSION` to use another release.
 If ICU does not agree with the CLDR data for a good reason, add the case to `icuDifferences` in `format/icu_test.go` with the reason.
 
 ### Minor units

@@ -13,37 +13,30 @@ import (
 
 // icuDifferences maps a locale, or a locale and currency pair, where ICU does not agree with CLDR to the reason.
 var icuDifferences = map[string]string{
-	"en-BE": "ICU has no number data for this locale and uses the data of en",
-	"en-DE": "ICU has no number data for this locale and uses the data of en",
-	"en-EE": "ICU has no number data for this locale and uses the data of en",
-	"en-ES": "ICU has no number data for this locale and uses the data of en",
-	"en-FI": "ICU has no number data for this locale and uses the data of en",
-	"en-FR": "ICU has no number data for this locale and uses the data of en",
-	"en-IT": "ICU has no number data for this locale and uses the data of en",
-	"en-LT": "ICU has no number data for this locale and uses the data of en",
-	"en-LV": "ICU has no number data for this locale and uses the data of en",
-	"en-NL": "ICU has no number data for this locale and uses the data of en",
-	"en-PT": "ICU has no number data for this locale and uses the data of en",
-	"en-SI": "ICU has no number data for this locale and uses the data of en",
-	"en-SK": "ICU has no number data for this locale and uses the data of en",
-
+	"en-BE/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-CH/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-CZ/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-DE/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-DK/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-EE/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-ES/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-FI/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-FR/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-GE/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-HU/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-IT/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-LT/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-LV/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-NL/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-NO/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-PL/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-PT/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-RO/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-SE/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-SI/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
+	"en-SK/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
 	"en-UA/EUR": "ICU uses the separators of en-150 with the EUR pattern of en-150",
-
-	"fr-CH":          "CLDR 48.2 changed the group separator, and ICU 78 has CLDR 48.0",
-	"sr-Cyrl-ME/BAM": "ICU uses the Latin symbol KM of sr-ME",
 }
-
-// icuCVELocales are the locales where ICU uses the CVE decimal separator "$" for all currencies, not only for CVE.
-var icuCVELocales = map[string]bool{"kea": true, "pt-CV": true}
 
 type icuCase struct {
 	line     int
@@ -87,9 +80,6 @@ func (c icuCase) skipReason() string {
 	}
 	if reason, ok := icuDifferences[c.locale+"/"+c.code]; ok {
 		return reason
-	}
-	if icuCVELocales[c.locale] && c.code != "CVE" {
-		return "ICU uses the CVE separators for all currencies"
 	}
 	return ""
 }
