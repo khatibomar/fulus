@@ -22,6 +22,12 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Check for new CLDR version and generate
         id: check_update
         run: |
@@ -34,6 +40,22 @@ jobs:
           if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] && [ "$LATEST_VERSION" != "null" ] && [ -n "$LATEST_VERSION" ]; then
             echo "New version found. Running generator..."
             make gen
+
+            # ICU releases move in step with CLDR: CLDR 49 has ICU 79. Update the golden data with
+            # the matching ICU4J release, so that the tests compare the new data with the same CLDR version.
+            CLDR_VERSION=$(grep -oP '// CLDR Version: \K.*' locale/gen_locale.go)
+            ICU_MAJOR=$(( ${CLDR_VERSION%%.*} + 30 ))
+            ICU_VERSION=$(curl -fsSL 'https://api.github.com/repos/unicode-org/icu/releases?per_page=100' \
+              | jq -r --arg prefix "release-${ICU_MAJOR}." \
+                '[.[] | select(.prerelease == false) | .tag_name | select(startswith($prefix))] | .[0] // empty' \
+              | sed 's/^release-//')
+            if [ -z "$ICU_VERSION" ]; then
+              echo "::error::CLDR $CLDR_VERSION has no matching ICU $ICU_MAJOR release yet"
+              exit 1
+            fi
+            echo "Using ICU $ICU_VERSION for CLDR $CLDR_VERSION"
+            ICU_VERSION="$ICU_VERSION" ./format/testdata/icu/generate.sh > format/testdata/icu/golden.tsv
+
             echo "update_needed=true" >> $GITHUB_OUTPUT
             echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           else
